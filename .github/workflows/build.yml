@@ -73,7 +73,7 @@ jobs:
         run: curl -o baserom.gba -u ${{ secrets.STORAGE_USERNAME }}:${{ secrets.STORAGE_PASSWORD }} ${{ secrets.STORAGE_URL }}/baserom.gba
 
       - name: Compare
-        run: make -j${nproc}
+        run: make
 
       - name: Progress
         run: |

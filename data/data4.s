@@ -21,6 +21,7 @@ gUnknown_08C92208:
 unused_gUnknown_08C9A208:
     .incbin "baserom.gba", 0x00C9A208, 0xC558
 
+
     .global gUnknown_08CA6760
 gUnknown_08CA6760:
     .incbin "baserom.gba", 0x00CA6760, 0x6A7C
@@ -32,6 +33,7 @@ gUnknown_08CAD1DC:
     .global gUnknown_08CB41C0
 gUnknown_08CB41C0:
     .incbin "baserom.gba", 0x00CB41C0, 0x6a44
+
 
     .global gUnknown_08CBAC04
 gUnknown_08CBAC04:
