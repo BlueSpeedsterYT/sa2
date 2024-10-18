@@ -10,6 +10,7 @@
 #include "game/interactables_2/music_plant/note_block.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -39,9 +40,8 @@ static void sub_8075DE8(Sprite_NoteBlock *);
 
 /* animId, variant, tileId (OBJ VRAM) */
 const u16 gUnknown_080DFC40[NUM_NOTE_BLOCK_TYPES][3] = {
-    { SA2_ANIM_NOTE_BLOCK, 0, 0x16C }, { SA2_ANIM_NOTE_BLOCK, 1, 0x170 },
-    { SA2_ANIM_NOTE_BLOCK, 2, 0x174 }, { SA2_ANIM_NOTE_BLOCK, 3, 0x178 },
-    { SA2_ANIM_NOTE_BLOCK, 4, 0x17C }, { SA2_ANIM_NOTE_BLOCK, 5, 0x180 },
+    { SA2_ANIM_NOTE_BLOCK, 0, 0x16C }, { SA2_ANIM_NOTE_BLOCK, 1, 0x170 }, { SA2_ANIM_NOTE_BLOCK, 2, 0x174 },
+    { SA2_ANIM_NOTE_BLOCK, 3, 0x178 }, { SA2_ANIM_NOTE_BLOCK, 4, 0x17C }, { SA2_ANIM_NOTE_BLOCK, 5, 0x180 },
     { SA2_ANIM_NOTE_BLOCK, 6, 0x184 },
 };
 
@@ -56,17 +56,13 @@ const s16 gUnknown_080DFC6A[NUM_NOTE_BLOCK_TYPES] = {
 };
 
 const u16 sSfxGlockenspiel[NUM_NOTE_BLOCK_TYPES + 1] = {
-    SE_MUSIC_PLANT_GLOCKENSPIEL_1, SE_MUSIC_PLANT_GLOCKENSPIEL_2,
-    SE_MUSIC_PLANT_GLOCKENSPIEL_3, SE_MUSIC_PLANT_GLOCKENSPIEL_4,
-    SE_MUSIC_PLANT_GLOCKENSPIEL_5, SE_MUSIC_PLANT_GLOCKENSPIEL_6,
-    SE_MUSIC_PLANT_GLOCKENSPIEL_6, MUS_DUMMY,
+    SE_MUSIC_PLANT_GLOCKENSPIEL_1, SE_MUSIC_PLANT_GLOCKENSPIEL_2, SE_MUSIC_PLANT_GLOCKENSPIEL_3, SE_MUSIC_PLANT_GLOCKENSPIEL_4,
+    SE_MUSIC_PLANT_GLOCKENSPIEL_5, SE_MUSIC_PLANT_GLOCKENSPIEL_6, SE_MUSIC_PLANT_GLOCKENSPIEL_6, MUS_DUMMY,
 };
 
-void CreateEntity_Note_Block(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                             u8 spriteY)
+void CreateEntity_Note_Block(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_8075C6C, sizeof(Sprite_NoteBlock), 0x2010, 0,
-                                TaskDestructor_8075CC0);
+    struct Task *t = TaskCreate(Task_8075C6C, sizeof(Sprite_NoteBlock), 0x2010, 0, TaskDestructor_8075CC0);
     Sprite_NoteBlock *block = TASK_DATA(t);
     Sprite *s = &block->s;
 
@@ -80,18 +76,18 @@ void CreateEntity_Note_Block(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY
     block->base.me = me;
 
     block->base.spriteX = me->x;
-    block->base.spriteY = spriteY;
+    block->base.id = spriteY;
 
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
 
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
 
     {
         u16 tileId = gUnknown_080DFC40[block->unk48][2];
@@ -150,9 +146,9 @@ void sub_8075B50(Sprite_NoteBlock *block)
     s32 ah;
     block->unk49 = 192;
     gPlayer.speedAirY = -(gUnknown_080DFC6A[block->unk48]);
-    gPlayer.unk64 = 0x39;
+    gPlayer.charState = CHARSTATE_NOTE_BLOCK;
     gPlayer.transition = PLTRANS_PT5;
-    gPlayer.unk66 = -1;
+    gPlayer.prevCharState = CHARSTATE_INVALID;
 
     block->unk4A = 0;
     sub_8080C78(block->posX, block->posY, 5, 30, (gUnknown_080DFC6A[block->unk48]) >> 3,
@@ -161,11 +157,8 @@ void sub_8075B50(Sprite_NoteBlock *block)
                 (-((gUnknown_080DFC6A[block->unk48] * 3) << 14)) >> 16, 1);
 
     if (--block->unk4B == 1) {
-        block->s.graphics.dest
-            = &((u8 *)OBJ_VRAM0)[gUnknown_080DFC40[ARRAY_COUNT(gUnknown_080DFC40) - 1][2]
-                                 * TILE_SIZE_4BPP];
-        block->s.graphics.anim
-            = gUnknown_080DFC40[ARRAY_COUNT(gUnknown_080DFC40) - 1][0];
+        block->s.graphics.dest = &((u8 *)OBJ_VRAM0)[gUnknown_080DFC40[ARRAY_COUNT(gUnknown_080DFC40) - 1][2] * TILE_SIZE_4BPP];
+        block->s.graphics.anim = gUnknown_080DFC40[ARRAY_COUNT(gUnknown_080DFC40) - 1][0];
         block->s.variant = gUnknown_080DFC40[ARRAY_COUNT(gUnknown_080DFC40) - 1][1];
         UpdateSpriteAnimation(&block->s);
     }
@@ -207,21 +200,22 @@ void NoteBlock_UpdatePosition(Sprite_NoteBlock *block)
 {
     Sprite *s = &block->s;
 
-    s->x = block->posX - gCamera.x + Q_24_8_TO_INT(block->unk44);
-    s->y = block->posY - gCamera.y + Q_24_8_TO_INT(block->unk46);
+    s->x = block->posX - gCamera.x + I(block->unk44);
+    s->y = block->posY - gCamera.y + I(block->unk46);
 }
 
 void sub_8075D28(Sprite_NoteBlock *block)
 {
     Sprite *s = &block->s;
 
-    s->unk10 |= 0x400;
+    s->frameFlags |= 0x400;
     DisplaySprite(s);
 
-    s->unk10 &= ~0x400;
+    s->frameFlags &= ~0x400;
     DisplaySprite(s);
 }
 
+// TODO/BUG: Even with the non-matching fixes, these blocks despawn immediately after creation.
 bool32 sub_8075D58(Sprite_NoteBlock *block)
 {
     s32 screenX, screenY;
@@ -240,9 +234,9 @@ bool32 sub_8075D58(Sprite_NoteBlock *block)
     screenY = block->posY + r4;
     screenY -= gCamera.y;
 #else
-    screenX = block->posX + 256;
+    screenX = block->posX;
     screenX -= gCamera.x;
-    screenX = block->posY + 256;
+    screenY = block->posY;
     screenY -= gCamera.y;
 #endif
 
@@ -251,8 +245,7 @@ bool32 sub_8075D58(Sprite_NoteBlock *block)
     otherX = screenX;
     if ((otherX) > 752 || (otherY) > 672) {
 #else
-    if ((screenX < -256 || screenX > (256 + DISPLAY_WIDTH))
-        || (screenY < -256 || screenY > (256 + DISPLAY_HEIGHT))) {
+    if ((screenX < -128 || screenX > (128 + DISPLAY_WIDTH)) || (screenY < -128 || screenY > (DISPLAY_HEIGHT + 128))) {
 #endif
         return TRUE;
     }
@@ -265,9 +258,9 @@ bool32 sub_8075D98(Sprite_NoteBlock *block)
     if (!(gPlayer.moveState & MOVESTATE_DEAD) && (block->unk4B != 0)) {
         s32 posX, posY;
         u16 otherX, otherY;
-        posX = Q_24_8_TO_INT(gPlayer.x) + 16;
+        posX = I(gPlayer.x) + 16;
         posX -= block->posX;
-        posY = Q_24_8_TO_INT(gPlayer.y) + 24;
+        posY = I(gPlayer.y) + 24;
         posY -= block->posY;
 
         otherY = posY;

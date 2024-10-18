@@ -8,7 +8,7 @@
 #include "game/entity.h"
 #include "sprite.h"
 
-typedef struct {
+PACKED(Interactable_SlowingSnow, {
     /* 0x00 */ u8 x;
     /* 0x01 */ u8 y;
     /* 0x02 */ u8 index;
@@ -17,7 +17,7 @@ typedef struct {
     /* 0x04 */ s8 offsetY;
     /* 0x05 */ u8 width;
     /* 0x06 */ u8 height;
-} Interactable_SlowingSnow PACKED;
+});
 
 typedef struct {
     /* 0x00 */ s16 left;
@@ -35,11 +35,9 @@ static void Task_SlowingSnow(void);
 static void TaskDestructor_SlowingSnow(struct Task *t);
 static bool32 ShouldDespawn(Sprite_SlowingSnow *);
 
-void CreateEntity_SlowingSnow(MapEntity *in_ia, u16 spriteRegionX, u16 spriteRegionY,
-                              u8 spriteY)
+void CreateEntity_SlowingSnow(MapEntity *in_ia, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_SlowingSnow, sizeof(Sprite_SlowingSnow), 0x2010, 0,
-                                TaskDestructor_SlowingSnow);
+    struct Task *t = TaskCreate(Task_SlowingSnow, sizeof(Sprite_SlowingSnow), 0x2010, 0, TaskDestructor_SlowingSnow);
 
     Sprite_SlowingSnow *snow = TASK_DATA(t);
     Interactable_SlowingSnow *me = (Interactable_SlowingSnow *)in_ia;
@@ -62,15 +60,12 @@ static bool32 PlayerIsTouchingSnow(Sprite_SlowingSnow *snow)
         if (!(gPlayer.moveState & MOVESTATE_IN_AIR)) {
             s16 snowScreenX = snow->posX - gCamera.x;
             s16 snowScreenY = snow->posY - gCamera.y;
-            s16 playerScreenX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-            s16 playerScreenY = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+            s16 playerScreenX = I(gPlayer.x) - gCamera.x;
+            s16 playerScreenY = I(gPlayer.y) - gCamera.y;
 
-            if (((snowScreenX + snow->left) <= playerScreenX)
-                && ((snowScreenX + snow->left) + (snow->right - snow->left)
-                    >= playerScreenX)
+            if (((snowScreenX + snow->left) <= playerScreenX) && ((snowScreenX + snow->left) + (snow->right - snow->left) >= playerScreenX)
                 && ((snowScreenY + snow->top) <= playerScreenY)
-                && ((snowScreenY + snow->top) + (snow->bottom - snow->top)
-                    >= playerScreenY)) {
+                && ((snowScreenY + snow->top) + (snow->bottom - snow->top) >= playerScreenY)) {
                 return TRUE;
             }
         }
@@ -83,7 +78,7 @@ void Task_SlowingSnow(void)
     Sprite_SlowingSnow *snow = TASK_DATA(gCurTask);
 
     if (PlayerIsTouchingSnow(snow)) {
-        gPlayer.speedGroundX = Q_24_8_MULTIPLY(gPlayer.speedGroundX, 0.95);
+        gPlayer.speedGroundX = Q_MUL_Q_F32(gPlayer.speedGroundX, 0.95);
     }
 
     // NOTE: Technically this can be turned into an else-if, because
@@ -102,10 +97,8 @@ static bool32 ShouldDespawn(Sprite_SlowingSnow *snow)
     screenX = snow->posX - gCamera.x;
     screenY = snow->posY - gCamera.y;
 
-    if ((screenX + snow->right < -(CAM_REGION_WIDTH / 2))
-        || (screenX + snow->left > DISPLAY_WIDTH + (CAM_REGION_WIDTH / 2))
-        || (screenY + snow->bottom < -(CAM_REGION_WIDTH / 2))
-        || (screenY + snow->top > CAM_BOUND_Y))
+    if ((screenX + snow->right < -(CAM_REGION_WIDTH / 2)) || (screenX + snow->left > DISPLAY_WIDTH + (CAM_REGION_WIDTH / 2))
+        || (screenY + snow->bottom < -(CAM_REGION_WIDTH / 2)) || (screenY + snow->top > CAM_BOUND_Y))
         return TRUE;
 
     return FALSE;

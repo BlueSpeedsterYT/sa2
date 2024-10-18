@@ -4,31 +4,30 @@
 #include "malloc_vram.h"
 #include "trig.h"
 
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 
+#include "game/player_callbacks.h"
 #include "game/save.h"
 #include "game/cheese.h"
 #include "game/bosses/boss_1.h"
 #include "game/bosses/common.h"
 #include "game/bosses/eggmobile_escape_sequence.h"
-#include "game/time_attack/results.h"
 #include "game/cutscenes/level_endings.h"
+#include "game/parameters/bosses.h"
 #include "game/stage/boss_results_transition.h"
-
 #include "game/stage/collision.h"
-#include "game/player_callbacks.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
-
 #include "game/stage/results.h"
-
 #include "game/stage/screen_fade.h"
 #include "game/stage/screen_shake.h"
+#include "game/time_attack/results.h"
 
 #include "lib/m4a.h"
+#include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/songs.h"
 #include "constants/zones.h"
-#include "constants/animations.h"
 #include "flags.h"
 
 typedef struct {
@@ -138,13 +137,11 @@ static const s16 gUnknown_080D7A28[] = {
 };
 
 static const s32 gUnknown_080D7A38[8] = {
-    Q_24_8(0.0),  Q_24_8(12.0), Q_24_8(24.0), Q_24_8(34.0),
-    Q_24_8(44.0), Q_24_8(50.0), Q_24_8(54.0), Q_24_8(56.0),
+    Q(0.0), Q(12.0), Q(24.0), Q(34.0), Q(44.0), Q(50.0), Q(54.0), Q(56.0),
 };
 
 static const s32 gUnknown_080D7A58[8] = {
-    Q_24_8(0.0),  Q_24_8(12.0), Q_24_8(24.0), Q_24_8(36.0),
-    Q_24_8(48.0), Q_24_8(60.0), Q_24_8(72.0), Q_24_8(84.0),
+    Q(0.0), Q(12.0), Q(24.0), Q(36.0), Q(48.0), Q(60.0), Q(72.0), Q(84.0),
 };
 
 static const s16 gUnknown_080D7A78[] = {
@@ -162,8 +159,7 @@ static const u8 gUnknown_080D7AA2[] = {
 static const TaskMain gUnknown_080D7AA8[] = { sub_803CAC8, sub_803B018 };
 
 static const HammertankFunc gUnknown_080D7AB0[] = {
-    sub_803B17C, sub_803B264, sub_803CB84, sub_803B2F8,
-    sub_803CBA4, sub_803B4A0, sub_803B57C, sub_803B62C,
+    sub_803B17C, sub_803B264, sub_803CB84, sub_803B2F8, sub_803CBA4, sub_803B4A0, sub_803B57C, sub_803B62C,
 };
 
 static const u16 gUnknown_080D7AD0[][16] = {
@@ -181,8 +177,7 @@ void CreateEggHammerTankII(void)
 
     gPlayer.moveState |= MOVESTATE_IGNORE_INPUT;
     gPseudoRandom = gStageTime;
-    t = TaskCreate(Task_EggHammerTankIIMain, sizeof(EggHammerTankII), 0x4000, 0,
-                   TaskDestructor_EggHammerTankIIMain);
+    t = TaskCreate(Task_EggHammerTankIIMain, sizeof(EggHammerTankII), 0x4000, 0, TaskDestructor_EggHammerTankIIMain);
 
     boss = TASK_DATA(t);
     if (IS_FINAL_STAGE(gCurrentLevel)) {
@@ -192,8 +187,7 @@ void CreateEggHammerTankII(void)
         } else {
             boss->unkB0 = 4;
         }
-    } else if (gDifficultyLevel != DIFFICULTY_NORMAL
-               && gGameMode != GAME_MODE_BOSS_TIME_ATTACK) {
+    } else if (gDifficultyLevel != DIFFICULTY_NORMAL && gGameMode != GAME_MODE_BOSS_TIME_ATTACK) {
         boss->unkB0 = 6;
     } else {
         boss->unkB0 = 8;
@@ -208,16 +202,16 @@ void CreateEggHammerTankII(void)
     boss->unkB2 = 0;
     boss->unkB3 = 0;
 
-    i = Q_24_8(980);
+    i = Q(980);
     boss->x = i;
-    boss->y = Q_24_8(155);
+    boss->y = Q(155);
 
     if (IS_FINAL_STAGE(gCurrentLevel)) {
-        boss->speedX = Q_8_8(5);
-        boss->speedY = 0;
+        boss->speedX = BOSS_RUSH_VELOCITY_X;
+        boss->speedY = BOSS_RUSH_VELOCITY_Y;
     } else {
-        boss->speedX = Q_8_8(5);
-        boss->speedY = 0;
+        boss->speedX = BOSS1_VELOCITY_X;
+        boss->speedY = BOSS1_VELOCITY_Y;
     }
 
     for (i = 0; i < 8; i++) {
@@ -234,8 +228,8 @@ void CreateEggHammerTankII(void)
     }
 
     boss->unk94 = 768;
-    boss->unk98 = Q_24_8(18.5);
-    boss->unk9C = Q_24_8(18.5);
+    boss->unk98 = Q(18.5);
+    boss->unk9C = Q(18.5);
 
     s = &boss->body;
     s->x = 0;
@@ -277,10 +271,9 @@ void CreateEggHammerTankII(void)
     SPRITE_INIT_ANIM(s, SA2_ANIM_HAMMERTANK_HAMMER, 0, 24);
     SPRITE_INIT_SCRIPT(s, 1.0);
 
-    s->unk10 = (gUnknown_030054B8++) | 0x2060;
+    s->frameFlags = (gUnknown_030054B8++) | 0x2060;
 
-    if (!IS_FINAL_STAGE(gCurrentLevel) && gSelectedCharacter == CHARACTER_SONIC
-        && gLoadedSaveGame->unlockedLevels[0] <= gCurrentLevel) {
+    if (!IS_FINAL_STAGE(gCurrentLevel) && gSelectedCharacter == CHARACTER_SONIC && gLoadedSaveGame->unlockedLevels[0] <= gCurrentLevel) {
 
         s = &boss->cream;
         s->x = 0;
@@ -312,7 +305,7 @@ static void Task_EggHammerTankIIMain(void)
     if (unkA8 < 127) {
         u32 r0, r2;
 #ifndef NON_MATCHING
-        register u32 r1 asm("r1") = (unkA8 - 0x3D);
+        register u32 UNUSED r1 asm("r1") = (unkA8 - 0x3D);
 #endif
 
         if (IS_FINAL_STAGE(gCurrentLevel)) {
@@ -338,7 +331,7 @@ static void Task_EggHammerTankIIMain(void)
 
     if (unkA8 > 126) {
         gPlayer.moveState &= ~MOVESTATE_IGNORE_INPUT;
-        boss->speedX = Q_8_8(5);
+        boss->speedX = BOSS1_VELOCITY_X;
         gCurTask->main = Task_803C980;
     }
 
@@ -362,19 +355,16 @@ static void sub_803A8E4(EggHammerTankII *boss)
             s32 r2;
 #endif
 
-            r2 = Q_24_8_TO_INT(boss->x);
-            r0 = (((boss->unk54[0][5] * COS(boss->unk54[1][5] & (SIN_PERIOD - 1)))
-                   >> 0x17)
-                  - 8);
+            r2 = I(boss->x);
+            r0 = (((boss->unk54[0][5] * COS(boss->unk54[1][5] & (SIN_PERIOD - 1))) >> 0x17) - 8);
             pos.x = r2 + r0;
 
-            r2 = Q_24_8_TO_INT(boss->y);
-            r0 = ((boss->unk54[0][5] * SIN(boss->unk54[1][5] & (SIN_PERIOD - 1))
-                   >> 0x17));
+            r2 = I(boss->y);
+            r0 = ((boss->unk54[0][5] * SIN(boss->unk54[1][5] & (SIN_PERIOD - 1)) >> 0x17));
             pos.y = r2 + r0;
 
-            pos.x -= Q_24_8_TO_INT(gPlayer.x);
-            pos.y -= Q_24_8_TO_INT(gPlayer.y);
+            pos.x -= I(gPlayer.x);
+            pos.y -= I(gPlayer.y);
             if ((SQUARE(pos.x) + SQUARE(pos.y)) < 0x1A4) {
                 sub_803CBFC(boss);
                 sub_800CBA4(&gPlayer);
@@ -382,26 +372,23 @@ static void sub_803A8E4(EggHammerTankII *boss)
         }
 
         s = &boss->body;
-        pos.x = Q_24_8_TO_INT(boss->x);
-        pos.y = Q_24_8_TO_INT(boss->y);
+        pos.x = I(boss->x);
+        pos.y = I(boss->y);
 
         s->x = pos.x - gCamera.x;
         s->y = pos.y - gCamera.y;
 
         sub_800CA20(s, pos.x, pos.y, 1, &gPlayer);
-        Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+        Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
 
-        if (boss->unkB1 == 0
-            || ((gPlayer.speedAirY > 0 || !(gPlayer.moveState & 2))
-                && (gPlayer.moveState & 2))) {
+        if (boss->unkB1 == 0 || ((gPlayer.speedAirY > 0 || !(gPlayer.moveState & 2)) && (gPlayer.moveState & 2))) {
             if (sub_800C320(s, pos.x, pos.y, 0, &gPlayer) == 1) {
                 sub_803B6AC(boss);
             } else {
                 sub_800CA20(s, pos.x, pos.y, 0, &gPlayer);
             }
 
-            if (boss->unkB1 == 0
-                && IsColliding_Cheese(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
+            if (boss->unkB1 == 0 && IsColliding_Cheese(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
                 sub_803B6AC(boss);
             }
         }
@@ -425,37 +412,31 @@ static void sub_803AA40(void)
 
     if (boss->unkA8 < 33) {
         if (boss->unkA8 == 1) {
-            ts->flags = 1;
-            ts->brightness = 2048;
-            ts->speed = 192;
+            ts->flags = SCREEN_FADE_FLAG_LIGHTEN;
+            ts->brightness = Q(8);
+            ts->speed = Q(0.75);
         }
         UpdateScreenFade(ts);
     } else if (boss->unkA8 < 121) {
         Cheese *thing;
-        ts->flags = 2;
-        ts->brightness = 0;
-        ts->speed = 0;
+        ts->flags = SCREEN_FADE_FLAG_2;
+        ts->brightness = Q(0);
+        ts->speed = Q(0);
         UpdateScreenFade(ts);
 
         if (!IS_FINAL_STAGE(gCurrentLevel) && gSelectedCharacter == CHARACTER_SONIC
             && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel) {
-            gPlayer.unk64 = 81;
+            gPlayer.charState = CHARSTATE_SONIC_CATCHING_CREAM;
         }
 
-        if (!IS_FINAL_STAGE(gCurrentLevel)) {
-            gWinRegs[4] = 0x3F;
-            gWinRegs[5] = 0x1F;
-            return;
-        }
-
-        if (boss->unkA8 == 0x22) {
+        if (IS_FINAL_STAGE(gCurrentLevel) && (boss->unkA8 == 0x22)) {
             s32 x, y;
 
-            x = gUnknown_080D6DE4[0][0] - Q_24_8_TO_INT(gPlayer.x);
-            y = gUnknown_080D6DE4[0][1] - Q_24_8_TO_INT(gPlayer.y);
+            x = gUnknown_080D6DE4[0][0] - I(gPlayer.x);
+            y = gUnknown_080D6DE4[0][1] - I(gPlayer.y);
 
-            gPlayer.x += Q_24_8_NEW(x);
-            gPlayer.y += Q_24_8_NEW(y);
+            gPlayer.x += QS(x);
+            gPlayer.y += QS(y);
 
             gCamera.x += x;
             gCamera.y += y;
@@ -468,34 +449,33 @@ static void sub_803AA40(void)
 
             thing = gCheese;
             if (thing != NULL) {
-                thing->posX += Q_24_8_NEW(x);
-                thing->posY += Q_24_8_NEW(y);
+                thing->posX += QS(x);
+                thing->posY += QS(y);
             }
 
-            gUnknown_030055B0++;
+            gBossIndex++;
         }
     } else {
-        ts->speed = 0x28;
+        ts->speed = Q(40. / 256.);
 
         if (UpdateScreenFade(ts) == SCREEN_FADE_COMPLETE) {
             if (!IS_FINAL_STAGE(gCurrentLevel)) {
                 if (gGameMode == GAME_MODE_BOSS_TIME_ATTACK) {
                     CreateTimeAttackResults(gCourseTime);
-                } else if (gSelectedCharacter == CHARACTER_SONIC
-                           && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC]
-                               <= gCurrentLevel) {
+                } else if (gSelectedCharacter == CHARACTER_SONIC && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel) {
                     CreateStageResultsCutscene(0);
                 } else {
                     CreateStageResults(gCourseTime, gRingCount, gSpecialRingCount);
                 }
             }
+
             TaskDestroy(gCurTask);
             return;
         }
     }
 
-    gWinRegs[4] = 0x3F;
-    gWinRegs[5] = 0x1F;
+    gWinRegs[WINREG_WININ] = WININ_WIN0_ALL;
+    gWinRegs[WINREG_WINOUT] = (WINOUT_WIN01_BG_ALL | WINOUT_WIN01_OBJ);
 }
 
 static void sub_803AC2C(EggHammerTankII *boss)
@@ -506,51 +486,47 @@ static void sub_803AC2C(EggHammerTankII *boss)
     SpriteTransform *transform;
     EggHammerTankII_UNKB4 *unkB4 = &boss->unkB4;
     Sprite *s = &boss->body;
-    s->x = Q_24_8_TO_INT(boss->x) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->y) - gCamera.y;
+    s->x = I(boss->x) - gCamera.x;
+    s->y = I(boss->y) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
     s = &boss->pilot;
-    s->x = Q_24_8_TO_INT(boss->x) - gCamera.x + 4;
-    s->y = Q_24_8_TO_INT(boss->y) - gCamera.y;
+    s->x = I(boss->x) - gCamera.x + 4;
+    s->y = I(boss->y) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
     s = &boss->wheel;
-    s->x = Q_24_8_TO_INT(boss->x - Q_24_8(22)) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->y + boss->unk98 + Q_24_8(14.5)) - gCamera.y;
+    s->x = I(boss->x - Q(22)) - gCamera.x;
+    s->y = I(boss->y + boss->unk98 + Q(14.5)) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
     s = &boss->wheel;
-    s->x = Q_24_8_TO_INT(boss->x + Q_24_8(24)) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->y + boss->unk9C + Q_24_8(14.5)) - gCamera.y;
+    s->x = I(boss->x + Q(24)) - gCamera.x;
+    s->y = I(boss->y + boss->unk9C + Q(14.5)) - gCamera.y;
     DisplaySprite(s);
 
     s = &boss->brokenWheel;
-    s->x = Q_24_8_TO_INT(boss->x - Q_24_8(22)) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->y + boss->unk98 + Q_24_8(14.5)) - gCamera.y;
+    s->x = I(boss->x - Q(22)) - gCamera.x;
+    s->y = I(boss->y + boss->unk98 + Q(14.5)) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
     s = &boss->brokenWheel;
-    s->x = Q_24_8_TO_INT(boss->x + Q_24_8(24)) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->y + boss->unk9C + Q_24_8(14.5)) - gCamera.y;
+    s->x = I(boss->x + Q(24)) - gCamera.x;
+    s->y = I(boss->y + boss->unk9C + Q(14.5)) - gCamera.y;
     DisplaySprite(s);
 
     s = &boss->armSegment;
-    s->unk1A = 0x480;
-    x = Q_24_8_TO_INT(boss->x) - gCamera.x;
-    y = Q_24_8_TO_INT(boss->y) - gCamera.y;
+    s->oamFlags = SPRITE_OAM_ORDER(18);
+    x = I(boss->x) - gCamera.x;
+    y = I(boss->y) - gCamera.y;
 
     for (i = 6; i >= 0; i--) {
-        s->x = x
-            + ((COS((boss->unkC[1][i] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][i])
-               >> 23);
-        s->y = y
-            + ((SIN((boss->unkC[1][i] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][i])
-               >> 23);
+        s->x = x + ((COS((boss->unkC[1][i] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][i]) >> 23);
+        s->y = y + ((SIN((boss->unkC[1][i] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][i]) >> 23);
         DisplaySprite(s);
 
         if (boss->unkB0 != 0) {
@@ -560,10 +536,8 @@ static void sub_803AC2C(EggHammerTankII *boss)
     }
 
     s = &boss->hand;
-    s->x = x
-        + ((COS((boss->unkC[1][7] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][7]) >> 23);
-    s->y = y
-        + ((SIN((boss->unkC[1][7] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][7]) >> 23);
+    s->x = x + ((COS((boss->unkC[1][7] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][7]) >> 23);
+    s->y = y + ((SIN((boss->unkC[1][7] + 80) & (SIN_PERIOD - 1)) * boss->unkC[0][7]) >> 23);
 
     x3 = s->x;
     y3 = s->y;
@@ -584,26 +558,22 @@ static void sub_803AC2C(EggHammerTankII *boss)
     }
 
     s = &boss->armSegment;
-    s->unk1A = 0x640;
+    s->oamFlags = SPRITE_OAM_ORDER(25);
 
     for (i = 0; i < 6; i++) {
-        s->x = x - 8
-            + ((COS((boss->unk54[1][i]) & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 23);
-        s->y = y
-            + ((SIN((boss->unk54[1][i]) & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 23);
+        s->x = x - 8 + ((COS((boss->unk54[1][i]) & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 23);
+        s->y = y + ((SIN((boss->unk54[1][i]) & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 23);
         DisplaySprite(s);
     }
 
     s = &boss->hammer;
     transform = &boss->transform;
 
-    s->x = x - 8
-        + ((COS((boss->unk54[1][5]) & (SIN_PERIOD - 1)) * boss->unk54[0][5]) >> 23);
+    s->x = x - 8 + ((COS((boss->unk54[1][5]) & (SIN_PERIOD - 1)) * boss->unk54[0][5]) >> 23);
     s->y = y + ((SIN((boss->unk54[1][5]) & (SIN_PERIOD - 1)) * boss->unk54[0][5]) >> 23);
-    s->unk10 = gUnknown_030054B8++ | 0x2060;
+    s->frameFlags = gUnknown_030054B8++ | 0x2060;
 
-    transform->rotation
-        = (boss->unk54[1][5] - (boss->unk94) + boss->unk54[1][5]) & (SIN_PERIOD - 1);
+    transform->rotation = (boss->unk54[1][5] - (boss->unk94) + boss->unk54[1][5]) & (SIN_PERIOD - 1);
     if (transform->rotation != 768) {
         transform->rotation += 10;
     }
@@ -613,7 +583,7 @@ static void sub_803AC2C(EggHammerTankII *boss)
     transform->x = s->x;
     transform->y = s->y;
     UpdateSpriteAnimation(s);
-    sub_8004860(s, transform);
+    TransformSprite(s, transform);
     DisplaySprite(s);
 }
 
@@ -626,10 +596,10 @@ static void sub_803B018(void)
     s32 idx;
     boss->speedY = 0;
     origY = boss->y;
-    x = (boss->x + Q_24_8(24));
-    y = (origY + boss->unk9C + Q_24_8(14.5));
+    x = (boss->x + Q(24));
+    y = (origY + boss->unk9C + Q(14.5));
 
-    result = sub_801F100(Q_24_8_TO_INT(y), Q_24_8_TO_INT(x), 1, 8, sub_801EC3C);
+    result = sub_801F100(I(y), I(x), 1, 8, sub_801EC3C);
     if (result < 1) {
         boss->y += result * 64;
         idx = -result;
@@ -641,19 +611,19 @@ static void sub_803B018(void)
         boss->unk9C += 288;
     }
 
-    boss->y -= Q_24_8_TO_INT((Q_24_8(18.5) - boss->unk9C) * Q_24_8(0.375));
+    boss->y -= I((Q(18.5) - boss->unk9C) * Q(0.375));
 
-    if (boss->unk9C < Q_24_8(14.5)) {
-        boss->unk9C = Q_24_8(14.5);
+    if (boss->unk9C < Q(14.5)) {
+        boss->unk9C = Q(14.5);
     }
-    if (boss->unk9C > Q_24_8(23.5)) {
-        boss->unk9C = Q_24_8(23.5);
+    if (boss->unk9C > Q(23.5)) {
+        boss->unk9C = Q(23.5);
     }
 
-    x = (boss->x - Q_24_8(22));
-    y = (origY + boss->unk98 + Q_24_8(14.5));
+    x = (boss->x - Q(22));
+    y = (origY + boss->unk98 + Q(14.5));
 
-    result = sub_801F100(Q_24_8_TO_INT(y), Q_24_8_TO_INT(x), 1, 8, sub_801EC3C);
+    result = sub_801F100(I(y), I(x), 1, 8, sub_801EC3C);
     if (result < 1) {
         boss->y += (result * 0x40);
 
@@ -666,13 +636,13 @@ static void sub_803B018(void)
         boss->unk98 += 288;
     }
 
-    boss->y -= Q_24_8_TO_INT((Q_24_8(18.5) - boss->unk98) * Q_24_8(0.375));
+    boss->y -= I((Q(18.5) - boss->unk98) * Q(0.375));
 
-    if (boss->unk98 < Q_24_8(14.5)) {
-        boss->unk98 = Q_24_8(14.5);
+    if (boss->unk98 < Q(14.5)) {
+        boss->unk98 = Q(14.5);
     }
-    if (boss->unk98 > Q_24_8(23.5)) {
-        boss->unk98 = Q_24_8(23.5);
+    if (boss->unk98 > Q(23.5)) {
+        boss->unk98 = Q(23.5);
     }
 }
 
@@ -687,9 +657,8 @@ static void sub_803B17C(EggHammerTankII *boss)
     }
     boss->unk54[1][0] = boss->unk94;
 
-    for (i = 1; i < 8; i++) {
-        boss->unk54[1][i] += Q_24_8_TO_INT((boss->unk54[1][i - 1] - boss->unk54[1][i])
-                                           * gUnknown_080D7A78[i + 8]);
+    for (i = 1; i < ARRAY_COUNT(boss->unk54[0]); i++) {
+        boss->unk54[1][i] += I((boss->unk54[1][i - 1] - boss->unk54[1][i]) * gUnknown_080D7A78[i + 8]);
     }
 
     boss->timer -= 1;
@@ -698,7 +667,7 @@ static void sub_803B17C(EggHammerTankII *boss)
         boss->timer = 10;
         boss->unkA0 = 1;
 
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < ARRAY_COUNT(boss->unk54[0]); i++) {
             boss->unk54[1][i] = 768;
             boss->unk54[0][i] = gUnknown_080D7A58[i];
         }
@@ -716,7 +685,7 @@ static void sub_803B264(EggHammerTankII *boss)
 {
     u8 i, j;
     s16 acc, val;
-    for (i = 0, val = 1; i < 5; i++) {
+    for (i = 0, val = 1; i < ARRAY_COUNT(gUnknown_080D7A98); i++) {
         if ((boss->unkA4 & val)) {
             val = gUnknown_080D7A98[i];
             break;
@@ -730,9 +699,7 @@ static void sub_803B264(EggHammerTankII *boss)
         boss->unk54[0][j] += acc;
     }
 
-    boss->timer--;
-
-    if (boss->timer == 0) {
+    if (--boss->timer == 0) {
         boss->timer = 15;
         boss->unkA0 = 2;
     }
@@ -744,7 +711,7 @@ static void sub_803B2F8(EggHammerTankII *boss)
     u8 i, val;
     s32 result;
 
-    for (i = 0, val = 1; i < 5; i++) {
+    for (i = 0, val = 1; i < ARRAY_COUNT(gUnknown_080D7AA2); i++) {
         if (boss->unkA4 & val) {
             val = gUnknown_080D7AA2[i];
             break;
@@ -756,17 +723,12 @@ static void sub_803B2F8(EggHammerTankII *boss)
     boss->unk94 &= (SIN_PERIOD - 1);
     boss->unk54[1][0] = boss->unk94;
 
-    for (i = 1; i < 8; i++) {
-        boss->unk54[1][i] += Q_24_8_TO_INT((boss->unk54[1][i - 1] - boss->unk54[1][i])
-                                           * gUnknown_080D7A78[i]);
+    for (i = 1; i < ARRAY_COUNT(boss->unk54[0]); i++) {
+        boss->unk54[1][i] += I((boss->unk54[1][i - 1] - boss->unk54[1][i]) * gUnknown_080D7A78[i]);
     }
 
-    x = Q_24_8_TO_INT(boss->x)
-        + ((boss->unk54[0][7] * COS((boss->unk54[1][7] - val) & (SIN_PERIOD - 1)))
-           >> 0x17);
-    y = Q_24_8_TO_INT(boss->y)
-        + ((boss->unk54[0][7] * SIN((boss->unk54[1][7] - val) & (SIN_PERIOD - 1)))
-           >> 0x17);
+    x = I(boss->x) + ((boss->unk54[0][7] * COS((boss->unk54[1][7] - val) & (SIN_PERIOD - 1))) >> 0x17);
+    y = I(boss->y) + ((boss->unk54[0][7] * SIN((boss->unk54[1][7] - val) & (SIN_PERIOD - 1))) >> 0x17);
 
     result = sub_801E6D4(y, x, 1, 8, NULL, sub_801EE64);
 
@@ -776,20 +738,16 @@ static void sub_803B2F8(EggHammerTankII *boss)
         boss->unkA0 = 4;
 
         result = sub_8004418(SIN((boss->unk54[1][7] + val) & (SIN_PERIOD - 1)) >> 6,
-                             (COS((boss->unk54[1][7] + val) & (SIN_PERIOD - 1)) >> 6)
-                                 + result);
+                             (COS((boss->unk54[1][7] + val) & (SIN_PERIOD - 1)) >> 6) + result);
 
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < ARRAY_COUNT(boss->unk54[0]); i++) {
             boss->unk54[1][i] = result;
         }
         boss->unk94 = result;
         CreateScreenShake(0x800, 0x10, 0x80, 0x14, 0x83);
-    } else {
-        boss->timer--;
-        if (boss->timer == 0) {
-            boss->timer = 30;
-            boss->unkA0 = 4;
-        }
+    } else if (--boss->timer == 0) {
+        boss->timer = 30;
+        boss->unkA0 = 4;
     }
 }
 
@@ -797,17 +755,15 @@ static void sub_803B4A0(EggHammerTankII *boss)
 {
     u8 i;
     s32 val;
-    s32 result;
 
     boss->unk94 += 8;
     boss->unk54[1][0] = boss->unk94;
 
-    for (i = 1; i < 8; i++) {
-        boss->unk54[1][i] += Q_24_8_TO_INT((boss->unk54[1][i - 1] - boss->unk54[1][i])
-                                           * gUnknown_080D7A78[i + 8]);
+    for (i = 1; i < ARRAY_COUNT(boss->unk54[0]); i++) {
+        boss->unk54[1][i] += I((boss->unk54[1][i - 1] - boss->unk54[1][i]) * gUnknown_080D7A78[i + 8]);
     }
 
-    for (i = 0, val = 1; i < 5; i++) {
+    for (i = 0, val = 1; i < ARRAY_COUNT(gUnknown_080D7A98); i++) {
         if (boss->unkA4 & val) {
             val = gUnknown_080D7A98[i] * 2;
             break;
@@ -816,7 +772,7 @@ static void sub_803B4A0(EggHammerTankII *boss)
     }
 
     if (boss->timer < 58) {
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < ARRAY_COUNT(gUnknown_080D7A58); i++) {
             boss->unk54[0][i] -= val;
             if (boss->unk54[0][i] < gUnknown_080D7A58[i]) {
                 boss->unk54[0][i] = gUnknown_080D7A58[i];
@@ -873,8 +829,7 @@ static void sub_803B62C(EggHammerTankII *boss)
 
     boss->unk54[1][0] = boss->unk94;
     for (i = 1; i < 8; i++) {
-        boss->unk54[1][i] += Q_24_8_TO_INT((boss->unk54[1][i - 1] - boss->unk54[1][i])
-                                           * gUnknown_080D7A78[i]);
+        boss->unk54[1][i] += I((boss->unk54[1][i - 1] - boss->unk54[1][i]) * gUnknown_080D7A78[i]);
     }
 
     boss->timer--;
@@ -920,11 +875,10 @@ static void sub_803B6AC(EggHammerTankII *boss)
 static void sub_803B7B0(EggHammerTankII *boss)
 {
     Sprite *s = &boss->pilot;
-    if (boss->unkB1 != 0) {
+    if (boss->unkB1 > 0) {
         boss->unkB2 = 0;
-        boss->unkB1--;
 
-        if (boss->unkB1 != 0) {
+        if (--boss->unkB1 > 0) {
             return;
         }
 
@@ -937,30 +891,17 @@ static void sub_803B7B0(EggHammerTankII *boss)
         }
         s->prevVariant = -1;
     } else {
-#ifndef NON_MATCHING
-        register u32 r2 asm("r2");
-#endif
         if (boss->unkB2 == 0) {
             return;
         }
 
-        boss->unkB2--;
-#ifndef NON_MATCHING
-        r2 = 0xFF;
-#endif
-
-        if (boss->unkB2 != 0) {
+        if (--boss->unkB2 != 0) {
             return;
         }
 
         s->graphics.anim = SA2_ANIM_HAMMERTANK_PILOT;
         s->variant = 0;
-
-#ifndef NON_MATCHING
-        s->prevVariant |= r2;
-#else
         s->prevVariant = -1;
-#endif
     }
 }
 
@@ -974,21 +915,20 @@ static void sub_803B84C(EggHammerTankII *boss)
         unkB4->unkC8 = 0;
     }
 
-    unkB4->unkCC += Q_24_8(0.25);
+    unkB4->unkCC += Q(0.25);
     unkB4->unkC0 += unkB4->unkC8;
     unkB4->unkC4 += unkB4->unkCC;
 
-    result = sub_801F100(Q_24_8_TO_INT(unkB4->unkC4) + 28, Q_24_8_TO_INT(unkB4->unkC0),
-                         1, 8, sub_801EC3C);
+    result = sub_801F100(I(unkB4->unkC4) + 28, I(unkB4->unkC0), 1, 8, sub_801EC3C);
     if (unkB4->unk2DC != 0) {
-        unkB4->unk278[0][0] = unkB4->unkC0 - Q_24_8(22);
-        unkB4->unk278[0][1] = unkB4->unkC4 + boss->unk98 + Q_24_8(14.5);
-        unkB4->unk278[1][0] = unkB4->unkC0 + Q_24_8(24);
-        unkB4->unk278[1][1] = unkB4->unkC4 + boss->unk9C + Q_24_8(14.5);
-        unkB4->unk278[2][0] = unkB4->unkC0 - Q_24_8(22);
-        unkB4->unk278[2][1] = unkB4->unkC4 + boss->unk98 + Q_24_8(14.5);
-        unkB4->unk278[3][0] = unkB4->unkC0 + Q_24_8(24);
-        unkB4->unk278[3][1] = unkB4->unkC4 + boss->unk9C + Q_24_8(14.5);
+        unkB4->unk278[0][0] = unkB4->unkC0 - Q(22);
+        unkB4->unk278[0][1] = unkB4->unkC4 + boss->unk98 + Q(14.5);
+        unkB4->unk278[1][0] = unkB4->unkC0 + Q(24);
+        unkB4->unk278[1][1] = unkB4->unkC4 + boss->unk9C + Q(14.5);
+        unkB4->unk278[2][0] = unkB4->unkC0 - Q(22);
+        unkB4->unk278[2][1] = unkB4->unkC4 + boss->unk98 + Q(14.5);
+        unkB4->unk278[3][0] = unkB4->unkC0 + Q(24);
+        unkB4->unk278[3][1] = unkB4->unkC4 + boss->unk9C + Q(14.5);
     } else {
         for (i = 0; i < 4; i++) {
             s32 result1;
@@ -1000,18 +940,17 @@ static void sub_803B84C(EggHammerTankII *boss)
             unkB4->unk278[i][0] += unkB4->unk278[i][2];
             unkB4->unk278[i][1] += unkB4->unk278[i][3];
 
-            result1 = sub_801F100(Q_24_8_TO_INT(unkB4->unk278[i][1]),
-                                  Q_24_8_TO_INT(unkB4->unk278[i][0]), 1, 8, sub_801EC3C);
+            result1 = sub_801F100(I(unkB4->unk278[i][1]), I(unkB4->unk278[i][0]), 1, 8, sub_801EC3C);
             if (result1 < 0) {
                 s32 r0;
                 if (unkB4->unk278[i][4] != 0) {
                     unkB4->unk278[i][4]--;
                 }
-                unkB4->unk278[i][1] += Q_24_8(result1);
+                unkB4->unk278[i][1] += Q(result1);
                 r0 = unkB4->unk278[i][3] * 3;
                 r0 = (r0 * 4) - unkB4->unk278[i][3];
                 r0 *= 16;
-                unkB4->unk278[i][3] = Q_24_8_TO_INT(-r0);
+                unkB4->unk278[i][3] = I(-r0);
             }
 
             if (unkB4->unk278[i][4] == 0) {
@@ -1029,38 +968,34 @@ static void sub_803B84C(EggHammerTankII *boss)
         } else {
             s32 r0;
             unkB4->unkC8 -= 32;
-            r0 = unkB4->unkCC * 7;
-            r0 = (r0 * 4) - unkB4->unkCC;
-            r0 *= 8;
-            unkB4->unkCC = Q_24_8_TO_INT(-r0);
+            r0 = (unkB4->unkCC * 27);
+            unkB4->unkCC = I(-(r0 * 8));
         }
 
         if (unkB4->unkCC > -160) {
             unkB4->unkCC = 0;
         }
 
-        unkB4->unkC4 += Q_24_8_NEW(result);
+        unkB4->unkC4 += QS(result);
     }
 
     for (i = 0; i < 8; i++) {
-        unkB4->unkF8[i][3] += Q_24_8(0.125);
+        unkB4->unkF8[i][3] += Q(0.125);
         if (unkB4->unkF8[i][2] > 0) {
             unkB4->unkF8[i][0] += unkB4->unkF8[i][2];
         }
 
         unkB4->unkF8[i][1] += unkB4->unkF8[i][3];
 
-        result = sub_801F100(Q_24_8_TO_INT(unkB4->unkF8[i][1]) + 5,
-                             Q_24_8_TO_INT(unkB4->unkF8[i][0]), 1, 8, sub_801EC3C);
+        result = sub_801F100(I(unkB4->unkF8[i][1]) + 5, I(unkB4->unkF8[i][0]), 1, 8, sub_801EC3C);
 
         if (result < 0) {
             if (unkB4->unkF8[i][4] != 0) {
                 unkB4->unkF8[i][4]--;
             }
-            unkB4->unkF8[i][2] -= Q_24_8(0.125);
-            unkB4->unkF8[i][1] += Q_24_8_NEW(result);
-            unkB4->unkF8[i][3]
-                = Q_24_8_TO_INT(unkB4->unkF8[i][3] * ((i * 4) - Q_24_8(0.25)));
+            unkB4->unkF8[i][2] -= Q(0.125);
+            unkB4->unkF8[i][1] += QS(result);
+            unkB4->unkF8[i][3] = I(unkB4->unkF8[i][3] * ((i * 4) - Q(0.25)));
         }
 
         if (unkB4->unkF8[i][4] == 0) {
@@ -1076,16 +1011,15 @@ static void sub_803B84C(EggHammerTankII *boss)
 
         unkB4->unk1B8[i][1] += unkB4->unk1B8[i][3];
 
-        result = sub_801F100(Q_24_8_TO_INT(unkB4->unk1B8[i][1]) + 5,
-                             Q_24_8_TO_INT(unkB4->unk1B8[i][0]), 1, 8, sub_801EC3C);
+        result = sub_801F100(I(unkB4->unk1B8[i][1]) + 5, I(unkB4->unk1B8[i][0]), 1, 8, sub_801EC3C);
 
         if (result < 0) {
             if (unkB4->unk1B8[i][4] != 0) {
                 unkB4->unk1B8[i][4]--;
             }
             unkB4->unk1B8[i][2] -= 32;
-            unkB4->unk1B8[i][1] += Q_24_8_NEW(result);
-            unkB4->unk1B8[i][3] = Q_24_8_TO_INT(unkB4->unk1B8[i][3] * -((i * 4) + 64));
+            unkB4->unk1B8[i][1] += QS(result);
+            unkB4->unk1B8[i][3] = I(unkB4->unk1B8[i][3] * -((i * 4) + 64));
         }
 
         if (unkB4->unk1B8[i][4] == 0) {
@@ -1095,19 +1029,18 @@ static void sub_803B84C(EggHammerTankII *boss)
         }
     }
 
-    unkB4->unkDC += Q_24_8(0.375);
+    unkB4->unkDC += Q(0.375);
     unkB4->unkD0 += unkB4->unkD8;
     unkB4->unkD4 += unkB4->unkDC;
 
-    result = sub_801F100(Q_24_8_TO_INT(unkB4->unkD4) + 24, Q_24_8_TO_INT(unkB4->unkD0),
-                         1, 8, sub_801EC3C);
+    result = sub_801F100(I(unkB4->unkD4) + 24, I(unkB4->unkD0), 1, 8, sub_801EC3C);
     if (result < 0) {
         ExplosionPartsInfo parts;
 
         if (unkB4->unkE4 == 0) {
             u32 rand;
-            parts.spawnX = Q_24_8_TO_INT(unkB4->unkD0) - gCamera.x;
-            parts.spawnY = Q_24_8_TO_INT(unkB4->unkD4) - gCamera.y;
+            parts.spawnX = I(unkB4->unkD0) - gCamera.x;
+            parts.spawnY = I(unkB4->unkD4) - gCamera.y;
             parts.velocity = 0;
             parts.rotation = 1000;
             parts.speed = 768;
@@ -1118,16 +1051,16 @@ static void sub_803B84C(EggHammerTankII *boss)
             CreateBossParticleWithExplosionUpdate(&parts, &unkB4->unk2DD);
 
             rand = PseudoRandom32();
-            parts.spawnX = (Q_24_8_TO_INT(unkB4->unkD0) - gCamera.x) + (rand & 15);
+            parts.spawnX = (I(unkB4->unkD0) - gCamera.x) + (rand & 15);
             rand = PseudoRandom32();
-            parts.spawnY = (Q_24_8_TO_INT(unkB4->unkD4) - gCamera.y) + (rand & 15);
+            parts.spawnY = (I(unkB4->unkD4) - gCamera.y) + (rand & 15);
 
             CreateBossParticleWithExplosionUpdate(&parts, &unkB4->unk2DD);
 
             rand = PseudoRandom32();
-            parts.spawnX = (Q_24_8_TO_INT(unkB4->unkD0) - gCamera.x) + (rand & 15);
+            parts.spawnX = (I(unkB4->unkD0) - gCamera.x) + (rand & 15);
             rand = PseudoRandom32();
-            parts.spawnY = (Q_24_8_TO_INT(unkB4->unkD4) - gCamera.y) + (rand & 15);
+            parts.spawnY = (I(unkB4->unkD4) - gCamera.y) + (rand & 15);
 
             CreateBossParticleWithExplosionUpdate(&parts, &unkB4->unk2DD);
         }
@@ -1149,8 +1082,8 @@ static void sub_803B84C(EggHammerTankII *boss)
             unkB4->unkD8 = 0;
         }
 
-        unkB4->unkD4 += Q_24_8_NEW(result);
-        unkB4->unkDC = Q_24_8_TO_INT(-(unkB4->unkDC * 192));
+        unkB4->unkD4 += QS(result);
+        unkB4->unkDC = I(-(unkB4->unkDC * 192));
     }
 
     if (unkB4->unkE0 != 0) {
@@ -1160,17 +1093,18 @@ static void sub_803B84C(EggHammerTankII *boss)
     }
 }
 
-// Basically 100% matched, a silly side effect of optimising means that the stack is
-// wrong for 2 instructions https://decomp.me/scratch/yZ3Hw :(
-NONMATCH("asm/non_matching/game/bosses/boss_1__sub_803BDB8.inc",
-         static void sub_803BDB8(void))
+static void sub_803BDB8(void)
 {
     s8 i;
+    EggHammerTankII *boss;
+    EggHammerTankII_UNKB4 *unkB4 = &boss->unkB4;
     s32 x, y;
     SpriteTransform *transform;
-    EggHammerTankII *boss = TASK_DATA(gCurTask);
-    EggHammerTankII_UNKB4 *unkB4 = &boss->unkB4;
     Sprite *s;
+
+    boss = TASK_DATA(gCurTask);
+
+    unkB4 = &boss->unkB4;
 
     boss->unkA8 = 0;
     unkB4->unk2DC = 5;
@@ -1186,14 +1120,13 @@ NONMATCH("asm/non_matching/game/bosses/boss_1__sub_803BDB8.inc",
     unkB4->unkCC = -768;
 
     for (i = 0; i < 4; i++) {
-        s32 temp;
         if (i < 2) {
-            unkB4->unk278[i][0] = boss->x - Q_24_8(22);
+            unkB4->unk278[i][0] = boss->x - Q(22);
         } else {
-            unkB4->unk278[i][0] = boss->x + Q_24_8(24);
+            unkB4->unk278[i][0] = boss->x + Q(24);
         }
 
-        unkB4->unk278[i][1] = boss->y + boss->unk98 + Q_24_8(14.5);
+        unkB4->unk278[i][1] = boss->y + boss->unk98 + Q(14.5);
 
         if (i < 2) {
             unkB4->unk278[i][2] = boss->speedX + (i + 2) * 5;
@@ -1201,7 +1134,7 @@ NONMATCH("asm/non_matching/game/bosses/boss_1__sub_803BDB8.inc",
             unkB4->unk278[i][2] = boss->speedX + i * 0x30;
         }
 
-        unkB4->unk278[i][3] = Q_24_8_TO_INT((boss->unk98 * (-Q_24_8(0.375) - (i * 2))));
+        unkB4->unk278[i][3] = I((boss->unk98 * (-Q(0.375) - (i * 2))));
         unkB4->unk278[i][4] = 4;
         unkB4->unk278[i][5] = 60;
     }
@@ -1210,14 +1143,12 @@ NONMATCH("asm/non_matching/game/bosses/boss_1__sub_803BDB8.inc",
         unkB4->unkF8[i][0] += gCamera.x;
         unkB4->unkF8[i][1] += gCamera.y;
 
-        unkB4->unkF8[i][0] = Q_24_8(unkB4->unkF8[i][0]);
-        unkB4->unkF8[i][1] = Q_24_8(unkB4->unkF8[i][1]);
+        unkB4->unkF8[i][0] = Q(unkB4->unkF8[i][0]);
+        unkB4->unkF8[i][1] = Q(unkB4->unkF8[i][1]);
 
-        unkB4->unkF8[i][2] = boss->speedX
-            + ((COS(boss->unkC[1][i] & (SIN_PERIOD - 1)) * boss->unkC[0][i]) >> 18);
+        unkB4->unkF8[i][2] = boss->speedX + ((COS(boss->unkC[1][i] & (SIN_PERIOD - 1)) * boss->unkC[0][i]) >> 18);
 
-        unkB4->unkF8[i][3]
-            = (SIN(boss->unkC[1][i] & (SIN_PERIOD - 1)) * boss->unkC[0][i]) >> 18;
+        unkB4->unkF8[i][3] = (SIN(boss->unkC[1][i] & (SIN_PERIOD - 1)) * boss->unkC[0][i]) >> 18;
         unkB4->unkF8[i][4] = 3;
         unkB4->unkF8[i][5] = 30;
     }
@@ -1225,33 +1156,23 @@ NONMATCH("asm/non_matching/game/bosses/boss_1__sub_803BDB8.inc",
     x = boss->x;
     y = boss->y;
     for (i = 0; i < 8; i++) {
-        unkB4->unk1B8[i][0] = x
-            + ((COS((boss->unk54[1][i] + 768) & (SIN_PERIOD - 1)) * boss->unk54[0][i])
-               >> 0xF);
-        unkB4->unk1B8[i][1] = y
-            + ((SIN((boss->unk54[1][i] + 768) & (SIN_PERIOD - 1)) * boss->unk54[0][i])
-               >> 0xf);
-        unkB4->unk1B8[i][2] = boss->speedX
-            + ((COS((boss->unk54[1][i]) & (SIN_PERIOD - 1)) * boss->unk54[0][i])
-               >> 0x12);
-        unkB4->unk1B8[i][3]
-            = (SIN(boss->unk54[1][i] & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 18;
+        unkB4->unk1B8[i][0] = x + ((COS((boss->unk54[1][i] + 768) & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 0xF);
+        unkB4->unk1B8[i][1] = y + ((SIN((boss->unk54[1][i] + 768) & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 0xf);
+        unkB4->unk1B8[i][2] = boss->speedX + ((COS((boss->unk54[1][i]) & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 0x12);
+        unkB4->unk1B8[i][3] = (SIN(boss->unk54[1][i] & (SIN_PERIOD - 1)) * boss->unk54[0][i]) >> 18;
         unkB4->unk1B8[i][4] = 3;
         unkB4->unk1B8[i][5] = 30;
     }
 
     transform = &boss->transform;
-    unkB4->unkD0
-        = x + ((COS(boss->unk54[1][5] & (SIN_PERIOD - 1)) * boss->unk54[0][5]) >> 15);
-    unkB4->unkD4
-        = y + ((SIN(boss->unk54[1][5] & (SIN_PERIOD - 1)) * boss->unk54[0][5]) >> 15);
+    unkB4->unkD0 = x + ((COS(boss->unk54[1][5] & (SIN_PERIOD - 1)) * boss->unk54[0][5]) >> 15);
+    unkB4->unkD4 = y + ((SIN(boss->unk54[1][5] & (SIN_PERIOD - 1)) * boss->unk54[0][5]) >> 15);
     unkB4->unkD8 = boss->speedX;
     unkB4->unkDC = boss->speedY - 2048;
     unkB4->unk2D8 = transform->rotation;
     unkB4->unkE0 = 1;
     unkB4->unkE4 = 0;
 }
-END_NONMATCH
 
 static void sub_803C198(EggHammerTankII *boss)
 {
@@ -1272,8 +1193,8 @@ static void sub_803C198(EggHammerTankII *boss)
     if (!(boss->unkA8 & 7)) {
         i = result - (Div(result, 6) * 6);
 
-        init.spawnX = Q_24_8_TO_INT(unkB4->unkC0) - gCamera.x;
-        init.spawnY = Q_24_8_TO_INT(unkB4->unkC4) - gCamera.y;
+        init.spawnX = I(unkB4->unkC0) - gCamera.x;
+        init.spawnY = I(unkB4->unkC4) - gCamera.y;
         init.velocity = 0x40;
         init.rotation = PseudoRandom32() & (SIN_PERIOD - 1);
         init.speed = 0x600;
@@ -1289,8 +1210,8 @@ static void sub_803C198(EggHammerTankII *boss)
     }
 
     s = &boss->body;
-    s->x = Q_24_8_TO_INT(unkB4->unkC0) - gCamera.x;
-    s->y = Q_24_8_TO_INT(unkB4->unkC4) - gCamera.y;
+    s->x = I(unkB4->unkC0) - gCamera.x;
+    s->y = I(unkB4->unkC4) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
@@ -1389,7 +1310,7 @@ static void sub_803C198(EggHammerTankII *boss)
         CreateEggmobileEscapeSequence(s->x, s->y, SPRITE_FLAG(PRIORITY, 2));
     }
 
-    if (Q_24_8_TO_INT(unkB4->unkC0) - gCamera.x < -200) {
+    if (I(unkB4->unkC0) - gCamera.x < -200) {
         unkB4->fade.window = 0;
         unkB4->fade.brightness = 0;
         unkB4->fade.flags = 2;
@@ -1402,58 +1323,58 @@ static void sub_803C198(EggHammerTankII *boss)
 
     if (*unkB3 == 0) {
         s = &boss->pilot;
-        s->x = Q_24_8_TO_INT(unkB4->unkC0) - gCamera.x;
-        s->y = Q_24_8_TO_INT(unkB4->unkC4) - gCamera.y;
+        s->x = I(unkB4->unkC0) - gCamera.x;
+        s->y = I(unkB4->unkC4) - gCamera.y;
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
     }
 
     if (unkB4->unk278[0][4] != 0 || (unkB4->unk278[0][5] & 1)) {
         s = &boss->wheel;
-        s->x = Q_24_8_TO_INT(unkB4->unk278[0][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(unkB4->unk278[0][1]) - gCamera.y;
+        s->x = I(unkB4->unk278[0][0]) - gCamera.x;
+        s->y = I(unkB4->unk278[0][1]) - gCamera.y;
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
     }
 
     if (unkB4->unk278[1][4] != 0 || (unkB4->unk278[1][5] & 1)) {
         s = &boss->wheel;
-        s->x = Q_24_8_TO_INT(unkB4->unk278[1][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(unkB4->unk278[1][1]) - gCamera.y;
+        s->x = I(unkB4->unk278[1][0]) - gCamera.x;
+        s->y = I(unkB4->unk278[1][1]) - gCamera.y;
         DisplaySprite(s);
     }
 
     if (unkB4->unk278[2][4] != 0 || (unkB4->unk278[2][5] & 1)) {
         s = &boss->brokenWheel;
-        s->x = Q_24_8_TO_INT(unkB4->unk278[2][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(unkB4->unk278[2][1]) - gCamera.y;
+        s->x = I(unkB4->unk278[2][0]) - gCamera.x;
+        s->y = I(unkB4->unk278[2][1]) - gCamera.y;
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
     }
 
     if (unkB4->unk278[3][4] != 0 || (unkB4->unk278[3][5] & 1)) {
         s = &boss->brokenWheel;
-        s->x = Q_24_8_TO_INT(unkB4->unk278[3][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(unkB4->unk278[3][1]) - gCamera.y;
+        s->x = I(unkB4->unk278[3][0]) - gCamera.x;
+        s->y = I(unkB4->unk278[3][1]) - gCamera.y;
         DisplaySprite(s);
     }
 
     s = &boss->armSegment;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
 
     for (i = 6; i > -1; i--) {
-        s->x = Q_24_8_TO_INT(unkB4->unkF8[i][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(unkB4->unkF8[i][1]) - gCamera.y;
+        s->x = I(unkB4->unkF8[i][0]) - gCamera.x;
+        s->y = I(unkB4->unkF8[i][1]) - gCamera.y;
         if (unkB4->unkF8[i][4] != 0 || (unkB4->unkF8[i][5] != 0 && boss->unkA8 & 1)) {
             DisplaySprite(s);
         }
     }
 
     s = &boss->armSegment;
-    s->unk1A = SPRITE_OAM_ORDER(25);
+    s->oamFlags = SPRITE_OAM_ORDER(25);
     for (i = 0; i < 6; i++) {
-        s->x = Q_24_8_TO_INT(unkB4->unk1B8[i][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(unkB4->unk1B8[i][1]) - gCamera.y;
+        s->x = I(unkB4->unk1B8[i][0]) - gCamera.x;
+        s->y = I(unkB4->unk1B8[i][1]) - gCamera.y;
         if (unkB4->unk1B8[i][4] != 0 || (unkB4->unk1B8[i][5] != 0 && boss->unkA8 & 1)) {
             DisplaySprite(s);
         }
@@ -1462,9 +1383,9 @@ static void sub_803C198(EggHammerTankII *boss)
     s = &boss->hammer;
     transform = &boss->transform;
 
-    s->x = Q_24_8_TO_INT(unkB4->unkD0) - gCamera.x;
-    s->y = Q_24_8_TO_INT(unkB4->unkD4) - gCamera.y;
-    s->unk10 = gUnknown_030054B8++ | 0x2060;
+    s->x = I(unkB4->unkD0) - gCamera.x;
+    s->y = I(unkB4->unkD4) - gCamera.y;
+    s->frameFlags = gUnknown_030054B8++ | 0x2060;
 
     if (unkB4->unkE4 != 0) {
         unkB4->unkE4 = 2;
@@ -1474,7 +1395,7 @@ static void sub_803C198(EggHammerTankII *boss)
         transform->height = 256;
         transform->x = s->x;
         transform->y = s->y;
-        sub_8004860(s, transform);
+        TransformSprite(s, transform);
         DisplaySprite(s);
     }
 }
@@ -1532,7 +1453,6 @@ static void TaskDestructor_EggHammerTankIIMain(struct Task *t)
 
 static void Task_803C980(void)
 {
-    u8 result;
     EggHammerTankII *boss = TASK_DATA(gCurTask);
     boss->x += boss->speedX;
     boss->y += boss->speedY;
@@ -1566,14 +1486,14 @@ bool8 sub_803CA40(void)
     EggHammerTankII *boss = TASK_DATA(gCurTask);
     s32 x, y;
     s32 result;
-    x = (boss->x + Q_24_8(24));
-    y = (boss->y + boss->unk9C + Q_24_8(14.5));
+    x = (boss->x + Q(24));
+    y = (boss->y + boss->unk9C + Q(14.5));
 
-    result = sub_801F100(Q_24_8_TO_INT(y), Q_24_8_TO_INT(x), 1, 8, sub_801EC3C);
+    result = sub_801F100(I(y), I(x), 1, 8, sub_801EC3C);
     if (result > 0) {
-        x = (boss->x - Q_24_8(22));
-        y = (boss->y + boss->unk98 + Q_24_8(14.5));
-        result = sub_801F100(Q_24_8_TO_INT(y), Q_24_8_TO_INT(x), 1, 8, sub_801EC3C);
+        x = (boss->x - Q(22));
+        y = (boss->y + boss->unk98 + Q(14.5));
+        result = sub_801F100(I(y), I(x), 1, 8, sub_801EC3C);
 
         if (result > 0) {
             return FALSE;
@@ -1586,16 +1506,16 @@ bool8 sub_803CA40(void)
 static void sub_803CAC8(void)
 {
     EggHammerTankII *boss = TASK_DATA(gCurTask);
-    boss->speedY += Q_24_8(0.25);
-    boss->unk9C += Q_24_8(1.125);
-    boss->unk98 += Q_24_8(1.125);
+    boss->speedY += Q(0.25);
+    boss->unk9C += Q(1.125);
+    boss->unk98 += Q(1.125);
 
-    if (boss->unk9C > Q_24_8(23.5)) {
-        boss->unk9C = Q_24_8(23.5);
+    if (boss->unk9C > Q(23.5)) {
+        boss->unk9C = Q(23.5);
     }
 
-    if (boss->unk98 > Q_24_8(23.5)) {
-        boss->unk98 = Q_24_8(23.5);
+    if (boss->unk98 > Q(23.5)) {
+        boss->unk98 = Q(23.5);
     }
 }
 
@@ -1606,18 +1526,14 @@ static void sub_803CB18(EggHammerTankII *boss)
     boss->unk50 = SIN(boss->unk4C) >> 8;
     boss->unkC[1][0] = boss->unk50;
 
-    for (i = 1; i < 8; i++) {
-        boss->unkC[1][i] += Q_24_8_TO_INT((boss->unkC[1][i - 1] - boss->unkC[1][i])
-                                              * gUnknown_080D7A28[i]
-                                          - Q_24_8(12));
+    for (i = 1; i < ARRAY_COUNT(boss->unkC[0]); i++) {
+        boss->unkC[1][i] += I((boss->unkC[1][i - 1] - boss->unkC[1][i]) * gUnknown_080D7A28[i] - Q(12));
     }
 }
 
 static void sub_803CB84(EggHammerTankII *boss)
 {
-    boss->timer--;
-
-    if (boss->timer == 0) {
+    if (--boss->timer == 0) {
         boss->timer = 60;
         boss->unkA0 = 3;
     }
@@ -1625,9 +1541,8 @@ static void sub_803CB84(EggHammerTankII *boss)
 
 static void sub_803CBA4(EggHammerTankII *boss)
 {
-    boss->timer--;
-    if (boss->timer == 0) {
-        if (PseudoRandom32() & 3) {
+    if (--boss->timer == 0) {
+        if (PseudoRandBetween(0, 4) != 0) {
             boss->timer = 68;
             boss->unkA0 = 5;
         } else {
@@ -1651,12 +1566,13 @@ static void sub_803CBFC(EggHammerTankII *boss)
 
 static void sub_803CC3C(EggHammerTankII *boss)
 {
-    if (boss->unkB1 != 0) {
+    if (boss->unkB1 > 0) {
         u8 i;
 
         for (i = 0; i < 16; i++) {
-            gObjPalette[i + 128] = gUnknown_080D7AD0[(boss->unkB1 & 4) >> 2][i];
+            gObjPalette[8 * 16 + i] = gUnknown_080D7AD0[(boss->unkB1 & 4) >> 2][i];
         }
+
         gFlags |= FLAGS_UPDATE_SPRITE_PALETTES;
     }
 }

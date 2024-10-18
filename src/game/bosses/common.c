@@ -3,7 +3,7 @@
 #include "task.h"
 #include "trig.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player.h"
 #include "game/bosses/common.h"
@@ -24,26 +24,25 @@
 struct Task *gActiveBossTask = NULL;
 
 const VoidFn sBossCreationFuncs[] = {
-    CreateEggHammerTankII, CreateEggBomberTank, CreateEggTotem,
-    CreateAeroEgg,         CreateEggSaucer,     CreateEggGoRound,
-    CreateEggFrog,         CreateSuperEggRoboZ, CreateTrueArea53Boss,
+    CreateEggHammerTankII, CreateEggBomberTank, CreateEggTotem,      CreateAeroEgg,        CreateEggSaucer,
+    CreateEggGoRound,      CreateEggFrog,       CreateSuperEggRoboZ, CreateTrueArea53Boss,
 };
 
+// NOTE:
+// "Super Egg Robo Z" does not having a 'Move' function, because it's static.
 const TranslateBossFunction MoveBossPositionFuncs[] = {
-    EggHammerTankIIMove, EggBomberTankMove, EggTotemMove, AeroEggMove,
-    EggSaucerMove,       sub_8047224,       sub_8048EB4,  sub_804D594,
+    EggHammerTankIIMove, EggBomberTankMove, EggTotemMove, AeroEggMove, EggSaucerMove, EggGoRoundMove, EggFrogMove, TrueArea53BossMove,
 };
 
 // Anims for screws etc.
 const u32 gTileInfoBossScrews[][3] = {
-    { 412, 620, 0 }, { 416, 620, 1 }, { 420, 621, 0 },
-    { 436, 621, 1 }, { 448, 622, 0 }, { 449, 622, 1 },
+    { 412, 620, 0 }, { 416, 620, 1 }, { 420, 621, 0 }, { 436, 621, 1 }, { 448, 622, 0 }, { 449, 622, 1 },
 };
 
 void CreateZoneBoss(u8 boss)
 {
     if (boss < ARRAY_COUNT(sBossCreationFuncs)) {
-        gUnknown_03005424 &= ~(EXTRA_STATE__DISABLE_PAUSE_MENU | EXTRA_STATE__ACT_START);
+        gStageFlags &= ~(STAGE_FLAG__DISABLE_PAUSE_MENU | STAGE_FLAG__ACT_START);
         sBossCreationFuncs[boss]();
     }
 }
@@ -51,9 +50,9 @@ void CreateZoneBoss(u8 boss)
 void sub_8039ED4(void)
 {
     if (gCurrentLevel == LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)) {
-        gPlayer.moveState &= ~MOVESTATE_8000000;
+        gPlayer.moveState &= ~MOVESTATE_GOAL_REACHED;
         gPlayer.moveState &= ~MOVESTATE_IGNORE_INPUT;
-        PLAYERFN_SET(PlayerCB_8025318);
+        PLAYERFN_SET(Player_TouchGround);
         gPlayer.transition = PLTRANS_NONE;
     }
 }
@@ -61,8 +60,7 @@ void sub_8039ED4(void)
 // Moves the bosses' position back when close to the end of the map.
 void sub_8039F14(s32 p0, s32 p1)
 {
-    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE))
-        && (gActiveBossTask != NULL)) {
+    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)) && (gActiveBossTask != NULL)) {
         MoveBossPositionFuncs[LEVEL_TO_ZONE(gCurrentLevel)](p0, p1);
     }
 }

@@ -1,7 +1,7 @@
 #include "global.h"
 #include "malloc_vram.h"
 
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 
 #include "game/stage/collision.h"
 #include "game/stage/player.h"
@@ -25,21 +25,19 @@ typedef struct {
 static void Task_PikoPiko(void);
 static void TaskDestructor_PikoPiko(struct Task *);
 
-#define ENEMY_SPEED_PIKOPIKO Q_24_8(1.0)
+#define ENEMY_SPEED_PIKOPIKO Q(1.0)
 
-void CreateEntity_PikoPiko(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                           u8 spriteY)
+void CreateEntity_PikoPiko(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     if (DIFFICULTY_LEVEL_IS_NOT_EASY) {
-        struct Task *t = TaskCreate(Task_PikoPiko, sizeof(Sprite_PikoPiko), 0x4080, 0,
-                                    TaskDestructor_PikoPiko);
+        struct Task *t = TaskCreate(Task_PikoPiko, sizeof(Sprite_PikoPiko), 0x4080, 0, TaskDestructor_PikoPiko);
         Sprite_PikoPiko *piko = TASK_DATA(t);
         Sprite *s = &piko->s;
         piko->base.regionX = spriteRegionX;
         piko->base.regionY = spriteRegionY;
         piko->base.me = me;
         piko->base.spriteX = me->x;
-        piko->base.spriteY = spriteY;
+        piko->base.id = spriteY;
 
         if (me->d.sData[1] != 0) {
             piko->clampParam = TRUE;

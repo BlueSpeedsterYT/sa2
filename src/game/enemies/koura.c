@@ -5,7 +5,7 @@
 #include "game/entity.h"
 #include "game/enemies/koura.h"
 
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 #include "trig.h"
 
 #include "constants/animations.h"
@@ -39,14 +39,14 @@ static const u16 gUnknown_080D8F38[][2] = {
 void CreateEntity_Koura(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
 
-    struct Task *t = TaskCreate(sub_8054224, 0x5C, 0x40B0, 0, TaskDestructor_80095E8);
+    struct Task *t = TaskCreate(sub_8054224, sizeof(Sprite_Koura), 0x40B0, 0, TaskDestructor_80095E8);
     Sprite_Koura *koura = TASK_DATA(t);
     Sprite *s = &koura->s;
     koura->base.regionX = spriteRegionX;
     koura->base.regionY = spriteRegionY;
     koura->base.me = me;
     koura->base.spriteX = me->x;
-    koura->base.spriteY = spriteY;
+    koura->base.id = spriteY;
 
     if (me->d.uData[2] > me->d.uData[3]) {
         if (me->d.sData[1] == 1) {
@@ -68,9 +68,7 @@ void CreateEntity_Koura(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 
     ENEMY_SET_SPAWN_POS_STATIC(koura, me);
     koura->offsetX = 0;
     if (koura->unk54 < 2) {
-        koura->offsetY = Q_24_8_NEW(sub_801F07C(Q_24_8_TO_INT(koura->spawnY),
-                                                Q_24_8_TO_INT(koura->spawnX),
-                                                koura->unk54, 8, NULL, sub_801EE64));
+        koura->offsetY = QS(sub_801F07C(I(koura->spawnY), I(koura->spawnX), koura->unk54, 8, NULL, sub_801EE64));
     } else {
         koura->offsetY = 0;
     }
@@ -78,8 +76,7 @@ void CreateEntity_Koura(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 
     s->x = TO_WORLD_POS(me->x, spriteRegionX);
     s->y = TO_WORLD_POS(me->y, spriteRegionY);
     SET_MAP_ENTITY_INITIALIZED(me);
-    SPRITE_INIT(s, 30, gUnknown_080D8F38[koura->unk54 & 2][0],
-                gUnknown_080D8F38[koura->unk54 & 2][1], 18, 2);
+    SPRITE_INIT(s, 30, gUnknown_080D8F38[koura->unk54 & 2][0], gUnknown_080D8F38[koura->unk54 & 2][1], 18, 2);
 }
 
 static void sub_8054224(void)
@@ -152,8 +149,7 @@ static void sub_8054224(void)
             koura->unk58 = NEGATE(koura->unk58);
         }
 
-        if ((SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.x < Q_24_8_NEW(pos.x))
-            || (!SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.x > Q_24_8_NEW(pos.x))) {
+        if ((SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.x < QS(pos.x)) || (!SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.x > QS(pos.x))) {
             gCurTask->main = sub_805462C;
             s->graphics.anim = gUnknown_080D8F38[5][0];
             s->variant = gUnknown_080D8F38[5][1];
@@ -207,7 +203,7 @@ static void sub_805462C(void)
 
     ENEMY_DESTROY_IF_OFFSCREEN(koura, me, s);
 
-    Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+    Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
 
     if (UpdateSpriteAnimation(s) == 0) {
         ENEMY_TURN_AROUND(s);
@@ -239,7 +235,7 @@ static void sub_8054904(void)
     ENEMY_UPDATE_POSITION(koura, s, pos.x, pos.y);
     ENEMY_DESTROY_IF_OFFSCREEN(koura, me, s);
 
-    Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+    Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
 
     if (UpdateSpriteAnimation(s) == 0) {
         s->graphics.anim = gUnknown_080D8F38[koura->unk54 & 2][0];

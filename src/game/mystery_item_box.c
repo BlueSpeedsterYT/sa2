@@ -1,16 +1,17 @@
 #include "core.h"
 #include "malloc_vram.h"
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 
 #include "game/entity.h"
 #include "game/mystery_item_box.h"
 #include "game/multiplayer/player_unk_1.h"
-#include "sakit/dust_cloud.h"
+#include "game/sa1_leftovers/dust_cloud.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "lib/m4a.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 #include "constants/zones.h"
@@ -48,27 +49,22 @@ static const u8 sRingBonuses[] = { 1, 5, 10, 30, 50 };
 
 static const u16 gUnknown_080E029A[] = { 0, 1, 1, 0, 1, 1, 0, 1 };
 
-static const u16 gUnknown_080E02AA[][3]
-    = { { SA2_ANIM_ITEMBOX_TYPE, 9, 4 }, { SA2_ANIM_ITEMBOX_TYPE, 12, 4 } };
+static const u16 gUnknown_080E02AA[][3] = { { SA2_ANIM_ITEMBOX_TYPE, 9, 4 }, { SA2_ANIM_ITEMBOX_TYPE, 12, 4 } };
 
 static const u16 unused = 0;
 
 #define ITEM_ICON_DISPLAY_TIME  (1 * GBA_FRAMES_PER_SECOND)
 #define ITEM_ICON_DISPLAY_DELAY (int)(0.5 * GBA_FRAMES_PER_SECOND)
 
-void CreateEntity_MysteryItemBox(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                 u8 spriteY)
+void CreateEntity_MysteryItemBox(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     Sprite *s;
     Sprite_MysteryItemBox *itemBox;
     struct Task *t;
-    if ((gRandomItemBox & 7) == me->d.sData[0]
-        && me->d.sData[1] <= (gRandomItemBox >> 4)) {
-        t = TaskCreate(sub_80865E4, sizeof(Sprite_MysteryItemBox), 0x2000, 0,
-                       sub_80867E8);
+    if ((gRandomItemBox & 7) == me->d.sData[0] && me->d.sData[1] <= (gRandomItemBox >> 4)) {
+        t = TaskCreate(sub_80865E4, sizeof(Sprite_MysteryItemBox), 0x2000, 0, sub_80867E8);
     } else {
-        t = TaskCreate(sub_808673C, sizeof(Sprite_MysteryItemBox), 0x2000, 0,
-                       sub_80867E8);
+        t = TaskCreate(sub_808673C, sizeof(Sprite_MysteryItemBox), 0x2000, 0, sub_80867E8);
     }
 
     if (me->d.sData[1] <= (gRandomItemBox >> 4)) {
@@ -76,42 +72,42 @@ void CreateEntity_MysteryItemBox(MapEntity *me, u16 spriteRegionX, u16 spriteReg
     }
 
     itemBox = TASK_DATA(t);
-    itemBox->unk82 = gUnknown_080E029A[gMultiplayerPseudoRandom & 7];
-    itemBox->iconOffsetY = Q_24_8(0.0);
+    itemBox->unk82 = gUnknown_080E029A[gMultiplayerPseudoRandom % ARRAY_COUNT(gUnknown_080E029A)];
+    itemBox->iconOffsetY = Q(0.0);
     itemBox->x = TO_WORLD_POS(me->x, spriteRegionX);
     itemBox->y = TO_WORLD_POS(me->y, spriteRegionY);
     itemBox->base.regionX = spriteRegionX;
     itemBox->base.regionY = spriteRegionY;
     itemBox->base.me = me;
     itemBox->base.spriteX = me->x;
-    itemBox->base.spriteY = spriteY;
+    itemBox->base.id = spriteY;
     SET_MAP_ENTITY_INITIALIZED(me);
 
     s = &itemBox->box;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
     s->palId = 0;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->hitboxes[0].index = -1;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
     s->graphics.dest = VramMalloc(16);
     s->graphics.anim = SA2_ANIM_ITEMBOX;
     s->variant = 0;
     UpdateSpriteAnimation(s);
 
     s = &itemBox->identifier;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
     s->palId = 0;
-    s->unk1A = SPRITE_OAM_ORDER(19);
+    s->oamFlags = SPRITE_OAM_ORDER(19);
     s->hitboxes[0].index = -1;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
     s->graphics.dest = VramMalloc(4);
     s->graphics.anim = gUnknown_080E02AA[gUnknown_080E029A[itemBox->unk82]][0];
     s->variant = gUnknown_080E02AA[gUnknown_080E029A[itemBox->unk82]][1];
@@ -124,16 +120,15 @@ static void sub_808616C(void)
     SpriteTransform *transform;
     Sprite *identifier;
 
-    itemBox->unk82
-        = gUnknown_080E029A[gMultiplayerPseudoRandom % ARRAY_COUNT(gUnknown_080E029A)];
+    itemBox->unk82 = gUnknown_080E029A[gMultiplayerPseudoRandom % ARRAY_COUNT(gUnknown_080E029A)];
 
     identifier = &itemBox->identifier;
     identifier->graphics.anim = gUnknown_080E02AA[gUnknown_080E029A[itemBox->unk82]][0];
     identifier->variant = gUnknown_080E02AA[gUnknown_080E029A[itemBox->unk82]][1];
     UpdateSpriteAnimation(identifier);
 
-    itemBox->box.unk10 |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
-    itemBox->identifier.unk10 |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+    itemBox->box.frameFlags |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+    itemBox->identifier.frameFlags |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
 
     transform = &itemBox->transform;
     transform->rotation = 0;
@@ -186,24 +181,24 @@ static void sub_808623C(void)
     if (transform->height >= 0x100) {
         MapEntity *me;
         Sprite_MysteryItemBox *itemBox2;
-        itemBox->box.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
-        itemBox->identifier.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+        itemBox->box.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+        itemBox->identifier.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
         transform->height = 0x100;
-        itemBox->iconOffsetY = Q_24_8(0.0);
+        itemBox->iconOffsetY = Q(0.0);
         gCurTask->main = sub_80865E4;
 
         sub_80865E4_inline();
         return;
     }
 
-    itemBox->box.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE;
+    itemBox->box.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE;
 
-    itemBox->box.unk10 |= gUnknown_030054B8;
-    itemBox->identifier.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE;
-    itemBox->identifier.unk10 |= gUnknown_030054B8++;
+    itemBox->box.frameFlags |= gUnknown_030054B8;
+    itemBox->identifier.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE;
+    itemBox->identifier.frameFlags |= gUnknown_030054B8++;
 
-    sub_8004860(&itemBox->box, transform);
-    sub_8004860(&itemBox->identifier, transform);
+    TransformSprite(&itemBox->box, transform);
+    TransformSprite(&itemBox->identifier, transform);
     DisplaySprite(&itemBox->box);
     DisplaySprite(&itemBox->identifier);
 }
@@ -213,8 +208,7 @@ static inline void sub_808673C_inline(void)
     Sprite_MysteryItemBox *itemBox = TASK_DATA(gCurTask);
     MapEntity *me = itemBox->base.me;
 
-    if (me->d.sData[0] == (gRandomItemBox & 7)
-        && me->d.sData[1] <= (gRandomItemBox >> 4)) {
+    if (me->d.sData[0] == (gRandomItemBox & 7) && me->d.sData[1] <= (gRandomItemBox >> 4)) {
         me->d.sData[1] = gRandomItemBox >> 4;
         gCurTask->main = sub_808616C;
         return;
@@ -240,8 +234,8 @@ static void sub_808636C(void)
     if (transform->height < 1) {
         MapEntity *me;
         Sprite_MysteryItemBox *itemBox2;
-        itemBox->box.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
-        itemBox->identifier.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+        itemBox->box.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+        itemBox->identifier.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
         transform->height = 0x100;
         gCurTask->main = sub_808673C;
 
@@ -249,14 +243,14 @@ static void sub_808636C(void)
         return;
     }
 
-    itemBox->box.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE;
+    itemBox->box.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE;
 
-    itemBox->box.unk10 |= gUnknown_030054B8;
-    itemBox->identifier.unk10 &= ~SPRITE_FLAG_MASK_ROT_SCALE;
-    itemBox->identifier.unk10 |= gUnknown_030054B8++;
+    itemBox->box.frameFlags |= gUnknown_030054B8;
+    itemBox->identifier.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE;
+    itemBox->identifier.frameFlags |= gUnknown_030054B8++;
 
-    sub_8004860(&itemBox->box, transform);
-    sub_8004860(&itemBox->identifier, transform);
+    TransformSprite(&itemBox->box, transform);
+    TransformSprite(&itemBox->identifier, transform);
     DisplaySprite(&itemBox->box);
     DisplaySprite(&itemBox->identifier);
 }
@@ -266,9 +260,9 @@ static void sub_8086474(Sprite_MysteryItemBox *itemBox)
     struct UNK_3005510 *unk5510;
     MapEntity *me;
     if (itemBox->unk84 != 1 || gPlayer.moveState & 2) {
-        gPlayer.speedAirY = -0x300;
-        gPlayer.unk64 = 0x26;
-        gPlayer.unk66 = -1;
+        gPlayer.speedAirY = -Q(3); // default itembox-hit y-accel
+        gPlayer.charState = CHARSTATE_SPRING_B;
+        gPlayer.prevCharState = CHARSTATE_INVALID;
         gPlayer.transition = PLTRANS_PT5;
     }
 
@@ -282,7 +276,7 @@ static void sub_8086474(Sprite_MysteryItemBox *itemBox)
     unk5510->unk0 = 5;
     unk5510->unk1 = itemBox->base.regionX;
     unk5510->unk2 = itemBox->base.regionY;
-    unk5510->unk3 = itemBox->base.spriteY;
+    unk5510->unk3 = itemBox->base.id;
     unk5510->unk4 = itemBox->base.me->d.sData[1];
 
     gCurTask->main = sub_808665C;
@@ -296,8 +290,8 @@ static void sub_8086504(Sprite_MysteryItemBox *itemBox)
             u16 prevRingCount = gRingCount;
             gRingCount = prevRingCount + boxVal;
 
-            if (gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_TRUE_AREA_53)) {
-                if (Div(gRingCount, 100) != Div(prevRingCount, 100) && gGameMode == 0) {
+            if (!IS_EXTRA_STAGE(gCurrentLevel)) {
+                if (Div(gRingCount, 100) != Div(prevRingCount, 100) && gGameMode == GAME_MODE_SINGLE_PLAYER) {
                     gNumLives = MIN(gNumLives + 1, 255u);
                     gUnknown_030054A8.unk3 = 0x10;
                 }
@@ -356,7 +350,7 @@ static void sub_808665C(void)
     if (itemBox->framesSinceOpened++ >= ITEM_ICON_DISPLAY_TIME) {
         sub_8086504(itemBox);
     } else {
-        itemBox->iconOffsetY -= Q_24_8(1.0);
+        itemBox->iconOffsetY -= Q(1.0);
     }
 
     sub_80868A8(itemBox, 1);
@@ -369,7 +363,7 @@ static void sub_80866AC(void)
     if (itemBox->framesSinceOpened++ >= ITEM_ICON_DISPLAY_TIME) {
         sub_8086890(itemBox);
     } else {
-        itemBox->iconOffsetY -= Q_24_8(1.0);
+        itemBox->iconOffsetY -= Q(1.0);
     }
 
     sub_80868A8(itemBox, 1);
@@ -392,8 +386,7 @@ static void sub_808673C(void)
     Sprite_MysteryItemBox *itemBox = TASK_DATA(gCurTask);
     MapEntity *me = itemBox->base.me;
 
-    if (me->d.sData[0] == (gRandomItemBox & 7)
-        && me->d.sData[1] <= (gRandomItemBox >> 4)) {
+    if (me->d.sData[0] == (gRandomItemBox & 7) && me->d.sData[1] <= (gRandomItemBox >> 4)) {
         me->d.sData[1] = gRandomItemBox >> 4;
         gCurTask->main = sub_808616C;
         return;
@@ -410,8 +403,8 @@ static inline void sub_808679C_inline(void)
 {
     SpriteTransform *transform;
     Sprite_MysteryItemBox *itemBox = TASK_DATA(gCurTask);
-    itemBox->box.unk10 |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
-    itemBox->identifier.unk10 |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+    itemBox->box.frameFlags |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+    itemBox->identifier.frameFlags |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
 
     transform = &itemBox->transform;
     transform->rotation = 0;
@@ -427,8 +420,8 @@ static void sub_808679C(void)
 {
     SpriteTransform *transform;
     Sprite_MysteryItemBox *itemBox = TASK_DATA(gCurTask);
-    itemBox->box.unk10 |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
-    itemBox->identifier.unk10 |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+    itemBox->box.frameFlags |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+    itemBox->identifier.frameFlags |= SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
 
     transform = &itemBox->transform;
     transform->rotation = 0;
@@ -473,7 +466,7 @@ static void sub_80868A8(Sprite_MysteryItemBox *itemBox, u32 p2)
     itemBox->box.x = itemBox->x - gCamera.x;
     itemBox->box.y = itemBox->y - gCamera.y;
     itemBox->identifier.x = itemBox->box.x;
-    itemBox->identifier.y = itemBox->box.y + Q_24_8_TO_INT(itemBox->iconOffsetY);
+    itemBox->identifier.y = itemBox->box.y + I(itemBox->iconOffsetY);
 
     if (p2 == 0) {
         DisplaySprite(&itemBox->box);
@@ -487,7 +480,7 @@ static bool32 sub_80868F4(Sprite_MysteryItemBox *itemBox)
     s16 x = itemBox->x - gCamera.x;
     s16 y = itemBox->y - gCamera.y;
 
-    if (IS_OUT_OF_GRAV_TRIGGER_RANGE(x, y)) {
+    if (IS_OUT_OF_CAM_RANGE_2(x, y)) {
         return TRUE;
     }
 
@@ -500,8 +493,7 @@ static bool32 sub_808693C(Sprite_MysteryItemBox *itemBox)
         if (sub_800C944(&itemBox->box, itemBox->x, itemBox->y) != 0) {
             itemBox->unk84 = 1;
             return TRUE;
-        } else if (sub_800C204(&itemBox->box, itemBox->x, itemBox->y, 0, &gPlayer, 0)
-                   == 0) {
+        } else if (sub_800C204(&itemBox->box, itemBox->x, itemBox->y, 0, &gPlayer, 0) == 0) {
 #ifndef NON_MATCHING
         ret0:
 #endif

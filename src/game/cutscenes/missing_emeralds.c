@@ -27,7 +27,7 @@ struct MissingChaosEmaraldsCutScene {
     s8 unkBF;
 
     u32 unkC0;
-    vu32 unkC4;
+    void *unkC4;
 };
 
 static const u16 sTilemapsPlayerNotifs[34] = {
@@ -100,7 +100,7 @@ void CreateMissingChaosEmaraldsCutScene(void)
 
     DmaFill32(3, 0, (void *)BG_VRAM, BG_VRAM_SIZE);
 
-    t = TaskCreate(Task_8094360, 0xC8, 0x3100, 0, TaskDestructor_80945A0);
+    t = TaskCreate(Task_8094360, sizeof(struct MissingChaosEmaraldsCutScene), 0x3100, 0, TaskDestructor_80945A0);
     scene = TASK_DATA(t);
 
     scene->unkBC = 0;
@@ -127,8 +127,8 @@ void CreateMissingChaosEmaraldsCutScene(void)
     }
     fade = &scene->unkB0;
     fade->window = SCREEN_FADE_USE_WINDOW_1;
-    fade->brightness = Q_24_8(0);
-    fade->speed = Q_24_8(0.5);
+    fade->brightness = Q(0);
+    fade->speed = Q(0.5);
     fade->bldCnt = (BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
     fade->bldAlpha = 0;
 
@@ -137,7 +137,7 @@ void CreateMissingChaosEmaraldsCutScene(void)
     {
         Sprite *s;
         s = &scene->unk80;
-        s->graphics.dest = (void *)OBJ_VRAM0;
+        s->graphics.dest = OBJ_VRAM0;
         if (scene->unkBD < 4) {
             scene->unkC4 += gUnknown_080E1CA0[0].numTiles * TILE_SIZE_4BPP;
             s->graphics.anim = gUnknown_080E1CA0[0].anim;
@@ -151,13 +151,13 @@ void CreateMissingChaosEmaraldsCutScene(void)
         }
         s->prevVariant = -1;
         s->x = (DISPLAY_WIDTH / 2);
-        s->unk1A = 0;
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }

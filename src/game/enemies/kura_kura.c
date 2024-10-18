@@ -4,7 +4,7 @@
 #include "malloc_vram.h"
 #include "trig.h"
 
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/kura_kura.h"
@@ -29,11 +29,9 @@ typedef struct {
 void Task_8052024(void);
 void TaskDestructor_8052264(struct Task *);
 
-void CreateEntity_KuraKura(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                           u8 spriteY)
+void CreateEntity_KuraKura(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_8052024, sizeof(Sprite_KuraKura), 0x4050, 0,
-                                TaskDestructor_8052264);
+    struct Task *t = TaskCreate(Task_8052024, sizeof(Sprite_KuraKura), 0x4050, 0, TaskDestructor_8052264);
     Sprite_KuraKura *kk = TASK_DATA(t);
     Sprite *s = &kk->s;
     kk->unkB0 = 0;
@@ -42,7 +40,7 @@ void CreateEntity_KuraKura(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     kk->base.regionY = spriteRegionY;
     kk->base.me = me;
     kk->base.spriteX = me->x;
-    kk->base.spriteY = spriteY;
+    kk->base.id = spriteY;
 
     ENEMY_SET_SPAWN_POS_STATIC(kk, me);
 
@@ -78,7 +76,7 @@ void Task_8052024(void)
     Vec2_32 pos;
     ENEMY_UPDATE_POSITION_STATIC(kk, s, pos.x, pos.y);
 
-    s->unk10 &= ~0x400;
+    SPRITE_FLAG_CLEAR(s, X_FLIP);
 
     ENEMY_DESTROY_IF_PLAYER_HIT_2(s, pos);
     ENEMY_DESTROY_IF_OFFSCREEN_RAW(kk, me, s, pos.x, pos.y);
@@ -101,13 +99,13 @@ void sub_805213C(Sprite_KuraKura *kk)
     kk->unkAC = (SIN_24_8((gStageTime * 4) & ONE_CYCLE) >> 1) & ONE_CYCLE;
 
     for (i = 0; i < 2; i++) {
-        s1->x = (Q_24_8_TO_INT(kk->spawnX) + (SIN(kk->unkAC) >> (11 - i))) - gCamera.x;
-        s1->y = (Q_24_8_TO_INT(kk->spawnY) + (COS(kk->unkAC) >> (11 - i))) - gCamera.y;
+        s1->x = (I(kk->spawnX) + (SIN(kk->unkAC) >> (11 - i))) - gCamera.x;
+        s1->y = (I(kk->spawnY) + (COS(kk->unkAC) >> (11 - i))) - gCamera.y;
         DisplaySprite(s1);
     }
 
-    pos.x = (Q_24_8_TO_INT(kk->spawnX) + (SIN(kk->unkAC) >> 9)) - (SIN(kk->unkAC) >> 11);
-    pos.y = (Q_24_8_TO_INT(kk->spawnY) + (COS(kk->unkAC) >> 9)) - (COS(kk->unkAC) >> 11);
+    pos.x = (I(kk->spawnX) + (SIN(kk->unkAC) >> 9)) - (SIN(kk->unkAC) >> 11);
+    pos.y = (I(kk->spawnY) + (COS(kk->unkAC) >> 9)) - (COS(kk->unkAC) >> 11);
 
     s2->x = pos.x - gCamera.x;
     s2->y = pos.y - gCamera.y;

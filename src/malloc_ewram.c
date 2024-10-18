@@ -1,3 +1,6 @@
+#if PORTABLE
+#include <stdlib.h>
+#endif
 #include "global.h"
 #include "core.h"
 #include "malloc_ewram.h"
@@ -10,8 +13,17 @@ void EwramInitHeap(void)
     root->state = sizeof(gEwramHeap);
 }
 
+// TEMP: EwramMalloc/Free can crash right now
+//       (Maybe because of DMAs?)
 void *EwramMalloc(u32 req)
 {
+#if PORTABLE
+    if (req == 0) {
+        return NULL;
+    }
+
+    return calloc(req, 1);
+#else
     struct EwramNode *node;
     s32 requestedSpace = req;
 
@@ -43,8 +55,7 @@ void *EwramMalloc(u32 req)
                     addr->next = node->next;
                     ++node;
                     --node;
-                    addr->state = node->state
-                        - requestedSpace; // Surplus space belongs to the new node.
+                    addr->state = node->state - requestedSpace; // Surplus space belongs to the new node.
                     node->next = addr;
                     node->state = -requestedSpace; // busy
                     return node->space;
@@ -58,22 +69,27 @@ void *EwramMalloc(u32 req)
         }
     }
     return ewram_end;
+#endif
 }
 
 void EwramFree(void *p)
 {
+#if PORTABLE
+    printf("EwramFree: %p\n", p);
+    if (p != NULL) {
+        free(p);
+    }
+#else
     struct EwramNode *node, *slow, *fast, *tmp;
 
     if (p && ewram_end != p) {
         node = p - offsetof(struct EwramNode, space);
 
         /* find parent of node */
-        for (fast = slow = (struct EwramNode *)gEwramHeap; node != fast;
-             fast = fast->next)
+        for (fast = slow = (struct EwramNode *)gEwramHeap; node != fast; fast = fast->next)
             slow = fast;
 
-        if (node->state
-            < 0) // It should always be true if the function is called properly.
+        if (node->state < 0) // It should always be true if the function is called properly.
             node->state = -node->state; // free
 
         /*
@@ -96,4 +112,5 @@ void EwramFree(void *p)
             node->next = tmp->next;
         }
     }
+#endif
 }

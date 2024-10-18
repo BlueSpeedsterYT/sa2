@@ -1,6 +1,5 @@
 #include "global.h"
 #include "core.h"
-#include "data.h"
 #include "flags.h"
 #include "task.h"
 
@@ -10,29 +9,35 @@
 #include "game/title_screen.h"
 #include "game/options_screen.h"
 #include "game/multiboot/connection.h"
-#include "game/stage/rings_scatter.h"
-#include "sakit/entities_manager.h"
+
+#include "game/sa1_leftovers/entities_manager.h"
+
+#include "game/decomp_credits.h"
+#include "game/stage/tilemap_table.h"
 #include "game/stage/stage.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
-#include "game/water_effects.h"
 #include "game/stage/underwater_effects.h"
 #include "game/stage/dust_effect_braking.h"
+#include "game/stage/rings_scatter.h"
+
+#include "game/water_effects.h"
 #include "game/dummy_task.h"
-#include "data/sprite_data.h"
+
+#include "data/sprite_tables.h"
 
 void GameStart(void)
 {
     u32 i;
     bool32 hasProfile = FALSE;
 
-    // TODO: Fix cast
-    gTilemapsRef = (struct MapHeader **)gTilemaps;
-    gUnknown_03002794 = &gSpriteTables;
+    // NOTE: cast because of const
+    gTilemapsRef = (Tilemap **)gTilemaps;
+    gRefSpriteTables = &gSpriteTables;
     gUnknown_03004D54 = gBgOffsetsBuffer[0];
     gUnknown_030022C0 = gBgOffsetsBuffer[1];
 
-    gUnknown_03005424 = gUnknown_0300544C = EXTRA_STATE__CLEAR;
+    gStageFlags = gUnknown_0300544C = STAGE_FLAG__CLEAR;
 
     gRingsScatterTask = NULL;
     gDummyTask = NULL;
@@ -68,12 +73,15 @@ void GameStart(void)
         hasProfile = TRUE;
     }
 
-    if (gFlags & 0x200) {
-        // Show singlepak results
-        sub_8081C0C();
+    // This flag is only set in GameInit
+    if (gFlags & FLAGS_200) {
+        ShowSinglePakResults();
         return;
     }
 
+#if ENABLE_DECOMP_CREDITS
+    CreateDecompCreditsScreen(hasProfile);
+#else
     if (gFlags & FLAGS_NO_FLASH_MEMORY) {
         CreateTitleScreen();
         LoadCompletedSaveGame();
@@ -95,4 +103,5 @@ void GameStart(void)
     }
 
     CreateTitleScreen();
+#endif
 }

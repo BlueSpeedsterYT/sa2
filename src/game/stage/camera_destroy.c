@@ -2,7 +2,7 @@
 #include "core.h"
 #include "flags.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -22,13 +22,12 @@ void TaskDestructor_801E040(struct Task *unused)
     s32 i;
     gCamera.movementTask = NULL;
 
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < NUM_BACKGROUNDS; i++) {
         gBgScrollRegs[i][0] = 0;
         gBgScrollRegs[i][1] = 0;
     }
 
-    if (gCurrentLevel == LEVEL_INDEX(ZONE_FINAL, ACT_TRUE_AREA_53)
-        && (gFlags & FLAGS_40)) {
+    if (gCurrentLevel == LEVEL_INDEX(ZONE_FINAL, ACT_TRUE_AREA_53) && (gFlags & FLAGS_40)) {
         gIntrTable[INTR_INDEX_VCOUNT] = gIntrTableTemplate[INTR_INDEX_VCOUNT];
         gFlags &= ~FLAGS_40;
     }

@@ -1,3 +1,9 @@
+#if PORTABLE
+// TEMP
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h> // memset
+#endif
 #include "global.h"
 #include "core.h"
 #include "task.h"
@@ -40,6 +46,9 @@ u32 TasksInit(void)
     cur->parent = (TaskPtr32)NULL;
     cur->prev = (TaskPtr32)NULL;
     cur->next = (TaskPtr32)TaskGetNextSlot();
+#if ENABLE_TASK_LOGGING
+    cur->name = "TaskMainDummy1";
+#endif
 
     if (TASK_IS_NULL((void *)TASK_PTR(cur->next))) {
         return 0;
@@ -52,10 +61,16 @@ u32 TasksInit(void)
     cur->flags = 0;
     cur->parent = 0;
     cur->next = 0;
+#if ENABLE_TASK_LOGGING
+    cur->name = "TaskMainDummy2";
+#endif
     gEmptyTask.parent = 0;
     gEmptyTask.prev = 0;
     gEmptyTask.next = 0;
     gEmptyTask.data = (IwramData)(uintptr_t)iwram_end;
+#if ENABLE_TASK_LOGGING
+    gEmptyTask.name = NULL;
+#endif
     // initialize IWRAM heap -- a huge node
     heapRoot = (struct IwramNode *)&gIwramHeap[0];
     heapRoot->next = 0;
@@ -63,13 +78,19 @@ u32 TasksInit(void)
     return 1;
 }
 
-struct Task *TaskCreate(TaskMain taskMain, u16 structSize, u16 priority, u16 flags,
-                        TaskDestructor taskDestructor)
+#ifdef TaskCreate
+#undef TaskCreate
+#endif
+
+#if ENABLE_TASK_LOGGING
+struct Task *TaskCreate(TaskMain taskMain, u16 structSize, u16 priority, u16 flags, TaskDestructor taskDestructor, const char *name)
+#else
+struct Task *TaskCreate(TaskMain taskMain, u16 structSize, u16 priority, u16 flags, TaskDestructor taskDestructor)
+#endif
 {
     struct Task *slow;
     struct Task *task;
     TaskPtr fast;
-    struct EwramNode *temp;
 
 #ifndef NON_MATCHING
     do
@@ -97,7 +118,13 @@ struct Task *TaskCreate(TaskMain taskMain, u16 structSize, u16 priority, u16 fla
     task->unk16 = 0;
     task->unk18 = 0;
     task->data = (IwramData)(uintptr_t)IwramMalloc(structSize);
+#if CLEAR_TASK_MEMORY_ON_DESTROY
+    task->dataSize = (task->data != (TaskPtr32)NULL) ? structSize : 0;
+#endif
     task->parent = (TaskPtr32)gCurTask;
+#if ENABLE_TASK_LOGGING
+    task->name = name;
+#endif
 
     // insert the task
     slow = gTaskPtrs[0];
@@ -120,6 +147,9 @@ void TaskDestroy(struct Task *task)
 {
     TaskPtr32 next, prev;
     if (!(task->flags & TASK_DESTROY_DISABLED)) {
+#if ENABLE_TASK_LOGGING
+        printf("Destroying '%s'\n", task->name);
+#endif
         prev = TASK_PTR(task->prev);
         next = TASK_PTR(task->next);
 
@@ -139,6 +169,10 @@ void TaskDestroy(struct Task *task)
                 ((struct Task *)next)->prev = prev;
 
                 if (task->data != (IwramData)NULL) {
+#if CLEAR_TASK_MEMORY_ON_DESTROY
+                    // Clear previous task data, to circumvent use-after-free bugs
+                    memset(TASK_DATA(task), 0, task->dataSize);
+#endif
                     IwramFree(TASK_DATA(task));
                 }
 
@@ -166,7 +200,14 @@ void TasksExec(void)
             gNextTask = (struct Task *)TASK_PTR(gCurTask->next);
 
             if (!(gCurTask->flags & 1)) {
-                gCurTask->main();
+#ifdef BUG_FIX
+                if (gCurTask->main == NULL)
+#if ENABLE_TASK_LOGGING
+                    printf("WARNING: Pointer of Task '%s' is NULL.\n", gCurTask->name);
+#endif
+                else
+#endif
+                    gCurTask->main();
             }
 
             gCurTask = gNextTask;
@@ -194,8 +235,19 @@ void TasksExec(void)
     gNextTask = NULL;
 }
 
+// TEMP: IwramMalloc/Free crash currently.
+//       (Might be because of missing DMAs?)
 void *IwramMalloc(u16 req)
 {
+#if PORTABLE
+    if (req == 0) {
+        return NULL;
+    }
+
+    void *result = calloc(req, 1);
+    assert(result != NULL);
+    return result;
+#else
     struct IwramNode *cur, *next;
     u16 size = req;
 
@@ -206,14 +258,14 @@ void *IwramMalloc(u16 req)
         return 0;
     }
 
-    size = (size << 2) + sizeof(struct IwramNode);
+    size = (size << 2) + offsetof(struct IwramNode, space);
     cur = (struct IwramNode *)&gIwramHeap[0];
 
     while (1) {
         s16 sizeSigned = size;
         if (sizeSigned <= cur->state) {
             if (sizeSigned != cur->state) {
-                s16 offset = size + sizeof(struct IwramNode);
+                s16 offset = size + offsetof(struct IwramNode, space);
                 if (offset > cur->state) {
                     if (TASK_IS_NULL((void *)IWRAM_PTR(cur->next))) {
                         return NULL;
@@ -237,20 +289,28 @@ void *IwramMalloc(u16 req)
         }
         cur = (struct IwramNode *)TASK_PTR(cur->next);
     };
+#endif
 }
 
 static void IwramFree(void *p)
 {
+#if PORTABLE
+    if (p) {
+#if ENABLE_TASK_LOGGING
+        printf("IwramFree: %p\n", p);
+#endif
+        free(p);
+    }
+#else
     struct IwramNode *node = p, *fast;
 #ifndef NON_MATCHING
     register struct IwramNode *slow asm("r1");
 #else
     struct IwramNode *slow;
 #endif
-    node--;
+    node = (struct IwramNode *)(((u8 *)node) - offsetof(struct IwramNode, space));
     slow = (struct IwramNode *)&gIwramHeap[0];
     fast = slow;
-
     if (node != slow) {
         do {
             slow = fast;
@@ -261,8 +321,8 @@ static void IwramFree(void *p)
         node->state = -node->state;
     }
     if ((struct IwramNode *)(slow->state + (u8 *)slow) == node) {
-        u16 state = slow->state; // not actual code. only for handling side effect of
-                                 // inline asm
+        u16 state = slow->state; // only for handling side effect of inline asm above
+
         if (slow->state > 0) {
             slow->next = fast->next;
             slow->state = state + node->state;
@@ -276,10 +336,11 @@ static void IwramFree(void *p)
             node->next = fast->next;
         }
     }
+#endif
 }
 
 /* The function is probably for cleaning up the IWRAM nodes, but it's not working. */
-static void sub_80028DC(void)
+static void UNUSED sub_80028DC(void)
 {
     struct IwramNode *cur = (struct IwramNode *)&gIwramHeap[0];
     s32 curStateBackup;
@@ -296,8 +357,8 @@ static void sub_80028DC(void)
                 cur->state += ((struct IwramNode *)IWRAM_PTR(cur->next))->state;
                 cur->next = ((struct IwramNode *)IWRAM_PTR(cur->next))->next;
             } else {
-                nextNodeSpace = (u32)cur->next
-                    + (u8 *)IWRAM_PTR(offsetof(struct IwramNode, space));
+                nextNodeSpace = (void *)(cur->next + IWRAM_PTR(offsetof(struct IwramNode, space)));
+
                 space = cur->space;
                 curStateBackup = cur->state;
                 cur->state = ((struct IwramNode *)IWRAM_PTR(cur->next))->state;
@@ -314,10 +375,9 @@ static void sub_80028DC(void)
                     }
                 }
 
-                DmaCopy32(3, nextNodeSpace, space,
-                          cur->state + sizeof(struct IwramNode));
+                DmaCopy32(3, nextNodeSpace, space, cur->state + sizeof(struct IwramNode));
                 {
-                    struct IwramNode *newLoc = (void *)cur + cur->state;
+                    struct IwramNode *newLoc = (struct IwramNode *)((u8 *)cur + cur->state);
                     newLoc->next = cur->next;
                     newLoc->state = curStateBackup;
                     cur = newLoc;

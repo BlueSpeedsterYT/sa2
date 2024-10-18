@@ -1,8 +1,9 @@
 #include "global.h"
 #include "core.h"
 #include "trig.h"
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
+#include "game/stage/spawn_positions.h"
 #include "game/stage/camera.h"
 #include "game/stage/player.h"
 
@@ -15,11 +16,11 @@
 #include "lib/m4a.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/characters.h"
 #include "constants/move_states.h"
 #include "constants/songs.h"
 
-bool32 sub_802BA8C();
 static void Task_802BC10(void);
 static void sub_802BE1C(struct SuperSonic *sonic);
 static void sub_802C358(struct SuperSonic *sonic);
@@ -41,32 +42,18 @@ static void sub_802C988(struct SuperSonic *sonic);
 
 struct Task *sSuperSonicTask = NULL;
 
-extern const Vec2_32 gUnknown_080D650C[NUM_LEVEL_IDS];
-extern const Vec2_32 gUnknown_080D661C[NUM_LEVEL_IDS];
-
 const TileInfo gAnims_SuperSonic_080D69C8[23] = {
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 2 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 1 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 3 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 0 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 4 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 5 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 12 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 13 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 16 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 17 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 8 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 9 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 10 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 11 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 6 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 7 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 14 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 15 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 18 },
-    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 19 },
-    { 0, SA2_ANIM_SUPER_SONIC_FROZEN, 0 },
-    { 0, SA2_ANIM_CHAR(SA2_CHAR_ANIM_29, CHARACTER_SONIC), 0 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 2 },  { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 1 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 3 },  { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 0 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 4 },  { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 5 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 12 }, { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 13 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 16 }, { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 17 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 8 },  { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 9 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 10 }, { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 11 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 6 },  { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 7 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 14 }, { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 15 },
+    { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 18 }, { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 19 },
+    { 0, SA2_ANIM_SUPER_SONIC_FROZEN, 0 },           { 0, SA2_ANIM_CHAR(SA2_CHAR_ANIM_DEAD, CHARACTER_SONIC), 0 },
     { 0, SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET, 2 },
 };
 
@@ -79,8 +66,8 @@ static void SuperSonicInitPlayer(void)
     p->speedAirX = 0;
     p->speedAirY = 0;
     p->speedGroundX = 0;
-    p->unk16 = 0;
-    p->unk17 = 0;
+    p->spriteOffsetX = 0;
+    p->spriteOffsetY = 0;
     // /* 0x18 */ u8 filler18[8]; // no idea what this data is and why it's not set
     p->moveState = 0;
     p->rotation = 0;
@@ -96,7 +83,7 @@ static void SuperSonicInitPlayer(void)
     p->unk34 = 0;
     p->unk36 = 0;
     p->itemEffect = 0;
-    p->unk38 = 0;
+    p->layer = 0;
     p->unk3C = NULL;
     p->unk40 = 0;
     p->unk44 = 0;
@@ -107,23 +94,23 @@ static void SuperSonicInitPlayer(void)
     p->unk54 = 0;
     p->unk56 = 0;
     p->unk58 = 0;
-    p->unk5A = 0;
+    p->isBoosting = FALSE;
     p->unk5B = 0;
-    p->unk5C = 0;
-    p->unk5E = 0;
+    p->heldInput = 0;
+    p->frameInput = 0;
     p->unk60 = 0;
     p->unk61 = 0;
     p->unk62 = 0;
     p->unk63 = 0;
-    p->unk64 = 0;
-    p->unk66 = 0;
+    p->charState = CHARSTATE_IDLE;
+    p->prevCharState = CHARSTATE_IDLE;
     p->anim = 0;
     p->variant = 0;
-    p->unk6C = 0;
+    p->unk6C = FALSE;
     p->transition = 0;
     p->unk6E = 0;
     p->prevTransition = 0;
-    p->unk70 = 0;
+    p->unk70 = FALSE;
     p->unk71 = 0;
     p->unk72 = 0;
     p->checkPointX = 0;
@@ -135,8 +122,8 @@ static void SuperSonicInitPlayer(void)
     p->unk82 = 0;
     p->defeatScoreIndex = 0;
     p->character = CHARACTER_SONIC;
-    p->unk86 = 0;
-    p->unk87 = 0;
+    p->secondsUntilDrown = 0;
+    p->framesUntilDrownCountDecrement = 0;
     p->unk88 = 0;
 }
 
@@ -151,8 +138,8 @@ void SuperSonicInit()
 
     gPlayer.moveState = 0;
     gPlayer.checkpointTime = 0;
-    gPlayer.speedAirX = Q_24_8(2.0);
-    gPlayer.speedGroundX = Q_24_8(2.0);
+    gPlayer.speedAirX = Q(2.0);
+    gPlayer.speedGroundX = Q(2.0);
 
     gCourseTime = 0;
 
@@ -161,8 +148,8 @@ void SuperSonicInit()
     sonic = TASK_DATA(t);
 
     sonic->flags = SUPER_FLAG__20;
-    sonic->worldX = Q_24_8(600);
-    sonic->worldY = Q_24_8(288);
+    sonic->worldX = Q(600);
+    sonic->worldY = Q(288);
     sonic->unk10 = 0;
     sonic->unk14 = 0;
     sonic->unk1A = 0;
@@ -180,18 +167,18 @@ void SuperSonicInit()
     spr->graphics.dest = RESERVED_SUPER_SONIC_TILES_VRAM;
     spr->graphics.anim = gAnims_SuperSonic_080D69C8[0].anim;
     spr->variant = gAnims_SuperSonic_080D69C8[0].variant;
-    spr->unk1A = SPRITE_OAM_ORDER(8);
+    spr->oamFlags = SPRITE_OAM_ORDER(8);
     spr->graphics.size = 0;
     spr->x = 0;
     spr->y = 0;
     spr->animCursor = 0;
-    spr->timeUntilNextFrame = 0;
+    spr->qAnimDelay = 0;
     spr->prevVariant = -1;
     spr->animSpeed = SPRITE_ANIM_SPEED(1.0);
     spr->palId = 0;
     spr->hitboxes[0].index = -1;
     spr->hitboxes[1].index = -1;
-    spr->unk10 = (SPRITE_FLAG(PRIORITY, 1) | SPRITE_FLAG_MASK_X_FLIP);
+    spr->frameFlags = (SPRITE_FLAG(PRIORITY, 1) | SPRITE_FLAG_MASK_X_FLIP);
 }
 
 void sub_802B81C(void)
@@ -213,7 +200,7 @@ static s32 sub_802B8A8(struct SuperSonic *sonic)
 {
     s32 zero = 0;
 
-    if (!(sonic->flags & SUPER_FLAG__10) && !(gUnknown_03005424 & EXTRA_STATE__100)) {
+    if (!(sonic->flags & SUPER_FLAG__10) && !(gStageFlags & STAGE_FLAG__100)) {
         if (gCourseTime >= MAX_COURSE_TIME && !gLoadedSaveGame->timeLimitDisabled) {
             gPlayer.moveState = MOVESTATE_DEAD;
 
@@ -235,7 +222,7 @@ static s32 sub_802B8A8(struct SuperSonic *sonic)
                     sonic->func24 = sub_802C8EC;
                     sonic->unkC = 60;
                     sonic->unk1A = 0;
-                    sonic->rotation = Q_24_8(1.0);
+                    sonic->rotation = Q(1.0);
                     sonic->flags = flags;
 
                     SUPER_SWITCH_ANIM(sonic, 21);
@@ -247,7 +234,7 @@ static s32 sub_802B8A8(struct SuperSonic *sonic)
             }
         } else {
             if (ExtraBossIsDead() == TRUE) {
-                gUnknown_03005424 |= (EXTRA_STATE__ACT_START | EXTRA_STATE__2);
+                gStageFlags |= (STAGE_FLAG__ACT_START | STAGE_FLAG__2);
                 sonic->func24 = sub_802C8A0;
 
                 SUPER_SWITCH_ANIM(sonic, 2);
@@ -339,7 +326,7 @@ static void Task_802BC10(void)
         TasksDestroyAll();
         gUnknown_03002AE4 = gUnknown_0300287C;
         gUnknown_03005390 = 0;
-        gVramGraphicsCopyCursor = gVramGraphicsCopyQueueIndex;
+        PAUSE_GRAPHICS_QUEUE();
 
         if ((gNumLives != 0) && (--gNumLives != 0)) {
             if (gCourseTime >= MAX_COURSE_TIME) {
@@ -356,17 +343,15 @@ static void Task_802BC10(void)
 }
 
 // (99.25%) https://decomp.me/scratch/2dbbE
-NONMATCH("asm/non_matching/game/super_sonic__sub_802BCCC.inc",
-         static void sub_802BCCC(struct SuperSonic *sonic))
+NONMATCH("asm/non_matching/game/super_sonic__sub_802BCCC.inc", static void sub_802BCCC(struct SuperSonic *sonic))
 {
     s32 ssx, ssx2;
     u8 i;
     u8 *id;
     u8 id2;
-    Vec2_32 *idk;
 
     if (!(sonic->flags & SUPER_FLAG__10)) {
-        sonic->worldX += Q_24_8(5);
+        sonic->worldX += Q(5);
     }
 
     ssx = sonic->worldX;
@@ -375,7 +360,7 @@ NONMATCH("asm/non_matching/game/super_sonic__sub_802BCCC.inc",
     }
     // _0802BD0E
 
-    ssx2 = Q_24_8(gUnknown_080D650C[gCurrentLevel].x);
+    ssx2 = Q(gUnknown_080D650C[gCurrentLevel].x);
     id = &sonic->unk128;
 
     if (ssx >= ssx2) {
@@ -383,12 +368,12 @@ NONMATCH("asm/non_matching/game/super_sonic__sub_802BCCC.inc",
         someX = (gUnknown_080D661C[gCurrentLevel].x);
         someY = (gUnknown_080D661C[gCurrentLevel].y);
 
-        ssx += Q_24_8(someX);
-        sub_804D594(Q_24_8(someX), Q_24_8(someY));
+        ssx += Q(someX);
+        TrueArea53BossMove(Q(someX), Q(someY));
 
         for (i = 0; i < ARRAY_COUNT(sonic->unk28); i++) {
-            sonic->unk28[i].x += Q_24_8(someX);
-            sonic->unk28[i].y += Q_24_8(someY);
+            sonic->unk28[i].x += Q(someX);
+            sonic->unk28[i].y += Q(someY);
         }
 
         gBossRingsShallRespawn = TRUE;
@@ -402,10 +387,10 @@ NONMATCH("asm/non_matching/game/super_sonic__sub_802BCCC.inc",
     // _0802BDAA
 
     if (sonic->func24 != sub_802C8A0) {
-        if (ssx < (Q_24_8(gCamera.unk10) + Q_24_8(8))) {
-            ssx = Q_24_8(gCamera.unk10) + Q_24_8(8);
-        } else if (ssx > (Q_24_8(gCamera.unk10) + Q_24_8(312))) {
-            ssx = Q_24_8(gCamera.unk10) + Q_24_8(312);
+        if (ssx < (Q(gCamera.unk10) + Q(8))) {
+            ssx = Q(gCamera.unk10) + Q(8);
+        } else if (ssx > (Q(gCamera.unk10) + Q(312))) {
+            ssx = Q(gCamera.unk10) + Q(312);
         }
     }
     sonic->worldX = ssx;
@@ -429,8 +414,7 @@ static void sub_802BE1C(struct SuperSonic *sonic)
         return;
     }
 
-    if (((sonic->flags & (SUPER_FLAG__80 | SUPER_FLAG__2)) == SUPER_FLAG__80)
-        && (gStageTime & 0x4)) {
+    if (((sonic->flags & (SUPER_FLAG__80 | SUPER_FLAG__2)) == SUPER_FLAG__80) && (gStageTime & 0x4)) {
         return;
     }
     if ((sonic->flags & SUPER_FLAG__4) && ((gStageTime & 0x4) != 0)) {
@@ -440,26 +424,26 @@ static void sub_802BE1C(struct SuperSonic *sonic)
     spr = &sonic->spr;
     transform = &sonic->transform;
 
-    spr->x = Q_24_8_TO_INT(sonic->worldX) - gCamera.x + Q_24_8_TO_INT(sonic->unk10);
-    spr->y = Q_24_8_TO_INT(sonic->worldY) - gCamera.y + Q_24_8_TO_INT(sonic->unk14);
+    spr->x = I(sonic->worldX) - gCamera.x + I(sonic->unk10);
+    spr->y = I(sonic->worldY) - gCamera.y + I(sonic->unk14);
 
     prio = (sonic->flags & SUPER_FLAG__200) ? 3 : 0;
 
     if (sonic->flags & 0x4) {
-        spr->unk10 = SPRITE_FLAG(PRIORITY, prio) | gUnknown_030054B8++
-            | SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+        spr->frameFlags = SPRITE_FLAG(PRIORITY, prio) | gUnknown_030054B8++ | SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE
+            | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
     } else {
-        spr->unk10 = SPRITE_FLAG(PRIORITY, prio) | SPRITE_FLAG_MASK_X_FLIP;
+        spr->frameFlags = SPRITE_FLAG(PRIORITY, prio) | SPRITE_FLAG_MASK_X_FLIP;
     }
     UpdateSpriteAnimation(spr);
 
     if (sonic->flags & SUPER_FLAG__4) {
         transform->rotation = (COS((sonic->unkC * 20) & ONE_CYCLE) >> 4) & ONE_CYCLE;
-        transform->width = Q_24_8(1.0);
-        transform->height = Q_24_8(1.0);
+        transform->width = Q(1.0);
+        transform->height = Q(1.0);
         transform->x = spr->x;
         transform->y = spr->y;
-        sub_8004860(spr, transform);
+        TransformSprite(spr, transform);
         DisplaySprite(spr);
     } else {
         DisplaySprite(spr);
@@ -479,8 +463,8 @@ static void sub_802BE1C(struct SuperSonic *sonic)
                 s32 ii = (i + 1) * 3;
 
                 u32 r2 = (*unk128 - ii) % 32u;
-                spr->x = Q_24_8_TO_INT(sonic->unk28[r2].x) - gCamera.x;
-                spr->y = Q_24_8_TO_INT(sonic->unk28[r2].y) - gCamera.y;
+                spr->x = I(sonic->unk28[r2].x) - gCamera.x;
+                spr->y = I(sonic->unk28[r2].y) - gCamera.y;
                 DisplaySprite(spr);
             }
         }
@@ -494,33 +478,33 @@ static u8 SuperSonicHandleDirectionalInput(struct SuperSonic *sonic)
 
     if (sonic->rawKeys & DPAD_LEFT) {
         if (sonic->rawKeys & DPAD_UP) {
-            sonic->rotation = Q_24_8(2.5);
+            sonic->rotation = Q(2.5);
             return 16;
         } else if (sonic->rawKeys & DPAD_DOWN) {
-            sonic->rotation = Q_24_8(1.5);
+            sonic->rotation = Q(1.5);
             return 12;
         } else {
-            sonic->rotation = Q_24_8(2.0);
+            sonic->rotation = Q(2.0);
             return 6;
         }
     } else if (sonic->rawKeys & DPAD_RIGHT) {
         if (sonic->rawKeys & DPAD_UP) {
-            sonic->rotation = Q_24_8(3.5);
+            sonic->rotation = Q(3.5);
             return 18;
         } else if (sonic->rawKeys & DPAD_DOWN) {
-            sonic->rotation = Q_24_8(0.5);
+            sonic->rotation = Q(0.5);
             return 14;
         } else {
-            sonic->rotation = Q_24_8(0.0);
+            sonic->rotation = Q(0.0);
             return 4;
         }
     } else if (sonic->rawKeys & DPAD_UP) {
-        sonic->rotation = Q_24_8(3.0);
+        sonic->rotation = Q(3.0);
         return 8;
     } else if (!(sonic->rawKeys & DPAD_DOWN)) {
         return 0;
     } else {
-        sonic->rotation = Q_24_8(1.0);
+        sonic->rotation = Q(1.0);
         return 10;
     }
 }
@@ -536,8 +520,8 @@ static void sub_802C058(struct SuperSonic *sonic)
         sonic->unk1A = ABS(sonic->unk1A);
         sonic->unk1A += 0x40;
 
-        if (sonic->unk1A > Q_24_8(2.5)) {
-            sonic->unk1A = Q_24_8(2.5);
+        if (sonic->unk1A > Q(2.5)) {
+            sonic->unk1A = Q(2.5);
         }
 
         if (sonic->rawKeys & DPAD_UP) {
@@ -571,7 +555,7 @@ static void sub_802C058(struct SuperSonic *sonic)
         if (sonic->spr.variant != 2) {
             SUPER_SWITCH_ANIM(sonic, 0);
         }
-        sonic->worldX -= Q_24_8(0.5);
+        sonic->worldX -= Q(0.5);
     }
 
     if (sonic->pressedKeys & (A_BUTTON | B_BUTTON)) {
@@ -609,8 +593,7 @@ static void sub_802C358(struct SuperSonic *sonic)
     }
 
     if (sonic->unkC == 8) {
-        sonic->spr.graphics.anim
-            = gAnims_SuperSonic_080D69C8[sonic->tileInfoId + 1].anim;
+        sonic->spr.graphics.anim = gAnims_SuperSonic_080D69C8[sonic->tileInfoId + 1].anim;
         sonic->spr.variant = gAnims_SuperSonic_080D69C8[sonic->tileInfoId + 1].variant;
         sonic->spr.prevVariant = -1;
         sonic->flags &= ~SUPER_FLAG__80;
@@ -677,13 +660,13 @@ static void sub_802C55C(struct SuperSonic *sonic)
     }
 }
 
-void SuperSonicGetPos(s32 *outX, s32 *outY)
+void SuperSonicGetPos(s32 *qOutX, s32 *qOutY)
 {
     if (sSuperSonicTask) {
         struct SuperSonic *sonic = TASK_DATA(sSuperSonicTask);
 
-        *outX = sonic->worldX;
-        *outY = sonic->worldY;
+        *qOutX = sonic->worldX;
+        *qOutY = sonic->worldY;
 
         if (!(sonic->flags & SUPER_FLAG__10)) {
             gPlayer.moveState = 0;
@@ -691,8 +674,8 @@ void SuperSonicGetPos(s32 *outX, s32 *outY)
             gPlayer.moveState = MOVESTATE_DEAD;
         }
     } else {
-        *outX = 0;
-        *outY = 0;
+        *qOutX = 0;
+        *qOutY = 0;
 
         gPlayer.moveState = MOVESTATE_DEAD;
     }
@@ -792,15 +775,15 @@ static void sub_802C828(struct SuperSonic *sonic)
 {
     s32 x, y;
 
-    if (!(gUnknown_03005424 & EXTRA_STATE__100)) {
+    if (!(gStageFlags & STAGE_FLAG__100)) {
         if (--sonic->unkC == 0) {
             sonic->func24 = sub_802C058;
             sonic->flags &= ~SUPER_FLAG__20;
             sonic->flags |= SUPER_FLAG__1;
         }
 
-        x = Q_24_8(gCamera.x + 80);
-        y = Q_24_8(gCamera.y + 90);
+        x = Q(gCamera.x + 80);
+        y = Q(gCamera.y + 90);
 
         sonic->worldX += Div(((x - sonic->worldX) * 3), 100);
         sonic->worldY += Div(((y - sonic->worldY) * 3), 100);
@@ -813,8 +796,8 @@ static void sub_802C8A0(struct SuperSonic *sonic)
 
     sonic->flags &= ~SUPER_FLAG__4;
 
-    x = Q_24_8(gCamera.x + (DISPLAY_WIDTH + 76));
-    y = Q_24_8(gCamera.y + (DISPLAY_HEIGHT / 2));
+    x = Q(gCamera.x + (DISPLAY_WIDTH + 76));
+    y = Q(gCamera.y + (DISPLAY_HEIGHT / 2));
 
     sonic->worldX += Div((x - sonic->worldX), 100);
     sonic->worldY += Div((y - sonic->worldY), 100);
@@ -823,12 +806,12 @@ static void sub_802C8A0(struct SuperSonic *sonic)
 static void sub_802C8EC(struct SuperSonic *sonic)
 {
     Sprite *spr = &sonic->spr;
-    spr->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    spr->frameFlags = SPRITE_FLAG(PRIORITY, 2);
 
-    sonic->unk1A += Q_24_8(0.125);
+    sonic->unk1A += Q(0.125);
     sonic->worldY += sonic->unk1A;
 
-    if ((Q_24_8_TO_INT(sonic->worldY) - gCamera.y) > DISPLAY_HEIGHT) {
+    if ((I(sonic->worldY) - gCamera.y) > DISPLAY_HEIGHT) {
         sonic->shouldDestroy = TRUE;
     }
 }
@@ -841,9 +824,9 @@ static void sub_802C92C(struct SuperSonic *sonic)
         sonic->unkC = 100;
     }
 
-    sonic->unk1A = Q_24_8(1.0);
-    sonic->worldX += Q_24_8_TO_INT(COS(sonic->rotation) * 4);
-    sonic->worldY += Q_24_8_TO_INT(SIN(sonic->rotation) * 4);
+    sonic->unk1A = Q(1.0);
+    sonic->worldX += I(COS(sonic->rotation) * 4);
+    sonic->worldY += I(SIN(sonic->rotation) * 4);
 }
 
 static void sub_802C988(struct SuperSonic *sonic)
@@ -859,9 +842,9 @@ static void sub_802C9B0(struct SuperSonic *sonic)
 {
     if (!(sonic->flags & (SUPER_FLAG__20 | SUPER_FLAG__10))) {
 #ifndef NON_MATCHING
-        CLAMP_INLINE_NO_ELSE(sonic->worldY, Q_24_8(50), Q_24_8(254));
+        CLAMP_INLINE_NO_ELSE(sonic->worldY, Q(50), Q(254));
 #else
-        CLAMP_INLINE(sonic->worldY, Q_24_8(50), Q_24_8(254));
+        CLAMP_INLINE(sonic->worldY, Q(50), Q(254));
 #endif
     }
 }

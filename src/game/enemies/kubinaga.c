@@ -1,8 +1,10 @@
 #include "global.h"
 #include "malloc_vram.h"
+#include "sprite.h"
+#include "trig.h"
 #include "lib/m4a.h"
 
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/kubinaga.h"
@@ -10,7 +12,6 @@
 #include "game/enemies/projectiles.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
-#include "trig.h"
 
 #include "constants/animations.h"
 #include "constants/songs.h"
@@ -44,11 +45,9 @@ static const u16 gUnknown_080D8F30[][2] = {
     { SA2_ANIM_KUBINAGA_BASE, 1 },
 };
 
-void CreateEntity_Kubinaga(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                           u8 spriteY)
+void CreateEntity_Kubinaga(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t
-        = TaskCreate(sub_80524D0, sizeof(Sprite_Kubinaga), 0x4060, 0, sub_8052F70);
+    struct Task *t = TaskCreate(sub_80524D0, sizeof(Sprite_Kubinaga), 0x4060, 0, sub_8052F70);
     Sprite_Kubinaga *k = TASK_DATA(t);
     Sprite *s = &k->sBase;
 
@@ -63,14 +62,13 @@ void CreateEntity_Kubinaga(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     k->base.regionY = spriteRegionY;
     k->base.me = me;
     k->base.spriteX = me->x;
-    k->base.spriteY = spriteY;
+    k->base.id = spriteY;
 
     ENEMY_SET_SPAWN_POS_STATIC(k, me);
     s->x = TO_WORLD_POS(me->x, spriteRegionX);
     s->y = TO_WORLD_POS(me->y, spriteRegionY);
 
-    SPRITE_INIT(s, 6, gUnknown_080D8F30[me->d.uData[0] & 1][0],
-                gUnknown_080D8F30[me->d.uData[0] & 1][1], 18, 2);
+    SPRITE_INIT(s, 6, gUnknown_080D8F30[me->d.uData[0] & 1][0], gUnknown_080D8F30[me->d.uData[0] & 1][1], 18, 2);
 
     if (me->d.uData[0] & 1) {
         if (me->d.sData[1]) {
@@ -94,7 +92,8 @@ void CreateEntity_Kubinaga(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     s->graphics.dest = VramMalloc(0x10);
     SPRITE_INIT_ANIM(s, SA2_ANIM_KUBINAGA, 1, 19);
     SPRITE_INIT_SCRIPT(s, 1.0)
-    s->unk10 = gUnknown_030054B8++ | 0x2060;
+    s->frameFlags
+        = gUnknown_030054B8++ | SPRITE_FLAG(PRIORITY, 2) | SPRITE_FLAG(ROT_SCALE_DOUBLE_SIZE, 1) | SPRITE_FLAG(ROT_SCALE_ENABLE, 1);
     UpdateSpriteAnimation(s);
     SET_MAP_ENTITY_INITIALIZED(me);
 }
@@ -113,18 +112,15 @@ static void sub_80524D0(void)
     Player_UpdateHomingPosition(k->spawnX, k->spawnY);
     if (k->unkB8 != 0) {
         k->unkB8--;
-    } else if (gPlayer.x > k->spawnX - 0x7800 && gPlayer.x < k->spawnX + 0x7800
-               && gPlayer.y > k->spawnY - 0x6400 && gPlayer.y < k->spawnY + 0x6400) {
+    } else if (gPlayer.x > k->spawnX - 0x7800 && gPlayer.x < k->spawnX + 0x7800 && gPlayer.y > k->spawnY - 0x6400
+               && gPlayer.y < k->spawnY + 0x6400) {
         k->unkBE = 0;
         if (k->unkC0 == 0) {
-            k->unkBA = sub_8004418((Q_24_8_TO_INT(gPlayer.y) - pos.y) + 10,
-                                   Q_24_8_TO_INT(gPlayer.x) - pos.x);
+            k->unkBA = sub_8004418((I(gPlayer.y) - pos.y) + 10, I(gPlayer.x) - pos.x);
         } else if ((k->unkC0 & 1)) {
-            k->unkBA = sub_8004418((Q_24_8_TO_INT(gPlayer.y) - pos.y),
-                                   (Q_24_8_TO_INT(gPlayer.x) - pos.x) + 10);
+            k->unkBA = sub_8004418((I(gPlayer.y) - pos.y), (I(gPlayer.x) - pos.x) + 10);
         } else {
-            k->unkBA = sub_8004418((Q_24_8_TO_INT(gPlayer.y) - pos.y),
-                                   (Q_24_8_TO_INT(gPlayer.x) - pos.x) - 10);
+            k->unkBA = sub_8004418((I(gPlayer.y) - pos.y), (I(gPlayer.x) - pos.x) - 10);
         }
 
         k->headX = k->spawnX;
@@ -135,10 +131,10 @@ static void sub_80524D0(void)
     DisplaySprite(s);
 
     if (s->variant == 0) {
-        s->unk10 ^= SPRITE_FLAG_MASK_X_FLIP;
+        s->frameFlags ^= SPRITE_FLAG_MASK_X_FLIP;
         DisplaySprite(s);
     } else {
-        s->unk10 ^= SPRITE_FLAG_MASK_Y_FLIP;
+        s->frameFlags ^= SPRITE_FLAG_MASK_Y_FLIP;
         DisplaySprite(s);
     }
 }
@@ -152,10 +148,10 @@ static void sub_80526C8(void)
     Vec2_32 pos;
     Vec2_32 pos2;
 
-    pos.x = Q_24_8_TO_INT(k->spawnX);
-    pos.y = Q_24_8_TO_INT(k->spawnY);
-    pos2.x = Q_24_8_TO_INT(k->headX);
-    pos2.y = Q_24_8_TO_INT(k->headY);
+    pos.x = I(k->spawnX);
+    pos.y = I(k->spawnY);
+    pos2.x = I(k->headX);
+    pos2.y = I(k->headY);
 
     sBase->x = pos.x - gCamera.x;
     sBase->y = pos.y - gCamera.y;
@@ -182,10 +178,10 @@ static void sub_80526C8(void)
     DisplaySprite(sBase);
 
     if (sBase->variant == 0) {
-        sBase->unk10 ^= SPRITE_FLAG_MASK_X_FLIP;
+        sBase->frameFlags ^= SPRITE_FLAG_MASK_X_FLIP;
         DisplaySprite(sBase);
     } else {
-        sBase->unk10 ^= SPRITE_FLAG_MASK_Y_FLIP;
+        sBase->frameFlags ^= SPRITE_FLAG_MASK_Y_FLIP;
         DisplaySprite(sBase);
     }
 
@@ -201,17 +197,21 @@ static void sub_80528AC(void)
     Vec2_32 pos;
     Vec2_32 pos2;
 
-    pos.x = Q_24_8_TO_INT(k->spawnX);
-    pos.y = Q_24_8_TO_INT(k->spawnY);
-    pos2.x = Q_24_8_TO_INT(k->headX);
-    pos2.y = Q_24_8_TO_INT(k->headY);
+    pos.x = I(k->spawnX);
+    pos.y = I(k->spawnY);
+    pos2.x = I(k->headX);
+    pos2.y = I(k->headY);
 
     sBase->x = pos.x - gCamera.x;
     sBase->y = pos.y - gCamera.y;
 
     sHead->x = pos2.x - gCamera.x;
+#ifndef BUG_FIX
     // BUG: this doesn't make sense to be pos.x but it doesn't appear to have any effect
     sHead->y = pos2.x - gCamera.y;
+#else
+    sHead->y = pos2.y - gCamera.y;
+#endif
 
     ENEMY_DESTROY_IF_PLAYER_HIT_2(sBase, pos);
     ENEMY_DESTROY_IF_PLAYER_HIT_2(sHead, pos2);
@@ -249,10 +249,10 @@ static void sub_80528AC(void)
     DisplaySprite(sBase);
 
     if (sBase->variant == 0) {
-        sBase->unk10 ^= SPRITE_FLAG_MASK_X_FLIP;
+        sBase->frameFlags ^= SPRITE_FLAG_MASK_X_FLIP;
         DisplaySprite(sBase);
     } else {
-        sBase->unk10 ^= SPRITE_FLAG_MASK_Y_FLIP;
+        sBase->frameFlags ^= SPRITE_FLAG_MASK_Y_FLIP;
         DisplaySprite(sBase);
     }
 
@@ -268,17 +268,21 @@ static void sub_8052AEC(void)
     Vec2_32 pos;
     Vec2_32 pos2;
 
-    pos.x = Q_24_8_TO_INT(k->spawnX);
-    pos.y = Q_24_8_TO_INT(k->spawnY);
-    pos2.x = Q_24_8_TO_INT(k->headX);
-    pos2.y = Q_24_8_TO_INT(k->headY);
+    pos.x = I(k->spawnX);
+    pos.y = I(k->spawnY);
+    pos2.x = I(k->headX);
+    pos2.y = I(k->headY);
 
     sBase->x = pos.x - gCamera.x;
     sBase->y = pos.y - gCamera.y;
 
     sHead->x = pos2.x - gCamera.x;
+#ifndef BUG_FIX
     // BUG: this doesn't make sense to be pos.x but it doesn't appear to have any effect
     sHead->y = pos2.x - gCamera.y;
+#else
+    sHead->y = pos2.y - gCamera.y;
+#endif
 
     k->unkBE -= 0x200;
     ENEMY_DESTROY_IF_PLAYER_HIT_2(sBase, pos);
@@ -297,10 +301,10 @@ static void sub_8052AEC(void)
     DisplaySprite(sBase);
 
     if (sBase->variant == 0) {
-        sBase->unk10 ^= SPRITE_FLAG_MASK_X_FLIP;
+        sBase->frameFlags ^= SPRITE_FLAG_MASK_X_FLIP;
         DisplaySprite(sBase);
     } else {
-        sBase->unk10 ^= SPRITE_FLAG_MASK_Y_FLIP;
+        sBase->frameFlags ^= SPRITE_FLAG_MASK_Y_FLIP;
         DisplaySprite(sBase);
     }
 
@@ -321,8 +325,8 @@ static void sub_8052CC8(Sprite_Kubinaga *k)
 
     for (i = 0; i < val; i++) {
 
-        pos.x = Q_24_8_TO_INT((i + 1) * cos + k->spawnX);
-        pos.y = Q_24_8_TO_INT((i + 1) * sin + k->spawnY);
+        pos.x = I((i + 1) * cos + k->spawnX);
+        pos.y = I((i + 1) * sin + k->spawnY);
         sNeck->x = pos.x - gCamera.x;
         if (k->unkC0 == 0) {
             sNeck->y = (pos.y - gCamera.y) - 10;
@@ -338,26 +342,23 @@ static void sub_8052CC8(Sprite_Kubinaga *k)
     k->headX = ((COS(k->unkBA) * Q_8_8_TO_INT(k->unkBE)) >> 6) + k->spawnX;
     k->headY = ((SIN(k->unkBA) * Q_8_8_TO_INT(k->unkBE)) >> 6) + k->spawnY;
 
-    pos.x = Q_24_8_TO_INT(k->headX);
-    pos.y = Q_24_8_TO_INT(k->headY);
+    pos.x = I(k->headX);
+    pos.y = I(k->headY);
 
     sHead->x = pos.x - gCamera.x;
 
     if (k->unkC0 == 0) {
         sHead->y = (pos.y - gCamera.y) - 10;
-        transform->rotation = sub_8004418(Q_24_8_TO_INT(gPlayer.y) - pos.y + 10,
-                                          Q_24_8_TO_INT(gPlayer.x) - pos.x);
+        transform->rotation = sub_8004418(I(gPlayer.y) - pos.y + 10, I(gPlayer.x) - pos.x);
     } else {
         if (k->unkC0 & 1) {
 
             sHead->x = sHead->x + 10;
-            transform->rotation = sub_8004418(Q_24_8_TO_INT(gPlayer.y) - pos.y,
-                                              (Q_24_8_TO_INT(gPlayer.x) - pos.x) + 10);
+            transform->rotation = sub_8004418(I(gPlayer.y) - pos.y, (I(gPlayer.x) - pos.x) + 10);
         } else {
 
             sHead->x = sHead->x - 10;
-            transform->rotation = sub_8004418(Q_24_8_TO_INT(gPlayer.y) - pos.y,
-                                              (Q_24_8_TO_INT(gPlayer.x) - pos.x) - 10);
+            transform->rotation = sub_8004418(I(gPlayer.y) - pos.y, (I(gPlayer.x) - pos.x) - 10);
         }
         sHead->y = (pos.y - gCamera.y);
     }
@@ -381,10 +382,11 @@ static void sub_8052CC8(Sprite_Kubinaga *k)
         sHead->prevVariant = -1;
     }
 
-    sHead->unk10 = gUnknown_030054B8++ | 0x2060;
+    sHead->frameFlags
+        = gUnknown_030054B8++ | SPRITE_FLAG(PRIORITY, 2) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE | SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE;
 
     UpdateSpriteAnimation(sHead);
-    sub_8004860(sHead, transform);
+    TransformSprite(sHead, transform);
     DisplaySprite(sHead);
 }
 

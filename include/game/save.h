@@ -3,7 +3,7 @@
 
 #include "global.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player_controls.h"
 #include "constants/zones.h"
@@ -28,11 +28,11 @@ struct MultiplayerScore {
 };
 
 struct TimeRecords {
+    // TODO: s16?
     u16 table[NUM_CHARACTERS][NUM_COURSE_ZONES][ACTS_PER_ZONE][TIME_RECORDS_PER_COURSE];
 };
 
-#define NUM_TIME_RECORD_ROWS                                                            \
-    (NUM_COURSE_ZONES * ACTS_PER_ZONE * NUM_CHARACTERS * TIME_RECORDS_PER_COURSE)
+#define NUM_TIME_RECORD_ROWS (NUM_COURSE_ZONES * ACTS_PER_ZONE * NUM_CHARACTERS * TIME_RECORDS_PER_COURSE)
 
 struct SaveGame {
     /* 0x000 */ u32 id;

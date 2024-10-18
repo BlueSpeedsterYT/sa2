@@ -397,7 +397,7 @@ _080164C4:
 	strh r0, [r1]
 	movs r0, #0x3c
 	strh r0, [r4, #0x2c]
-	ldr r0, _080165BC @ =PlayerCB_8025318
+	ldr r0, _080165BC @ =Player_TouchGround
 	str r0, [r4]
 	ldr r0, [r4, #0x20]
 	ldr r2, _080165C0 @ =0xFFBFFFFF
@@ -450,7 +450,7 @@ _080165AC: .4byte IWRAM_START + 0x64
 _080165B0: .4byte gPlayer
 _080165B4: .4byte 0xFFFFFBFF
 _080165B8: .4byte 0xFFFFFEFF
-_080165BC: .4byte PlayerCB_8025318
+_080165BC: .4byte Player_TouchGround
 _080165C0: .4byte 0xFFBFFFFF
 _080165C4: .4byte gGameMode
 _080165C8: .4byte gMultiplayerCharRings
@@ -744,7 +744,7 @@ _080167FE:
 	movs r1, #7
 	strb r1, [r0]
 _0801680C:
-	ldr r0, _080168AC @ =gUnknown_03005424
+	ldr r0, _080168AC @ =gStageFlags
 	ldrh r1, [r0]
 	movs r2, #1
 	adds r0, r2, #0
@@ -819,7 +819,7 @@ _0801689C: .4byte 0x04000128
 _080168A0: .4byte gMultiplayerPlayerTasks
 _080168A4: .4byte gMultiplayerConnections
 _080168A8: .4byte IWRAM_START + 0x54
-_080168AC: .4byte gUnknown_03005424
+_080168AC: .4byte gStageFlags
 _080168B0: .4byte gPlayer
 _080168B4: .4byte 0x80000004
 _080168B8: .4byte 0x00400080
@@ -1047,7 +1047,7 @@ _08016A68:
 _08016A7C:
 	adds r0, r6, #0
 	ldr r1, [sp]
-	bl sub_8004860
+	bl TransformSprite
 	b _08016ACC
 _08016A86:
 	ldr r2, [r6, #0x10]
@@ -1351,7 +1351,7 @@ _08016CB0:
 	beq _08016CE2
 	adds r0, r6, #0
 	ldr r1, [sp]
-	bl sub_8004860
+	bl TransformSprite
 _08016CE2:
 	adds r0, r6, #0
 	bl DisplaySprite

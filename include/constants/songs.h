@@ -5,11 +5,10 @@
 #define MUS_INTRO               1
 #define MUS_TITLE_FANFARE       2
 #define MUS_CHARACTER_SELECTION 3
-#define MUS_TA_COURSE_SELECTION                                                         \
-    4 // plays both in Time Attack and (initially) the zone map
-#define MUS_COURSE_SELECTION_2 5
-#define MUS_COURSE_SELECTION_3 6
-#define MUS_TIME_ATTACK_MENU   7
+#define MUS_TA_COURSE_SELECTION 4 // plays both in Time Attack and (initially) the zone map
+#define MUS_COURSE_SELECTION_2  5
+#define MUS_COURSE_SELECTION_3  6
+#define MUS_TIME_ATTACK_MENU    7
 // 8
 #define MUS_OPTIONS 9
 // 10
@@ -114,7 +113,7 @@
 #define SE_STAGE_RESULT_COUNTER_DONE 141
 #define SE_PAUSE_SCREEN              142
 #define SE_143                       143
-#define SE_144                       144
+#define SE_144                       144 // explosion?
 #define SE_145                       145
 #define SE_146                       146
 #define SE_SPIN                      147
@@ -126,7 +125,7 @@
 #define SE_SPRING                    153
 #define SE_SPIKES                    154
 #define SE_SPEED_BOOSTER             155
-#define SE_156                       156
+#define SE_WATERFALL_SURFACE_HIT     156
 #define SE_157                       157
 #define SE_AIR_BUBBLE                158
 #define SE_ALARM_1                   159
@@ -167,16 +166,16 @@
 #define SE_221                            221
 #define SE_222                            222
 // Plays when Sonic does his "Bound" trick and collides with the ground
-#define SE_SONIC_BOUND_IMPACT  223
-#define SE_224                 224
-#define SE_225                 225
-#define SE_226                 226
-#define SE_CREAM_FLYING        227
-#define SE_228                 228
-#define SE_CREAM_CHEESE_ATTACK 229
-#define SE_230                 230
-#define SE_231                 231
-#define SE_LONG_BRAKE          232
+#define SE_SONIC_BOUND_IMPACT      223
+#define SE_224                     224
+#define SE_SPIRAL_ATTACK           225
+#define SE_226                     226
+#define SE_CREAM_FLYING            227
+#define SE_228                     228
+#define SE_CREAM_CHEESE_ATTACK     229
+#define SE_TAILS_CREAM_STOP_N_SLAM 230
+#define SE_231                     231
+#define SE_LONG_BRAKE              232
 // 233
 #define SE_234             234
 #define SE_235             235
@@ -234,7 +233,7 @@
 #define SE_287                287
 #define SE_288                288
 #define SE_289                289
-#define SE_290                290
+#define SE_POLE_SLIDING       290
 #define SE_291                291
 #define SE_ICE_PARADISE_SLIDE 292
 #define SE_293                293

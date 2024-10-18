@@ -6,7 +6,7 @@
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "game/entity.h"
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 
 #include "constants/animations.h"
 
@@ -25,18 +25,16 @@ static void Task_Hammerhead(void);
 static void sub_8056EDC(Enemy_Hammerhead *hammerhead);
 static void TaskDestructor_Hammerhead(struct Task *);
 
-void CreateEntity_Hammerhead(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                             u8 spriteY)
+void CreateEntity_Hammerhead(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_Hammerhead, sizeof(Enemy_Hammerhead), 0x4040, 0,
-                                TaskDestructor_Hammerhead);
+    struct Task *t = TaskCreate(Task_Hammerhead, sizeof(Enemy_Hammerhead), 0x4040, 0, TaskDestructor_Hammerhead);
     Enemy_Hammerhead *hammerhead = TASK_DATA(t);
     Sprite *s = &hammerhead->s;
     hammerhead->base.regionX = spriteRegionX;
     hammerhead->base.regionY = spriteRegionY;
     hammerhead->base.me = me;
     hammerhead->base.spriteX = me->x;
-    hammerhead->base.spriteY = spriteY;
+    hammerhead->base.id = spriteY;
 
     hammerhead->unk48 = 0;
     sub_8056EDC(hammerhead);
@@ -84,9 +82,9 @@ static void Task_Hammerhead(void)
     s->x = posX - gCamera.x;
 
     if (IS_MULTI_PLAYER) {
-        s->y = (posY - gCamera.y) + Q_24_8_TO_INT(hammerhead->unk50[2]);
+        s->y = (posY - gCamera.y) + I(hammerhead->unk50[2]);
     } else {
-        s->y = (posY - gCamera.y) + Q_24_8_TO_INT(prevUnk48);
+        s->y = (posY - gCamera.y) + I(prevUnk48);
     }
 
     if ((p->moveState & MOVESTATE_8) && (p->unk3C == s)) {
@@ -94,14 +92,14 @@ static void Task_Hammerhead(void)
         p->y += ip;
     }
     if (!(p->moveState & MOVESTATE_400000)) {
-        s32 flags = sub_800CCB8(s, posX, posY + Q_24_8_TO_INT(hammerhead->unk48), p);
+        s32 flags = sub_800CCB8(s, posX, posY + I(hammerhead->unk48), p);
 
         if (flags & 0x10000) {
             p->y += (flags << 24) >> 16;
         }
     }
 
-    if (sub_800C4FC(s, posX, posY + Q_24_8_TO_INT(hammerhead->unk48), 1) == TRUE) {
+    if (sub_800C4FC(s, posX, posY + I(hammerhead->unk48), 1) == TRUE) {
         TaskDestroy(gCurTask);
     } else {
         posX -= gCamera.x;

@@ -1,7 +1,7 @@
 #include "global.h"
 #include "malloc_vram.h"
 
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "game/entity.h"
 
@@ -30,22 +30,20 @@ typedef struct {
 
 void Task_BulletBuzzerMain(void);
 
-void CreateEntity_BulletBuzzer(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                               u8 spriteY)
+void CreateEntity_BulletBuzzer(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_BulletBuzzerMain, sizeof(Sprite_BulletBuzzer),
-                                0x4040, 0, TaskDestructor_80095E8);
+    struct Task *t = TaskCreate(Task_BulletBuzzerMain, sizeof(Sprite_BulletBuzzer), 0x4040, 0, TaskDestructor_80095E8);
     Sprite_BulletBuzzer *bbuzzer = TASK_DATA(t);
     Sprite *s = &bbuzzer->s;
     bbuzzer->base.regionX = spriteRegionX;
     bbuzzer->base.regionY = spriteRegionY;
     bbuzzer->base.me = me;
     bbuzzer->base.spriteX = me->x;
-    bbuzzer->base.spriteY = spriteY;
+    bbuzzer->base.id = spriteY;
 
     ENEMY_SET_SPAWN_POS_FLYING(bbuzzer, me);
 
-    bbuzzer->unk54 = Q_24_8(0.0);
+    bbuzzer->unk54 = Q(0.0);
     bbuzzer->unk5A = me->d.uData[2] * 4;
     bbuzzer->unk5B = me->d.uData[3] * 4;
     bbuzzer->unk5C = 0;
@@ -56,8 +54,7 @@ void CreateEntity_BulletBuzzer(MapEntity *me, u16 spriteRegionX, u16 spriteRegio
     SET_MAP_ENTITY_INITIALIZED(me);
 
     s->graphics.dest = VramMalloc(24);
-    SPRITE_INIT_WITHOUT_VRAM(s, SA2_ANIM_BULLETBUZZER, 0, 18, 2,
-                             SPRITE_FLAG_MASK_X_FLIP);
+    SPRITE_INIT_WITHOUT_VRAM(s, SA2_ANIM_BULLETBUZZER, 0, 18, 2, SPRITE_FLAG_MASK_X_FLIP);
 }
 
 void sub_8059B04(void);
@@ -108,12 +105,11 @@ void Task_BulletBuzzerMain(void)
     }
 
     ENEMY_DESTROY_IF_OFFSCREEN(bbuzzer, me, s);
-    value = sub_8004418(Q_24_8_TO_INT(gPlayer.y) - pos.y,
-                        Q_24_8_TO_INT(gPlayer.x) - pos.x);
+    value = sub_8004418(I(gPlayer.y) - pos.y, I(gPlayer.x) - pos.x);
 
     if (bbuzzer->unk5E == 0) {
-        if (((u16)(value - 86) < 84 && s->unk10 & SPRITE_FLAG_MASK_X_FLIP)
-            || ((u16)(value - 342) < 84 && !(s->unk10 & SPRITE_FLAG_MASK_X_FLIP))) {
+        if (((u16)(value - 86) < 84 && s->frameFlags & SPRITE_FLAG_MASK_X_FLIP)
+            || ((u16)(value - 342) < 84 && !(s->frameFlags & SPRITE_FLAG_MASK_X_FLIP))) {
             bbuzzer->unk58 = value;
             bbuzzer->unk5D = 0;
             s->graphics.anim = SA2_ANIM_BULLETBUZZER;
@@ -123,7 +119,7 @@ void Task_BulletBuzzerMain(void)
         }
     }
 
-    Player_UpdateHomingPosition(Q_24_8(pos.x), Q_24_8(pos.y));
+    Player_UpdateHomingPosition(Q(pos.x), Q(pos.y));
     if (UpdateSpriteAnimation(s) == 0) {
         ENEMY_TURN_AROUND(s);
         s->graphics.anim = SA2_ANIM_BULLETBUZZER;
@@ -150,19 +146,19 @@ void sub_8059B04(void)
         init.numTiles = 4;
         init.anim = SA2_ANIM_BUZZER_PROJ;
         init.variant = 0;
-        if (s->unk10 & SPRITE_FLAG_MASK_X_FLIP) {
-            init.x = Q_24_8_NEW(pos.x + 10);
+        if (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP) {
+            init.x = QS(pos.x + 10);
         } else {
-            init.x = Q_24_8_NEW(pos.x - 10);
+            init.x = QS(pos.x - 10);
         }
 
-        init.y = Q_24_8_NEW(pos.y + 14);
+        init.y = QS(pos.y + 14);
         init.rot = bbuzzer->unk58 - 16;
-        init.speed = Q_24_8(2);
+        init.speed = Q(2);
         CreateSeveralProjectiles(&init, 3, 16);
     }
 
-    Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+    Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
 
     if (UpdateSpriteAnimation(s) == 0) {
         DisplaySprite(s);

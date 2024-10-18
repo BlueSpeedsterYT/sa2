@@ -1,7 +1,7 @@
 #include "global.h"
 #include "malloc_vram.h"
 #include "game/entity.h"
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 #include "task.h"
 
 #include "constants/animations.h"
@@ -28,15 +28,14 @@ void TaskDestructor_Circus(struct Task *);
 
 void CreateEntity_Circus(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_CircusMain, sizeof(Sprite_Circus), 0x4090, 0,
-                                TaskDestructor_Circus);
+    struct Task *t = TaskCreate(Task_CircusMain, sizeof(Sprite_Circus), 0x4090, 0, TaskDestructor_Circus);
     Sprite_Circus *circus = TASK_DATA(t);
     Sprite *s = &circus->s;
     circus->base.regionX = spriteRegionX;
     circus->base.regionY = spriteRegionY;
     circus->base.me = me;
     circus->base.spriteX = me->x;
-    circus->base.spriteY = spriteY;
+    circus->base.id = spriteY;
 
     if (me->d.sData[1] != 0) {
         circus->clampParam = TRUE;
@@ -77,8 +76,8 @@ void Task_CircusMain(void)
     ENEMY_DESTROY_IF_OUT_OF_CAM_RANGE(circus, me, s);
 
     if (--circus->unk84 == 0) {
-        circus->unk88 = -Q_24_8(5.0);
-        circus->unk86 = -Q_24_8(8.0);
+        circus->unk88 = -Q(5.0);
+        circus->unk86 = -Q(8.0);
         circus->unk84 = 30;
 
         gCurTask->main = Task_8055AB8;
@@ -89,9 +88,9 @@ void Task_CircusMain(void)
 
     ENEMY_UPDATE_EX_RAW(s, circus->spawnX, circus->spawnY, {});
     s2->x = s->x;
-    s2->y = s->y - Q_24_8(0.125);
+    s2->y = s->y - Q(0.125);
 
-    sub_800C84C(s2, pos.x, pos.y - Q_24_8(0.125));
+    sub_800C84C(s2, pos.x, pos.y - Q(0.125));
     DisplaySprite(s2);
 }
 
@@ -125,9 +124,9 @@ void Task_8055AB8(void)
     } else {
         DisplaySprite(s);
         s2->x = s->x;
-        s2->y = s->y - Q_24_8(0.125);
+        s2->y = s->y - Q(0.125);
 
-        sub_800C84C(s2, pos.x, pos.y - Q_24_8(0.125));
+        sub_800C84C(s2, pos.x, pos.y - Q(0.125));
         DisplaySprite(s2);
     }
 }
@@ -145,13 +144,13 @@ void Task_8055C0C(void)
 
     circus->unk88 += 0x31;
     circus->unk86 += circus->unk88;
-    s2->y = (s->y + Q_24_8_TO_INT(circus->unk86)) - Q_24_8(0.125);
+    s2->y = (s->y + I(circus->unk86)) - Q(0.125);
 
     s2->x = s->x;
 
     ENEMY_DESTROY_IF_PLAYER_HIT_2(s, pos);
 
-    sub_800C84C(s2, pos.x, pos.y + Q_24_8_TO_INT(circus->unk86) - Q_24_8(0.125));
+    sub_800C84C(s2, pos.x, pos.y + I(circus->unk86) - Q(0.125));
 
     ENEMY_DESTROY_IF_OUT_OF_CAM_RANGE(circus, me, s);
 
@@ -200,9 +199,9 @@ void Task_8055D7C(void)
     }
 
     s2->x = s->x;
-    s2->y = s->y - Q_24_8(0.125);
+    s2->y = s->y - Q(0.125);
 
-    sub_800C84C(s2, pos.x, pos.y - Q_24_8(0.125));
+    sub_800C84C(s2, pos.x, pos.y - Q(0.125));
     DisplaySprite(s2);
 }
 

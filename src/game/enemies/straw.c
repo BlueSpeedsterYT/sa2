@@ -7,8 +7,8 @@
 #include "game/entity.h"
 #include "game/enemies/straw.h"
 
-#include "sakit/collision.h"
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -37,15 +37,14 @@ void CreateEntity_Straw(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 
 {
     if (DIFFICULTY_LEVEL_IS_NOT_EASY) {
         s32 rand;
-        struct Task *t = TaskCreate(Task_StrawMain, sizeof(Sprite_Straw), 0x4040, 0,
-                                    TaskDestructor_80095E8);
+        struct Task *t = TaskCreate(Task_StrawMain, sizeof(Sprite_Straw), 0x4040, 0, TaskDestructor_80095E8);
         Sprite_Straw *straw = TASK_DATA(t);
         Sprite *s = &straw->s;
         straw->base.regionX = spriteRegionX;
         straw->base.regionY = spriteRegionY;
         straw->base.me = me;
         straw->base.spriteX = me->x;
-        straw->base.spriteY = spriteY;
+        straw->base.id = spriteY;
 
         ENEMY_SET_SPAWN_POS_FLYING(straw, me);
 
@@ -69,8 +68,8 @@ void sub_80567F8(void)
     Sprite *s = &straw->s;
     MapEntity *me = straw->base.me;
     Vec2_32 pos = {
-        .x = Q_24_8_TO_INT(straw->spawnX + straw->offsetX),
-        .y = Q_24_8_TO_INT(straw->spawnY + straw->offsetY),
+        .x = I(straw->spawnX + straw->offsetX),
+        .y = I(straw->spawnY + straw->offsetY),
     };
 
     s->x = pos.x - gCamera.x;
@@ -106,13 +105,13 @@ void Task_StrawMain(void)
 
     ENEMY_UPDATE_POSITION(straw, s, pos.x, pos.y);
 
-    if (gPlayer.x < Q_24_8_NEW(pos.x)) {
+    if (gPlayer.x < QS(pos.x)) {
         straw->unk4C -= 0x10;
     } else {
         straw->unk4C += 0xB;
     }
 
-    if (gPlayer.y < Q_24_8_NEW(pos.y)) {
+    if (gPlayer.y < QS(pos.y)) {
         straw->unk50 -= 0x10;
     } else {
         straw->unk50 += 0xB;
@@ -130,7 +129,7 @@ void Task_StrawMain(void)
         straw->unk54 = 30;
     }
 
-    ENEMY_UPDATE_EX(s, pos.x, pos.y, ENEMY_TURN_TO_PLAYER(Q_24_8(pos.x), s))
+    ENEMY_UPDATE_EX(s, pos.x, pos.y, ENEMY_TURN_TO_PLAYER(Q(pos.x), s))
 }
 
 void sub_8056AF4(void)

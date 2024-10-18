@@ -1,3 +1,5 @@
+#include <string.h> // memcpy
+
 #include "global.h"
 #include "game/cutscenes/level_endings.h"
 #include "core.h"
@@ -16,6 +18,7 @@
 #include "game/stage/results.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/songs.h"
 #include "constants/text.h"
 #include "constants/tilemaps.h"
@@ -58,43 +61,34 @@ static void sub_808E114(void);
 
 // slides
 static const u16 sTilemapsCharacterSlides[] = {
-    TM_STORYFRAME_CREAM_UNLOCK_0,    TM_STORYFRAME_CREAM_UNLOCK_1,
-    TM_STORYFRAME_CREAM_UNLOCK_2,    TM_STORYFRAME_CREAM_UNLOCK_3,
+    TM_STORYFRAME_CREAM_UNLOCK_0,    TM_STORYFRAME_CREAM_UNLOCK_1,    TM_STORYFRAME_CREAM_UNLOCK_2,    TM_STORYFRAME_CREAM_UNLOCK_3,
 
-    TM_STORYFRAME_KNUCKLES_UNLOCK_0, TM_STORYFRAME_KNUCKLES_UNLOCK_1,
-    TM_STORYFRAME_KNUCKLES_UNLOCK_2, TM_STORYFRAME_KNUCKLES_UNLOCK_3,
+    TM_STORYFRAME_KNUCKLES_UNLOCK_0, TM_STORYFRAME_KNUCKLES_UNLOCK_1, TM_STORYFRAME_KNUCKLES_UNLOCK_2, TM_STORYFRAME_KNUCKLES_UNLOCK_3,
 
-    TM_STORYFRAME_TAILS_UNLOCK_0,    TM_STORYFRAME_TAILS_UNLOCK_1,
-    TM_STORYFRAME_TAILS_UNLOCK_2,    TM_STORYFRAME_TAILS_UNLOCK_3,
+    TM_STORYFRAME_TAILS_UNLOCK_0,    TM_STORYFRAME_TAILS_UNLOCK_1,    TM_STORYFRAME_TAILS_UNLOCK_2,    TM_STORYFRAME_TAILS_UNLOCK_3,
 };
 
-#define SLIDES_GROUP(i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14)   \
+#define SLIDES_GROUP(i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14)                                                      \
     i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14
 
 static const u16 sTilemapsCharacterDialogue[] = {
     /* LANG_JAPANESE */
-    SLIDES_GROUP(270, 271, 272, 273, 274, 304, 305, 306, 307, 308, 338, 339, 340, 341,
-                 342),
+    SLIDES_GROUP(270, 271, 272, 273, 274, 304, 305, 306, 307, 308, 338, 339, 340, 341, 342),
 
     /* LANG_ENGLISH */
-    SLIDES_GROUP(275, 276, 277, 278, 279, 309, 310, 311, 312, 313, 343, 344, 345, 346,
-                 347),
+    SLIDES_GROUP(275, 276, 277, 278, 279, 309, 310, 311, 312, 313, 343, 344, 345, 346, 347),
 
     /* LANG_FRENCH */
-    SLIDES_GROUP(285, 286, 287, 288, 289, 319, 320, 321, 322, 323, 353, 354, 355, 356,
-                 357),
+    SLIDES_GROUP(285, 286, 287, 288, 289, 319, 320, 321, 322, 323, 353, 354, 355, 356, 357),
 
     /* LANG_GERMAN */
-    SLIDES_GROUP(280, 281, 282, 283, 284, 314, 315, 316, 317, 318, 348, 349, 350, 351,
-                 352),
+    SLIDES_GROUP(280, 281, 282, 283, 284, 314, 315, 316, 317, 318, 348, 349, 350, 351, 352),
 
     /* LANG_SPANISH */
-    SLIDES_GROUP(295, 296, 297, 298, 299, 329, 330, 331, 332, 333, 363, 364, 365, 366,
-                 367),
+    SLIDES_GROUP(295, 296, 297, 298, 299, 329, 330, 331, 332, 333, 363, 364, 365, 366, 367),
 
     /* LANG_ITALIAN */
-    SLIDES_GROUP(290, 291, 292, 293, 294, 324, 325, 326, 327, 328, 358, 359, 360, 361,
-                 362),
+    SLIDES_GROUP(290, 291, 292, 293, 294, 324, 325, 326, 327, 328, 358, 359, 360, 361, 362),
 };
 
 static const u32 sAnimsCharacterRescued[] = {
@@ -194,16 +188,16 @@ void CreateStageResultsCutscene(u8 mode)
     s->x = 0;
     s->y = 0;
     s->graphics.size = 0;
-    s->unk1A = SPRITE_OAM_ORDER(10);
-    s->timeUntilNextFrame = 0;
+    s->oamFlags = SPRITE_OAM_ORDER(10);
+    s->qAnimDelay = 0;
 
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = unk122C[mode];
 
     if (mode != 2) {
-        s->unk10 = 0x400;
+        s->frameFlags = 0x400;
     } else {
-        s->unk10 = 0;
+        s->frameFlags = 0;
     }
 
     UpdateSpriteAnimation(s);
@@ -220,12 +214,12 @@ void CreateStageResultsCutscene(u8 mode)
         s->x = 0;
         s->y = 0;
         s->graphics.size = 0;
-        s->unk1A = SPRITE_OAM_ORDER(9);
-        s->timeUntilNextFrame = 0;
+        s->oamFlags = SPRITE_OAM_ORDER(9);
+        s->qAnimDelay = 0;
 
-        s->animSpeed = 0x10;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0x400;
+        s->frameFlags = 0x400;
         UpdateSpriteAnimation(s);
         m4aSongNumStart(SE_236);
     }
@@ -234,7 +228,7 @@ void CreateStageResultsCutscene(u8 mode)
     fade->window = 0;
     fade->flags = SCREEN_FADE_FLAG_FF00;
     fade->brightness = Q_8_8(1);
-    fade->speed = Q_24_8(0);
+    fade->speed = Q(0);
     fade->bldCnt = 0;
 }
 
@@ -256,17 +250,17 @@ static void sub_808DD9C(void)
         scene->unk76 = (scene->unk76 * 0x43) >> 6;
     }
 
-    if (scene->unk70 < (player->x - Q_24_8(gCamera.x) - Q_24_8(20.0))) {
-        scene->unk70 = (player->x - Q_24_8(gCamera.x) - Q_24_8(20.0));
+    if (scene->unk70 < (player->x - Q(gCamera.x) - Q(20.0))) {
+        scene->unk70 = (player->x - Q(gCamera.x) - Q(20.0));
     }
 
     if (scene->unk72 > (player->y - (gCamera.y * 0x100) - 0xA00)) {
         // Required for match
         scene->unk72 = scene->unk72 = player->y - (gCamera.y * 0x100) - 0xA00;
-        scene->unk70 = player->x - Q_24_8(gCamera.x) - Q_24_8(20.0);
+        scene->unk70 = player->x - Q(gCamera.x) - Q(20.0);
 
         if (scene->unk7A == 0) {
-            player->unk64 = 0x52;
+            player->charState = CHARSTATE_SONIC_CAUGHT_CREAM;
 
             VramFree(scene->unk4.graphics.dest);
 
@@ -325,13 +319,13 @@ static void sub_808DF88(void)
         scene->unk76 = (scene->unk76 * 0x7F) >> 7;
     }
 
-    if (scene->unk70 < (player->x - Q_24_8(gCamera.x) - 0x1C00)) {
-        scene->unk70 = player->x - Q_24_8(gCamera.x) - 0x1C00;
+    if (scene->unk70 < (player->x - Q(gCamera.x) - 0x1C00)) {
+        scene->unk70 = player->x - Q(gCamera.x) - 0x1C00;
     }
 
     if (scene->unk72 > (player->y - (gCamera.y * 0x100) - 0x1400)) {
         scene->unk72 = player->y - (gCamera.y * 0x100) - 0x1400;
-        scene->unk70 = player->x - Q_24_8(gCamera.x) - 0x1C00;
+        scene->unk70 = player->x - Q(gCamera.x) - 0x1C00;
 
         if (scene->unk7A == 0) {
             VramFree(scene->unk4.graphics.dest);
@@ -387,9 +381,7 @@ static void sub_808E114(void)
         scene->unk70 = player->x - (gCamera.x * 256) - 0x4000;
     }
 
-    result
-        = sub_801F100((scene->unk72 >> 8) + gCamera.y,
-                      (scene->unk70 >> 8) + gCamera.x + scene->unk7C, 1, 8, sub_801EC3C);
+    result = sub_801F100((scene->unk72 >> 8) + gCamera.y, (scene->unk70 >> 8) + gCamera.x + scene->unk7C, 1, 8, sub_801EC3C);
 
     if (result < 0) {
         scene->unk72 += result * 0x100;
@@ -406,7 +398,7 @@ static void sub_808E114(void)
     DisplaySprite(s);
 
     if (scene->unk78 == 0x28) {
-        player->unk64 = 0x52;
+        player->charState = CHARSTATE_SONIC_CAUGHT_CREAM;
     }
 
     if (scene->unk78 == 200) {
@@ -560,8 +552,7 @@ void sub_808E4C8(void)
             background->layoutVram = (void *)BG_SCREEN_ADDR(28);
             background->unk18 = 0;
             background->unk1A = 0;
-            background->tilemapId
-                = sTilemapsCharacterDialogue[scene->unk10E + 1 + (lang * 15)];
+            background->tilemapId = sTilemapsCharacterDialogue[scene->unk10E + 1 + (lang * 15)];
             background->unk1E = 0;
             background->unk20 = 0;
             background->unk22 = 0;
@@ -569,7 +560,7 @@ void sub_808E4C8(void)
             background->targetTilesX = 30;
             background->targetTilesY = 5;
             background->paletteOffset = 0;
-            background->flags = BACKGROUND_UPDATE_PALETTE | BACKGROUND_FLAGS_BG_ID(0);
+            background->flags = BACKGROUND_DISABLE_PALETTE_UPDATE | BACKGROUND_FLAGS_BG_ID(0);
             DrawBackground(background);
             gDispCnt |= DISPCNT_BG0_ON;
             m4aSongNumStart(MUS_GOT_ALL_CHAOS_EMERALDS);
@@ -615,11 +606,9 @@ void sub_808E6B0(void)
 
     if (UpdateScreenFade(&scene->unk100) == SCREEN_FADE_COMPLETE) {
         if (gCurrentLevel >= gLoadedSaveGame->unlockedLevels[gSelectedCharacter]) {
-            CreateCourseSelectionScreen(
-                gCurrentLevel, gLoadedSaveGame->unlockedLevels[gSelectedCharacter], 1);
+            CreateCourseSelectionScreen(gCurrentLevel, gLoadedSaveGame->unlockedLevels[gSelectedCharacter], 1);
         } else {
-            CreateCourseSelectionScreen(
-                gCurrentLevel, gLoadedSaveGame->unlockedLevels[gSelectedCharacter], 4);
+            CreateCourseSelectionScreen(gCurrentLevel, gLoadedSaveGame->unlockedLevels[gSelectedCharacter], 4);
         }
         TaskDestroy(gCurTask);
     }
@@ -627,7 +616,7 @@ void sub_808E6B0(void)
 
 void CreateCharacterUnlockCutScene(u8 zone)
 {
-    struct Task *t = TaskCreate(sub_808E424, 0x114, 0x1000, 0, NULL);
+    struct Task *t = TaskCreate(sub_808E424, sizeof(struct CharacterUnlockCutScene), 0x1000, 0, NULL);
     struct CharacterUnlockCutScene *scene = TASK_DATA(t);
     scene->unk10C = zone * 4;
     scene->unk10E = zone * 5;
@@ -638,7 +627,7 @@ void CreateCharacterUnlockCutScene(u8 zone)
 
 void CreateCreamUnlockCutScene(void)
 {
-    struct Task *t = TaskCreate(sub_808E424, 0x114, 0x1000, 0, NULL);
+    struct Task *t = TaskCreate(sub_808E424, sizeof(struct CharacterUnlockCutScene), 0x1000, 0, NULL);
     struct CharacterUnlockCutScene *scene = TASK_DATA(t);
     scene->unk10C = 0;
     scene->unk10E = 0;
@@ -648,7 +637,7 @@ void CreateCreamUnlockCutScene(void)
 
 void CreateTailsUnlockCutScene(void)
 {
-    struct Task *t = TaskCreate(sub_808E424, 0x114, 0x1000, 0, NULL);
+    struct Task *t = TaskCreate(sub_808E424, sizeof(struct CharacterUnlockCutScene), 0x1000, 0, NULL);
     struct CharacterUnlockCutScene *scene = TASK_DATA(t);
     scene->unk10C = 8;
     scene->unk10E = 10;
@@ -658,7 +647,7 @@ void CreateTailsUnlockCutScene(void)
 
 void CreateKnucklesUnlockCutScene(void)
 {
-    struct Task *t = TaskCreate(sub_808E424, 0x114, 0x1000, 0, NULL);
+    struct Task *t = TaskCreate(sub_808E424, sizeof(struct CharacterUnlockCutScene), 0x1000, 0, NULL);
     struct CharacterUnlockCutScene *scene = TASK_DATA(t);
     scene->unk10C = 4;
     scene->unk10E = 5;

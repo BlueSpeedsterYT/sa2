@@ -4,12 +4,14 @@
 #include "task.h"
 #include "trig.h"
 #include "lib/m4a.h"
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 #include "game/entity.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "game/interactables_2/techno_base/arrow_platform.h"
+
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -47,13 +49,11 @@ static void sub_807A73C(Sprite_IA75 *);
 static void sub_807A7F4(Sprite_IA75 *);
 static void sub_807AABC(void);
 
-static void sub_807A33C(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY,
-                        u8 param)
+static void sub_807A33C(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY, u8 param)
 {
     s32 i;
     Sprite *s;
-    struct Task *t
-        = TaskCreate(sub_807AA68, sizeof(Sprite_IA75), 0x2010, 0, sub_807AB04);
+    struct Task *t = TaskCreate(sub_807AA68, sizeof(Sprite_IA75), 0x2010, 0, sub_807AB04);
     Sprite_IA75 *ia75 = TASK_DATA(t);
     ia75->unk94 = param;
     ia75->unk8C = 0;
@@ -67,20 +67,20 @@ static void sub_807A33C(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 
     ia75->base.regionX = spriteRegionX;
     ia75->base.regionY = spriteRegionY;
     ia75->base.spriteX = me->x;
-    ia75->base.spriteY = spriteY;
+    ia75->base.id = spriteY;
 
     switch (ia75->unk94) {
         case 0:
-            ia75->unk74 = Q_24_8(ia75->offsetX);
-            ia75->unk78 = Q_24_8(ia75->height);
+            ia75->unk74 = Q(ia75->offsetX);
+            ia75->unk78 = Q(ia75->height);
             break;
         case 1:
-            ia75->unk74 = Q_24_8(ia75->width);
-            ia75->unk78 = Q_24_8(ia75->height);
+            ia75->unk74 = Q(ia75->width);
+            ia75->unk78 = Q(ia75->height);
             break;
         case 2:
-            ia75->unk74 = Q_24_8(ia75->width);
-            ia75->unk78 = Q_24_8(ia75->offsetY);
+            ia75->unk74 = Q(ia75->width);
+            ia75->unk78 = Q(ia75->offsetY);
             break;
     }
 
@@ -93,30 +93,30 @@ static void sub_807A33C(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 
     ia75->y = TO_WORLD_POS(me->y, spriteRegionY);
 
     s = &ia75->s1;
-    s->unk1A = SPRITE_OAM_ORDER(19);
+    s->oamFlags = SPRITE_OAM_ORDER(19);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
     s->graphics.dest = VramMalloc(8);
     s->graphics.anim = SA2_ANIM_ARROW_SCREEN;
     s->variant = 2;
     UpdateSpriteAnimation(s);
 
     s = &ia75->s2;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
     s->graphics.dest = (void *)BORDER_VRAM_ADDR;
     s->graphics.anim = SA2_ANIM_ARROW_SCREEN_BORDER;
     s->variant = 0;
@@ -129,8 +129,8 @@ static void sub_807A560(void)
 {
     u8 someBool = FALSE;
     Sprite_IA75 *ia75 = TASK_DATA(gCurTask);
-    gPlayer.transition = PLTRANS_PT1;
-    gPlayer.unk64 = 0;
+    gPlayer.transition = PLTRANS_TOUCH_GROUND;
+    gPlayer.charState = CHARSTATE_IDLE;
 
     if (IS_MULTI_PLAYER) {
         sub_807AB6C(ia75);
@@ -139,22 +139,22 @@ static void sub_807A560(void)
     switch (ia75->unk94) {
         case 0:
             ia75->unk74 -= Q_8_8(7.5);
-            if (Q_24_8_TO_INT(ia75->unk74) <= ia75->width) {
-                ia75->unk74 = Q_24_8(ia75->width);
+            if (I(ia75->unk74) <= ia75->width) {
+                ia75->unk74 = Q(ia75->width);
                 someBool = TRUE;
             }
             break;
         case 1:
             ia75->unk74 += Q_8_8(7.5);
-            if (Q_24_8_TO_INT(ia75->unk74) >= ia75->offsetX) {
-                ia75->unk74 = Q_24_8(ia75->offsetX);
+            if (I(ia75->unk74) >= ia75->offsetX) {
+                ia75->unk74 = Q(ia75->offsetX);
                 someBool = TRUE;
             }
             break;
         case 2:
             ia75->unk78 -= Q_8_8(7.5);
-            if (Q_24_8_TO_INT(ia75->unk78) <= ia75->height) {
-                ia75->unk78 = Q_24_8(ia75->height);
+            if (I(ia75->unk78) <= ia75->height) {
+                ia75->unk78 = Q(ia75->height);
                 someBool = TRUE;
             }
 
@@ -181,11 +181,11 @@ static void sub_807A560(void)
 static void sub_807A688(Sprite_IA75 *ia75)
 {
     Sprite *s;
-    ia75->unk7C = gPlayer.x - (Q_24_8(ia75->x) + ia75->unk74);
-    ia75->unk80 = gPlayer.y - (Q_24_8(ia75->y) + ia75->unk78);
+    ia75->unk7C = gPlayer.x - (Q(ia75->x) + ia75->unk74);
+    ia75->unk80 = gPlayer.y - (Q(ia75->y) + ia75->unk78);
 
-    gPlayer.transition = PLTRANS_PT1;
-    gPlayer.unk64 = 0;
+    gPlayer.transition = PLTRANS_TOUCH_GROUND;
+    gPlayer.charState = CHARSTATE_IDLE;
     gPlayer.speedAirX = 0;
     gPlayer.speedAirY = 0;
     gPlayer.speedGroundX = 0;
@@ -227,12 +227,12 @@ static void sub_807A73C(Sprite_IA75 *ia75)
             case 0:
                 gPlayer.speedGroundX = -Q_8_8(7.5);
                 gPlayer.moveState |= 1;
-                gPlayer.transition = PLTRANS_PT1;
+                gPlayer.transition = PLTRANS_TOUCH_GROUND;
                 break;
             case 1:
                 gPlayer.speedGroundX = Q_8_8(7.5);
                 gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
-                gPlayer.transition = PLTRANS_PT1;
+                gPlayer.transition = PLTRANS_TOUCH_GROUND;
                 break;
             case 2:
                 gPlayer.transition = PLTRANS_SPRING_UP;
@@ -250,39 +250,39 @@ static void sub_807A7F4(Sprite_IA75 *ia75)
 {
     Sprite *s = &ia75->s1;
     if (IS_MULTI_PLAYER) {
-        s->x = ia75->x + Q_24_8_TO_INT(ia75->unk98[1][0]) - gCamera.x;
-        s->y = ia75->y + Q_24_8_TO_INT(ia75->unk98[1][1]) - gCamera.y;
+        s->x = ia75->x + I(ia75->unk98[1][0]) - gCamera.x;
+        s->y = ia75->y + I(ia75->unk98[1][1]) - gCamera.y;
     } else {
-        s->x = ia75->x + Q_24_8_TO_INT(ia75->unk74) - gCamera.x;
-        s->y = ia75->y + Q_24_8_TO_INT(ia75->unk78) - gCamera.y;
+        s->x = ia75->x + I(ia75->unk74) - gCamera.x;
+        s->y = ia75->y + I(ia75->unk78) - gCamera.y;
     }
 
     if (ia75->unk8C != 0) {
         switch (ia75->unk94) {
             case 0:
-                s->unk10 &= ~(0x800 | 0x400);
+                s->frameFlags &= ~(0x800 | 0x400);
                 DisplaySprite(&ia75->s1);
-                s->unk10 |= 0x800;
+                s->frameFlags |= 0x800;
                 DisplaySprite(&ia75->s1);
                 break;
             case 1:
-                s->unk10 &= ~0x800;
-                s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+                s->frameFlags &= ~0x800;
+                s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
                 DisplaySprite(&ia75->s1);
-                s->unk10 |= 0x800;
+                s->frameFlags |= 0x800;
                 DisplaySprite(&ia75->s1);
                 break;
             case 2:
-                s->unk10 &= ~(0x800 | 0x400);
+                s->frameFlags &= ~(0x800 | 0x400);
                 DisplaySprite(&ia75->s1);
-                s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+                s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
                 DisplaySprite(&ia75->s1);
                 break;
         }
     } else {
-        s->unk10 &= ~(0x800 | 0x400);
+        s->frameFlags &= ~(0x800 | 0x400);
         DisplaySprite(&ia75->s1);
-        s->unk10 |= 0x800;
+        s->frameFlags |= 0x800;
         DisplaySprite(&ia75->s1);
     }
 
@@ -296,8 +296,8 @@ static bool32 sub_807A920(Sprite_IA75 *ia75)
     s16 x = ia75->x - gCamera.x;
     s16 y = ia75->y - gCamera.y;
 
-    if ((x + ia75->offsetX + 24) < -128 || (x + ia75->width - 24) > 368
-        || (y + ia75->offsetY + 24) < -128 || (y + ia75->height - 24) > 288) {
+    if ((x + ia75->offsetX + 24) < -128 || (x + ia75->width - 24) > (DISPLAY_WIDTH + 128) || (y + ia75->offsetY + 24) < -128
+        || (y + ia75->height - 24) > (DISPLAY_HEIGHT + 128)) {
         return TRUE;
     }
     return FALSE;
@@ -306,8 +306,7 @@ static bool32 sub_807A920(Sprite_IA75 *ia75)
 static u32 sub_807A99C(Sprite_IA75 *ia75)
 {
     if (PLAYER_IS_ALIVE) {
-        u32 temp = sub_800CCB8(&ia75->s2, ia75->x + Q_24_8_TO_INT(ia75->unk74),
-                               ia75->y + Q_24_8_TO_INT(ia75->unk78), &gPlayer);
+        u32 temp = sub_800CCB8(&ia75->s2, ia75->x + I(ia75->unk74), ia75->y + I(ia75->unk78), &gPlayer);
         if (temp != 0) {
             if (temp & 0x10000) {
                 gPlayer.y += Q_8_8(temp);
@@ -384,8 +383,8 @@ static void sub_807AB04(struct Task *t)
 static void sub_807AB18(Sprite_IA75 *ia75)
 {
     gPlayer.moveState |= MOVESTATE_400000;
-    gPlayer.x = ia75->unk7C + Q_24_8(ia75->x) + ia75->unk74;
-    gPlayer.y = ia75->unk80 + Q_24_8(ia75->y) + ia75->unk78;
+    gPlayer.x = ia75->unk7C + Q(ia75->x) + ia75->unk74;
+    gPlayer.y = ia75->unk80 + Q(ia75->y) + ia75->unk78;
     sub_807A99C(ia75);
 }
 
@@ -407,20 +406,17 @@ static void sub_807AB6C(Sprite_IA75 *ia75)
     ia75->unk98[0][1] = ia75->unk78;
 }
 
-void CreateEntity_ArrowPlatform_Left(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                     u8 spriteY)
+void CreateEntity_ArrowPlatform_Left(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     sub_807A33C(me, spriteRegionX, spriteRegionY, spriteY, 0);
 }
 
-void CreateEntity_ArrowPlatform_Right(MapEntity *me, u16 spriteRegionX,
-                                      u16 spriteRegionY, u8 spriteY)
+void CreateEntity_ArrowPlatform_Right(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     sub_807A33C(me, spriteRegionX, spriteRegionY, spriteY, 1);
 }
 
-void CreateEntity_ArrowPlatform_Up(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                   u8 spriteY)
+void CreateEntity_ArrowPlatform_Up(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     sub_807A33C(me, spriteRegionX, spriteRegionY, spriteY, 2);
 }

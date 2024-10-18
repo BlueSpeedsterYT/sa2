@@ -4,7 +4,7 @@
 #include "malloc_vram.h"
 #include "trig.h"
 
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 
 #include "game/save.h"
 #include "game/bosses/common.h"
@@ -16,6 +16,7 @@
 #include "game/stage/collision.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
+#include "game/stage/game_7.h"
 
 #include "game/stage/screen_fade.h"
 
@@ -126,8 +127,7 @@ typedef struct {
 } EggSaucer; /* 0x4B0 */
 
 // Attack speeds?
-const u16 gUnknown_080D7F94[2]
-    = { 4 * GBA_FRAMES_PER_SECOND, 8 * GBA_FRAMES_PER_SECOND };
+const u16 gUnknown_080D7F94[2] = { 4 * GBA_FRAMES_PER_SECOND, 8 * GBA_FRAMES_PER_SECOND };
 
 typedef void (*EggSaucerCallback)(EggSaucer *);
 
@@ -143,23 +143,16 @@ static const EggSaucerCallback gArmFunctions[] = {
 };
 
 static const TileInfo gUnknown_080D7FB0[] = {
-    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_RIGHT, 0 },
-    { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_DOWN_RIGHT, 0 },
-    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_DOWN, 0 },
-    { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_DOWN_LEFT, 0 },
-    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_LEFT, 0 },
-    { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_UP_LEFT, 0 },
-    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_UP, 0 },
-    { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_UP_RIGHT, 0 },
+    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_RIGHT, 0 }, { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_DOWN_RIGHT, 0 },
+    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_DOWN, 0 },  { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_DOWN_LEFT, 0 },
+    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_LEFT, 0 },  { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_UP_LEFT, 0 },
+    { 2, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_UP, 0 },    { 4, SA2_ANIM_EGG_SAUCER_SMACK_PARTICLE_UP_RIGHT, 0 },
 };
 
 static const u16 gUnknown_080D7FF0[][16] = {
     INCBIN_U16("graphics/80D7FF0.gbapal"),
     INCBIN_U16("graphics/80D8010.gbapal"),
 };
-
-// stage intro related
-extern void sub_802E784(u16, u16, u16, s16 x, s16 y, s16);
 
 void Task_EggSaucerIntro(void);
 void TaskDestructor_EggSaucerMain(struct Task *);
@@ -197,7 +190,6 @@ void sub_804352C(void);
 void CreateEggSaucer(void)
 {
     u8 i;
-    u32 r2;
     EggSaucer *boss;
     ScreenFade *fade;
     Sprite *s;
@@ -223,14 +215,13 @@ void CreateEggSaucer(void)
 
     m4aSongNumStart(SE_253);
 
-    gUnknown_03005AF0.s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AF0.s.unk10 |= SPRITE_FLAG(PRIORITY, 1);
+    gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
 
-    gUnknown_03005AA0.s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AA0.s.unk10 |= SPRITE_FLAG(PRIORITY, 1);
+    gUnknown_03005AA0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gUnknown_03005AA0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
 
-    gActiveBossTask = TaskCreate(Task_EggSaucerIntro, sizeof(EggSaucer), 0x4000, 0,
-                                 TaskDestructor_EggSaucerMain);
+    gActiveBossTask = TaskCreate(Task_EggSaucerIntro, sizeof(EggSaucer), 0x4000, 0, TaskDestructor_EggSaucerMain);
     boss = TASK_DATA(gActiveBossTask);
 
     fade = &boss->screenTransition;
@@ -238,9 +229,8 @@ void CreateEggSaucer(void)
     fade->brightness = 0;
     fade->flags = 2;
     fade->speed = 0;
-    fade->bldCnt
-        = (BLDCNT_TGT2_BD | BLDCNT_TGT2_OBJ | BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_BD
-           | BLDCNT_TGT1_BG0 | BLDCNT_TGT1_BG1 | BLDCNT_TGT1_BG2 | BLDCNT_TGT1_BG3);
+    fade->bldCnt = (BLDCNT_TGT2_BD | BLDCNT_TGT2_OBJ | BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_BD | BLDCNT_TGT1_BG0 | BLDCNT_TGT1_BG1
+                    | BLDCNT_TGT1_BG2 | BLDCNT_TGT1_BG3);
     fade->bldAlpha = 0;
 
     if (gDifficultyLevel != 0 && gGameMode != GAME_MODE_BOSS_TIME_ATTACK) {
@@ -257,16 +247,16 @@ void CreateEggSaucer(void)
     }
 
     if (gCurrentLevel == LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)) {
-        boss->x = Q_24_8(23044);
-        boss->y = Q_24_8(140);
+        boss->x = Q(23044);
+        boss->y = Q(140);
     } else {
-        boss->x = Q_24_8(540);
-        boss->y = Q_24_8(140);
+        boss->x = Q(540);
+        boss->y = Q(140);
     }
 
     boss->introTimer = 80;
 
-    boss->unkC = Q_24_8(BOSS_SPEED);
+    boss->unkC = Q(BOSS_SPEED);
     boss->unkE = 0;
     boss->unk12 = 0;
     boss->unk13 = 0;
@@ -324,8 +314,7 @@ void CreateEggSaucer(void)
     s->graphics.dest = vram;
     vram += PILOT_TILES * TILE_SIZE_4BPP;
 
-    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)
-         && gSelectedCharacter == CHARACTER_SONIC)
+    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) && gSelectedCharacter == CHARACTER_SONIC)
         && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel) {
         s->graphics.anim = SA2_ANIM_EGG_SAUCER_PILOT_KNUCKLES;
         s->variant = 0;
@@ -358,8 +347,8 @@ void CreateEggSaucer(void)
     // Seems a lot of tiles for this
     vram += 64 * TILE_SIZE_4BPP;
     SPRITE_INIT_ANIM_AND_SCRIPT(s, SA2_ANIM_EGG_SAUCER_GUN, 0, 23);
-    s->unk10 = gUnknown_030054B8++ | SPRITE_FLAG(PRIORITY, 1)
-        | SPRITE_FLAG(ROT_SCALE_ENABLE, 1) | SPRITE_FLAG(ROT_SCALE_DOUBLE_SIZE, 1);
+    s->frameFlags
+        = gUnknown_030054B8++ | SPRITE_FLAG(PRIORITY, 1) | SPRITE_FLAG(ROT_SCALE_ENABLE, 1) | SPRITE_FLAG(ROT_SCALE_DOUBLE_SIZE, 1);
 
     s = &boss->gunCharge;
     s->x = 0;
@@ -390,7 +379,7 @@ void CreateEggSaucer(void)
     s->graphics.dest = vram;
     SPRITE_INIT_ANIM_AND_SCRIPT(s, SA2_ANIM_EGG_SAUCER_HAND, 0, 12);
     s->hitboxes[1].index = -1;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 1);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 1);
 
     for (i = 0; i < 8; i++) {
         s = &boss->smackParticles[i];
@@ -399,8 +388,7 @@ void CreateEggSaucer(void)
         s->graphics.dest = vramBase;
         vramBase += gUnknown_080D7FB0[i].numTiles * TILE_SIZE_4BPP;
 
-        SPRITE_INIT_WITHOUT_VRAM(s, gUnknown_080D7FB0[i].anim,
-                                 gUnknown_080D7FB0[i].variant, 11, 1, 0);
+        SPRITE_INIT_WITHOUT_VRAM(s, gUnknown_080D7FB0[i].anim, gUnknown_080D7FB0[i].variant, 11, 1, 0);
     }
 }
 
@@ -408,7 +396,7 @@ void Task_EggSaucerIntro(void)
 {
     EggSaucer *boss = TASK_DATA(gCurTask);
     // speed
-    boss->x += Q_24_8(BOSS_INTRO_SPEED);
+    boss->x += Q(BOSS_INTRO_SPEED);
 
     SaucerUpdatePosAndRotate(boss);
     sub_8044784(boss);
@@ -445,7 +433,7 @@ void sub_804352C(void)
         gBldRegs.bldCnt = 0;
         Player_DisableInputAndBossTimer();
         sub_80436E4(boss);
-        boss->unkC = Q_24_8(BOSS_SPEED);
+        boss->unkC = Q(BOSS_SPEED);
         boss->unk11 = 0;
         gCurTask->main = sub_80435BC;
     }
@@ -468,23 +456,20 @@ void sub_80435BC(void)
         m4aSongNumStart(SE_144);
     }
 
-    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)
-         && gSelectedCharacter == CHARACTER_SONIC)
+    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) && gSelectedCharacter == CHARACTER_SONIC)
         && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel) {
-        if (boss->unk15 == 0 && Q_24_8_TO_INT(boss->cabinX) - gCamera.x < 50) {
+        if (boss->unk15 == 0 && I(boss->cabinX) - gCamera.x < 50) {
             boss->unk15 = 1;
         }
     } else {
-        if (boss->unk15 == 0 && Q_24_8_TO_INT(boss->cabinX) - gCamera.x < 50) {
+        if (boss->unk15 == 0 && I(boss->cabinX) - gCamera.x < 50) {
             boss->unk15 = 1;
-            CreateEggmobileEscapeSequence(Q_24_8_TO_INT(boss->cabinX) - gCamera.x,
-                                          Q_24_8_TO_INT(boss->cabinY) - gCamera.y,
-                                          SPRITE_FLAG(PRIORITY, 2));
+            CreateEggmobileEscapeSequence(I(boss->cabinX) - gCamera.x, I(boss->cabinY) - gCamera.y, SPRITE_FLAG(PRIORITY, 2));
         }
     }
     sub_8045898(boss);
 
-    if (Q_24_8_TO_INT(boss->cabinX) - gCamera.x < -200 && boss->unk15 != 0) {
+    if (I(boss->cabinX) - gCamera.x < -200 && boss->unk15 != 0) {
         sub_802EF68(-40, 140, 4);
         gCurTask->main = sub_804598C;
     }
@@ -513,16 +498,16 @@ void sub_80436E4(EggSaucer *boss)
     boss->unkD8 = Q_8_8(4.75);
     boss->unkDA = -Q_8_8(4);
 
-    x += Q_24_8(2);
-    y -= Q_24_8(17);
+    x += Q(2);
+    y -= Q(17);
 
     x2 = 0;
     y2 = 0;
 
     for (i = 0; i < 6; i++) {
         idx = (((boss->unkB6 - 1) - (i + 1) * 4)) & 31;
-        x2 += Q_24_8(boss->unk36[0][idx]);
-        y2 += Q_24_8(boss->unk36[1][idx]);
+        x2 += Q(boss->unk36[0][idx]);
+        y2 += Q(boss->unk36[1][idx]);
 
         boss->unkDC[i][0] = x + (x2 >> 3);
         boss->unkDC[i][1] = y + (y2 >> 3);
@@ -539,8 +524,8 @@ void sub_80436E4(EggSaucer *boss)
     }
 
     idx = (boss->unkB6 + 229) & 31;
-    x2 += boss->unk36[0][idx] * Q_24_8(0.5);
-    y2 += boss->unk36[1][idx] * Q_24_8(0.5);
+    x2 += boss->unk36[0][idx] * Q(0.5);
+    y2 += boss->unk36[1][idx] * Q(0.5);
     boss->handX = x + ((x2) >> 3);
     boss->handY = y + ((y2) >> 3);
 
@@ -558,8 +543,8 @@ void sub_80438C4(EggSaucer *boss)
     s32 x, y;
     s32 x2, y2;
 
-    x = Q_24_8_TO_INT(boss->x) - gCamera.x;
-    y = Q_24_8_TO_INT(boss->y) - gCamera.y;
+    x = I(boss->x) - gCamera.x;
+    y = I(boss->y) - gCamera.y;
 
     gBgScrollRegs[0][0] = 60 - x;
     gBgScrollRegs[0][1] = 54 - y;
@@ -593,7 +578,7 @@ void sub_80438C4(EggSaucer *boss)
         transform = &boss->transform;
         s->x = x + ((COS(boss->gunDiskAngle) * 5) >> 11) - 2;
         s->y = y + ((SIN(boss->gunDiskAngle) * 5) >> 11) - 19;
-        s->unk10 = gUnknown_030054B8++ | 0x1060;
+        s->frameFlags = gUnknown_030054B8++ | 0x1060;
 
         transform->rotation = boss->unk1A;
         transform->width = 0x100;
@@ -601,7 +586,7 @@ void sub_80438C4(EggSaucer *boss)
         transform->x = s->x;
         transform->y = s->y;
         UpdateSpriteAnimation(s);
-        sub_8004860(s, transform);
+        TransformSprite(s, transform);
         DisplaySprite(s);
 
         if (PLAYER_IS_ALIVE && (boss->unk1C > 0 && boss->unk1C < 12)) {
@@ -633,7 +618,7 @@ void sub_80438C4(EggSaucer *boss)
         y2 += (boss->unk36[1][idx]);
         s->x = x + (x2 >> 3);
         s->y = y + (y2 >> 3);
-        s->unk1A = (19 - i) * 0x40;
+        s->oamFlags = SPRITE_OAM_ORDER(19 - i);
         DisplaySprite(s);
     }
 
@@ -665,8 +650,8 @@ void sub_8043BEC(EggSaucer *boss)
     Sprite *s;
     u8 i;
     s32 x, y;
-    x = Q_24_8_TO_INT(boss->x) - gCamera.x;
-    y = Q_24_8_TO_INT(boss->y) - gCamera.y;
+    x = I(boss->x) - gCamera.x;
+    y = I(boss->y) - gCamera.y;
 
     gBgScrollRegs[0][0] = 60 - x;
     gBgScrollRegs[0][1] = 54 - y;
@@ -678,38 +663,37 @@ void sub_8043BEC(EggSaucer *boss)
     }
 
     s = &boss->cabin;
-    s->x = Q_24_8_TO_INT(boss->cabinX) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->cabinY) - gCamera.y;
+    s->x = I(boss->cabinX) - gCamera.x;
+    s->y = I(boss->cabinY) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
     if (boss->unk15 == 0
-        || (gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)
-            && gSelectedCharacter == CHARACTER_SONIC
+        || (gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) && gSelectedCharacter == CHARACTER_SONIC
             && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel)) {
         s = &boss->pilot;
-        s->x = Q_24_8_TO_INT(boss->cabinX) - gCamera.x;
-        s->y = Q_24_8_TO_INT(boss->cabinY) - gCamera.y;
+        s->x = I(boss->cabinX) - gCamera.x;
+        s->y = I(boss->cabinY) - gCamera.y;
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
     }
 
     s = &boss->armBase;
-    s->x = Q_24_8_TO_INT(boss->armBaseX) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->armBaseY) - gCamera.y;
+    s->x = I(boss->armBaseX) - gCamera.x;
+    s->y = I(boss->armBaseY) - gCamera.y;
     DisplaySprite(s);
 
     s = &boss->armSegment;
     for (i = 0; i < 6; i++) {
-        s->x = Q_24_8_TO_INT(boss->unkDC[i][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(boss->unkDC[i][1]) - gCamera.y;
-        s->unk1A = (19 - i) * 0x40;
+        s->x = I(boss->unkDC[i][0]) - gCamera.x;
+        s->y = I(boss->unkDC[i][1]) - gCamera.y;
+        s->oamFlags = SPRITE_OAM_ORDER(19 - i);
         DisplaySprite(s);
     }
 
     s = &boss->hand;
-    s->x = Q_24_8_TO_INT(boss->handX) - gCamera.x;
-    s->y = Q_24_8_TO_INT(boss->handY) - gCamera.y;
+    s->x = I(boss->handX) - gCamera.x;
+    s->y = I(boss->handY) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 }
@@ -749,42 +733,42 @@ void sub_8043E2C(EggSaucer *boss)
         y = boss->unk2C + boss->unk24;
         boss->unk2C = y;
 
-        bottomX = Q_24_8_TO_INT(x);
-        bottomY = Q_24_8_TO_INT(y) + 10;
+        bottomX = I(x);
+        bottomY = I(y) + 10;
         ground = sub_801E4E4(bottomY, bottomX, 1, 8, NULL, sub_801EE64);
         if (ground < 0) {
-            boss->unk2C += Q_24_8(ground);
+            boss->unk2C += Q(ground);
             boss->unk22 = Div(-(boss->unk22 * 80), 100);
             boss->unk20 = 1;
         }
 
         s = &boss->gunBase;
-        s->x = Q_24_8_TO_INT(x) - gCamera.x;
-        s->y = Q_24_8_TO_INT(y) - gCamera.y;
+        s->x = I(x) - gCamera.x;
+        s->y = I(y) - gCamera.y;
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
 
         s = &boss->gun;
         transform = &boss->transform;
-        s->x = (Q_24_8_TO_INT(x) - gCamera.x) - 2;
-        s->y = (Q_24_8_TO_INT(y) - gCamera.y) - 19;
-        s->unk10 = gUnknown_030054B8++ | 0x1060;
+        s->x = (I(x) - gCamera.x) - 2;
+        s->y = (I(y) - gCamera.y) - 19;
+        s->frameFlags = gUnknown_030054B8++ | 0x1060;
 
         transform->rotation = boss->unk1A;
         transform->width = 256;
         transform->height = 256;
         transform->x = s->x;
         transform->y = s->y;
-        sub_8004860(s, transform);
+        TransformSprite(s, transform);
         DisplaySprite(s);
 
         if (Mod(gStageTime, 3) == 0) {
             u32 rand;
 
             rand = PseudoRandom32();
-            explosion.spawnX = (Q_24_8_TO_INT(x) - gCamera.x) + (rand & 15) - 8;
+            explosion.spawnX = (I(x) - gCamera.x) + (rand & 15) - 8;
             rand = PseudoRandom32();
-            explosion.spawnY = (Q_24_8_TO_INT(y) - gCamera.y) + (rand & 15) - 8;
+            explosion.spawnY = (I(y) - gCamera.y) + (rand & 15) - 8;
             explosion.velocity = 0;
 
             explosion.rotation = ({ 1055 - (PseudoRandom32() & 63); });
@@ -827,14 +811,12 @@ void EggSaucerMove(s32 dX, s32 dY)
 void HandleCollision(EggSaucer *boss)
 {
     u8 i;
-    Sprite *s;
     u8 idx;
     s32 x, y;
-    u32 temp;
-    s = &boss->cabin;
+    Sprite *s = &boss->cabin;
 
-    x = Q_24_8_TO_INT(boss->x) + ((COS(boss->cabinDiskAngle) * 5) >> 11);
-    y = Q_24_8_TO_INT(boss->y) + ((SIN(boss->cabinDiskAngle) * 5) >> 11);
+    x = I(boss->x) + ((COS(boss->cabinDiskAngle) * 5) >> 11);
+    y = I(boss->y) + ((SIN(boss->cabinDiskAngle) * 5) >> 11);
 
     s->x = x - gCamera.x;
     s->y = y - gCamera.y;
@@ -855,17 +837,17 @@ void HandleCollision(EggSaucer *boss)
         }
     }
 
-    Player_UpdateHomingPosition(Q_24_8_NEW(x), Q_24_8_NEW(y));
+    Player_UpdateHomingPosition(QS(x), QS(y));
 
     if (boss->unk13 == 0 && IsColliding_Cheese(s, x, y, 0, &gPlayer) == TRUE) {
         sub_8045368(boss);
-        gUnknown_03005498.t->unk15 = 0;
+        gCheeseTarget.task->unk15 = 0;
     }
 
     if (boss->unk11 != 0 && boss->unk1F == 0) {
         s = &boss->gunBase;
-        x = Q_24_8_TO_INT(boss->x) + ((COS(boss->gunDiskAngle) * 5) >> 11);
-        y = Q_24_8_TO_INT(boss->y) + ((SIN(boss->gunDiskAngle) * 5) >> 11);
+        x = I(boss->x) + ((COS(boss->gunDiskAngle) * 5) >> 11);
+        y = I(boss->y) + ((SIN(boss->gunDiskAngle) * 5) >> 11);
 
         s->x = x - gCamera.x;
         s->y = y - gCamera.y;
@@ -893,7 +875,7 @@ void HandleCollision(EggSaucer *boss)
             }
         }
 
-        Player_UpdateHomingPosition(Q_24_8_NEW(x), Q_24_8_NEW(y));
+        Player_UpdateHomingPosition(QS(x), QS(y));
 
         if (boss->unk1F == 0) {
             if (IsColliding_Cheese(s, x, y, 0, &gPlayer) == 1) {
@@ -906,19 +888,19 @@ void HandleCollision(EggSaucer *boss)
                     m4aSongNumStart(SE_235);
                 }
 
-                gUnknown_03005498.t->unk15 = 0;
+                gCheeseTarget.task->unk15 = 0;
                 if (boss->unk11 == 0) {
                     INCREMENT_SCORE(500);
                 }
             }
         }
-        boss->unk28 = Q_24_8_NEW(x - 5);
-        boss->unk2C = Q_24_8_NEW(y + 1);
+        boss->unk28 = QS(x - 5);
+        boss->unk2C = QS(y + 1);
     }
 
     s = &boss->armBase;
-    x = Q_24_8_TO_INT(boss->x) + ((COS(boss->armDiskAngle) * 5) >> 11);
-    y = Q_24_8_TO_INT(boss->y) + ((SIN(boss->armDiskAngle) * 5) >> 11);
+    x = I(boss->x) + ((COS(boss->armDiskAngle) * 5) >> 11);
+    y = I(boss->y) + ((SIN(boss->armDiskAngle) * 5) >> 11);
 
     s->x = x - gCamera.x;
     s->y = y - gCamera.y;
@@ -969,20 +951,14 @@ static void SaucerUpdatePosAndRotate(EggSaucer *boss)
     y = boss->y + boss->unkE;
     boss->y = y;
 
-    bottomX = Q_24_8_TO_INT(x);
-    bottomY = Q_24_8_TO_INT(y) + (BOSS_HEIGHT / 2);
+    bottomX = I(x);
+    bottomY = I(y) + (BOSS_HEIGHT / 2);
 
-    boss->y += Q_24_8(sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64));
+    boss->y += Q(sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64));
 
-    boss->cabinDiskAngle = ({
-        (boss->cabinDiskAngle + DEG_TO_SIN(BOSS_ROTATE_SPEED_DEG)) & (SIN_PERIOD - 1);
-    });
-    boss->gunDiskAngle = ({
-        (boss->gunDiskAngle + DEG_TO_SIN(BOSS_ROTATE_SPEED_DEG)) & (SIN_PERIOD - 1);
-    });
-    boss->armDiskAngle = ({
-        (boss->armDiskAngle + DEG_TO_SIN(BOSS_ROTATE_SPEED_DEG)) & (SIN_PERIOD - 1);
-    });
+    boss->cabinDiskAngle = ({ (boss->cabinDiskAngle + DEG_TO_SIN(BOSS_ROTATE_SPEED_DEG)) & (SIN_PERIOD - 1); });
+    boss->gunDiskAngle = ({ (boss->gunDiskAngle + DEG_TO_SIN(BOSS_ROTATE_SPEED_DEG)) & (SIN_PERIOD - 1); });
+    boss->armDiskAngle = ({ (boss->armDiskAngle + DEG_TO_SIN(BOSS_ROTATE_SPEED_DEG)) & (SIN_PERIOD - 1); });
 }
 
 void sub_8044540(EggSaucer *boss)
@@ -997,20 +973,20 @@ void sub_8044540(EggSaucer *boss)
     boss->x += boss->unkC;
     boss->y += boss->unkE;
 
-    bottomX = Q_24_8_TO_INT(boss->x);
-    bottomY = Q_24_8_TO_INT(boss->y) + (BOSS_HEIGHT / 2);
+    bottomX = I(boss->x);
+    bottomY = I(boss->y) + (BOSS_HEIGHT / 2);
 
-    boss->y += Q_24_8(sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64));
+    boss->y += Q(sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64));
     boss->unkD6 += 0x30;
 
     boss->cabinX += boss->unkD4;
     boss->cabinY += boss->unkD6;
 
-    bottomX = Q_24_8_TO_INT(boss->cabinX);
-    bottomY = Q_24_8_TO_INT(boss->cabinY);
+    bottomX = I(boss->cabinX);
+    bottomY = I(boss->cabinY);
     res = sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64);
     if (res < 0) {
-        boss->cabinY += Q_24_8_NEW(res);
+        boss->cabinY += QS(res);
         boss->unkD6 = Div(-0x46 * boss->unkD6, 100);
         boss->unkD4 -= 24;
     }
@@ -1019,11 +995,11 @@ void sub_8044540(EggSaucer *boss)
     boss->armBaseX += boss->unkD8;
     boss->armBaseY += boss->unkDA;
 
-    bottomX = Q_24_8_TO_INT(boss->armBaseX);
-    bottomY = Q_24_8_TO_INT(boss->armBaseY);
+    bottomX = I(boss->armBaseX);
+    bottomY = I(boss->armBaseY);
     res = sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64);
     if (res < 0) {
-        boss->armBaseY += Q_24_8_NEW(res);
+        boss->armBaseY += QS(res);
         boss->unkDA = Div(-0x41 * boss->unkDA, 100);
         boss->unkD8 -= 34;
     }
@@ -1033,11 +1009,11 @@ void sub_8044540(EggSaucer *boss)
         boss->unkDC[i][0] += boss->unk10C[i][0];
         boss->unkDC[i][1] += boss->unk10C[i][1];
 
-        bottomX = Q_24_8_TO_INT(boss->unkDC[i][0]);
-        bottomY = Q_24_8_TO_INT(boss->unkDC[i][1]);
+        bottomX = I(boss->unkDC[i][0]);
+        bottomY = I(boss->unkDC[i][1]);
         res = sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64);
         if (res < 0) {
-            boss->unkDC[i][1] += Q_24_8_NEW(res);
+            boss->unkDC[i][1] += QS(res);
             boss->unk10C[i][1] = Div(boss->unk10C[i][1] * (i - 0x41), 100);
             boss->unk10C[i][0] += (i - 0x33);
         }
@@ -1047,11 +1023,11 @@ void sub_8044540(EggSaucer *boss)
     boss->handX += boss->unk12C;
     boss->handY += boss->unk12E;
 
-    bottomX = Q_24_8_TO_INT(boss->handX);
-    bottomY = Q_24_8_TO_INT(boss->handY);
+    bottomX = I(boss->handX);
+    bottomY = I(boss->handY);
     res = sub_801E4E4(bottomY, bottomX, 1, 8, 0, sub_801EE64);
     if (res < 0) {
-        boss->handY += Q_24_8_NEW(res);
+        boss->handY += QS(res);
         boss->unk12E = Div(-60 * boss->unk12E, 100);
         boss->unk12C -= 52;
     }
@@ -1067,8 +1043,8 @@ void sub_8044784(EggSaucer *boss)
     ScreenFade *fade = &boss->screenTransition;
 
     if (!PLAYER_IS_ALIVE) {
-        if (fade->brightness != Q_24_8(SCREEN_FADE_BLEND_MAX)) {
-            fade->brightness = Q_24_8(SCREEN_FADE_BLEND_MAX);
+        if (fade->brightness != Q(SCREEN_FADE_BLEND_MAX)) {
+            fade->brightness = Q(SCREEN_FADE_BLEND_MAX);
             UpdateScreenFade(fade);
         }
         gFlags &= ~FLAGS_4;
@@ -1076,24 +1052,24 @@ void sub_8044784(EggSaucer *boss)
     }
 
     if (boss->unk11 == 0) {
-        fade->brightness = Q_24_8(SCREEN_FADE_BLEND_MAX);
+        fade->brightness = Q(SCREEN_FADE_BLEND_MAX);
         UpdateScreenFade(fade);
         gFlags &= ~FLAGS_4;
         return;
     }
 
-    x = (Q_24_8_TO_INT(boss->x) - gCamera.x);
+    x = (I(boss->x) - gCamera.x);
     x += ((COS(boss->gunDiskAngle) * 5) >> 11);
     x += ((COS(boss->unk1A) * 3) >> 11);
 
-    y = (Q_24_8_TO_INT(boss->y) - gCamera.y);
+    y = (I(boss->y) - gCamera.y);
     y += (SIN(boss->gunDiskAngle) * 5) >> 11;
     y -= 0x12;
     y += (SIN(boss->unk1A) * 3) >> 11;
 
     someBool = FALSE;
     if (boss->unk1E != 0 && boss->unk1C == 0) {
-        fade->brightness = Q_24_8(SCREEN_FADE_BLEND_MAX) - Q_8_8((--boss->unk1E));
+        fade->brightness = Q(SCREEN_FADE_BLEND_MAX) - Q_8_8((--boss->unk1E));
         sub_802E784(boss->unk1A, boss->unk1E + 8, 6, x, y, 0x20);
 
         someBool = TRUE;
@@ -1102,7 +1078,7 @@ void sub_8044784(EggSaucer *boss)
         }
     } else {
         s32 tmp;
-        fade->brightness = Q_24_8(SCREEN_FADE_BLEND_MAX);
+        fade->brightness = Q(SCREEN_FADE_BLEND_MAX);
         tmp = boss->unk1C;
         boss->unk1C--;
         if (boss->unk1C == 0) {
@@ -1128,14 +1104,14 @@ void sub_8044784(EggSaucer *boss)
 
     UpdateScreenFade(fade);
 
-    y = Q_24_8_TO_INT(gPlayer.y);
+    y = I(gPlayer.y);
     y += 0x13;
-    y -= (Q_24_8_TO_INT(boss->y) + ((SIN(boss->gunDiskAngle) * 5) >> 11));
+    y -= (I(boss->y) + ((SIN(boss->gunDiskAngle) * 5) >> 11));
     x = ({
         s32 temp3;
-        x = (Q_24_8_TO_INT(gPlayer.x));
+        x = (I(gPlayer.x));
         temp3 = x + 2;
-        temp3 - (Q_24_8_TO_INT(boss->x) + ((COS(boss->gunDiskAngle) * 5) >> 11));
+        temp3 - (I(boss->x) + ((COS(boss->gunDiskAngle) * 5) >> 11));
     });
     temp = sub_8004418(y, x);
     if (gStageTime & 1) {
@@ -1285,8 +1261,8 @@ static void sub_8044CBC(EggSaucer *boss)
 #endif
     if (boss->armStateTimer == 64) {
         s32 x, y;
-        x = Q_24_8_TO_INT(boss->x);
-        y = Q_24_8_TO_INT(boss->y);
+        x = I(boss->x);
+        y = I(boss->y);
 
         x += ((COS(boss->armDiskAngle) * 5) >> 11);
         y += (SIN(boss->armDiskAngle) * 5) >> 11;
@@ -1294,8 +1270,8 @@ static void sub_8044CBC(EggSaucer *boss)
         x += 2;
         y -= 0x11;
 
-        x = Q_24_8_TO_INT(gPlayer.x) - x;
-        y = Q_24_8_TO_INT(gPlayer.y) - y;
+        x = I(gPlayer.x) - x;
+        y = I(gPlayer.y) - y;
         boss->unk32 = sub_8004418(y, x);
     }
 
@@ -1437,8 +1413,8 @@ static void sub_8044FE4(EggSaucer *boss)
 #endif
     if (boss->armStateTimer == 64) {
         s32 x, y;
-        x = Q_24_8_TO_INT(boss->x);
-        y = Q_24_8_TO_INT(boss->y);
+        x = I(boss->x);
+        y = I(boss->y);
 
         x += ((COS(boss->armDiskAngle) * 5) >> 11);
         y += (SIN(boss->armDiskAngle) * 5) >> 11;
@@ -1446,8 +1422,8 @@ static void sub_8044FE4(EggSaucer *boss)
         x += 2;
         y -= 0x11;
 
-        x = Q_24_8_TO_INT(gPlayer.x) - x;
-        y = Q_24_8_TO_INT(gPlayer.y) - y;
+        x = I(gPlayer.x) - x;
+        y = I(gPlayer.y) - y;
         boss->unk32 = sub_8004418(y, x);
     }
 
@@ -1516,7 +1492,7 @@ static void sub_8044FE4(EggSaucer *boss)
 static void sub_80451C4(EggSaucer *boss)
 {
     Sprite *s;
-    s32 val, temp, index;
+    s32 val;
 #ifndef NON_MATCHING
     register u8 r2 asm("r2");
 #endif
@@ -1576,10 +1552,10 @@ static void sub_80451C4(EggSaucer *boss)
 void sub_80452F8(EggSaucer *boss)
 {
     Sprite *s = &boss->pilot;
+
     if (boss->unk13 == 0) {
         boss->unk12 = 0x1E;
-        if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)
-             && gSelectedCharacter == CHARACTER_SONIC)
+        if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) && gSelectedCharacter == CHARACTER_SONIC)
             && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel) {
             s->graphics.anim = SA2_ANIM_EGG_SAUCER_PILOT_KNUCKLES;
             s->variant = 1;
@@ -1605,8 +1581,7 @@ void sub_8045368(EggSaucer *boss)
 
     boss->unk13 = 30;
     boss->unk12 = 0;
-    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)
-         && gSelectedCharacter == CHARACTER_SONIC)
+    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) && gSelectedCharacter == CHARACTER_SONIC)
         && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel) {
         if (!boss->unk10) {
             s->graphics.anim = SA2_ANIM_EGG_SAUCER_PILOT_KNUCKLES;
@@ -1628,8 +1603,7 @@ void sub_8045368(EggSaucer *boss)
     }
     s->prevVariant = -1;
 
-    if (gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)
-        && boss->unk10 == 4) {
+    if (gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) && boss->unk10 == 4) {
         gUnknown_030054A8.unk1 = 0x11;
     }
 }
@@ -1650,8 +1624,7 @@ void sub_80454A4(EggSaucer *boss)
 
     s = &boss->pilot;
 
-    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE)
-         && gSelectedCharacter == CHARACTER_SONIC)
+    if ((gCurrentLevel != LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) && gSelectedCharacter == CHARACTER_SONIC)
         && gLoadedSaveGame->unlockedLevels[CHARACTER_SONIC] <= gCurrentLevel) {
         if (!boss->unk10) {
             s->graphics.anim = SA2_ANIM_EGG_SAUCER_PILOT_KNUCKLES;
@@ -1673,8 +1646,7 @@ void sub_80454A4(EggSaucer *boss)
 }
 
 // (86.11%) https://decomp.me/scratch/wnQsf
-NONMATCH("asm/non_matching/game/bosses/boss_5__sub_8045564.inc",
-         void sub_8045564(EggSaucer *boss))
+NONMATCH("asm/non_matching/game/bosses/boss_5__sub_8045564.inc", void sub_8045564(EggSaucer *boss))
 {
     s32 index;
     u8 val2;
@@ -1685,9 +1657,9 @@ NONMATCH("asm/non_matching/game/bosses/boss_5__sub_8045564.inc",
         if (Mod(gStageTime, 7) == 0) {
             rand = (PseudoRandom32() & 31) + 0x18;
             index = CLAMP_SIN_PERIOD(gStageTime * 900);
-            e.spawnX = (Q_24_8_TO_INT(boss->x) - gCamera.x);
+            e.spawnX = (I(boss->x) - gCamera.x);
             e.spawnX += +((rand * COS(index)) >> 14);
-            e.spawnY = (Q_24_8_TO_INT(boss->y) - gCamera.y);
+            e.spawnY = (I(boss->y) - gCamera.y);
             e.spawnY += ((rand * SIN(index)) >> 14);
             e.velocity = 0;
             e.rotation = ({ 0x407 - (PseudoRandom32() & 0x3F); });
@@ -1702,9 +1674,9 @@ NONMATCH("asm/non_matching/game/bosses/boss_5__sub_8045564.inc",
             rand = (PseudoRandom32() & 31) + 0x18;
             index = CLAMP_SIN_PERIOD(gStageTime * 900);
             val2 = Mod(gStageTime, 6);
-            e.spawnX = (Q_24_8_TO_INT(boss->x) - gCamera.x);
+            e.spawnX = (I(boss->x) - gCamera.x);
             e.spawnX += ((rand * COS(index)) >> 14);
-            e.spawnY = (Q_24_8_TO_INT(boss->y) - gCamera.y);
+            e.spawnY = (I(boss->y) - gCamera.y);
             e.spawnY += ((rand * SIN(index)) >> 14);
             e.velocity = 0x40;
             rand = (PseudoRandom32() & ONE_CYCLE);
@@ -1719,9 +1691,9 @@ NONMATCH("asm/non_matching/game/bosses/boss_5__sub_8045564.inc",
 
         if (Mod(gStageTime, 9) == 0) {
             rand = PseudoRandom32();
-            e.spawnX = (Q_24_8_TO_INT(boss->cabinX) - gCamera.x) + (rand & 0xF) - 8;
+            e.spawnX = (I(boss->cabinX) - gCamera.x) + (rand & 0xF) - 8;
             rand = PseudoRandom32();
-            e.spawnY = (Q_24_8_TO_INT(boss->cabinY) - gCamera.y) + (rand & 0xF) - 8;
+            e.spawnY = (I(boss->cabinY) - gCamera.y) + (rand & 0xF) - 8;
             e.velocity = 0;
 
             e.rotation = ({ 0x407 - (PseudoRandom32() & 63); });
@@ -1735,9 +1707,9 @@ NONMATCH("asm/non_matching/game/bosses/boss_5__sub_8045564.inc",
 
         if (Mod(gStageTime, 0xB) == 0) {
             rand = PseudoRandom32();
-            e.spawnX = (Q_24_8_TO_INT(boss->armBaseX) - gCamera.x) + (rand & 0xF) - 8;
+            e.spawnX = (I(boss->armBaseX) - gCamera.x) + (rand & 0xF) - 8;
             rand = PseudoRandom32();
-            e.spawnY = (Q_24_8_TO_INT(boss->armBaseY) - gCamera.y) + (rand & 0xF) - 8;
+            e.spawnY = (I(boss->armBaseY) - gCamera.y) + (rand & 0xF) - 8;
             e.velocity = 0;
 
             e.rotation = ({ 0x407 - (PseudoRandom32() & 63); });
@@ -1787,8 +1759,7 @@ void sub_804598C(void) { TaskDestroy(gCurTask); }
 
 void sub_80459A0(EggSaucer *boss)
 {
-    if (boss->unk11 == 0
-        && boss->armDiskAngle != ((boss->cabinDiskAngle + 0x200) & (SIN_PERIOD - 1))) {
+    if (boss->unk11 == 0 && boss->armDiskAngle != ((boss->cabinDiskAngle + 0x200) & (SIN_PERIOD - 1))) {
         boss->armDiskAngle = CLAMP_SIN_PERIOD(boss->armDiskAngle + 1);
     }
 }

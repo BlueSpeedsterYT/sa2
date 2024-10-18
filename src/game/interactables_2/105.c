@@ -1,7 +1,7 @@
 #include "global.h"
 #include "gba/types.h"
 
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -28,11 +28,9 @@ static bool32 sub_80809B8(Sprite_IA105 *);
 static bool32 sub_8080A9C(Sprite_IA105 *);
 static void sub_8080AE4(Sprite_IA105 *);
 
-void CreateEntity_Interactable105(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                  u8 spriteY)
+void CreateEntity_Interactable105(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_Interactable105, sizeof(Sprite_IA105), 0x1FF0, 0,
-                                TaskDestructor_Interactable105);
+    struct Task *t = TaskCreate(Task_Interactable105, sizeof(Sprite_IA105), 0x1FF0, 0, TaskDestructor_Interactable105);
     Sprite_IA105 *ia105 = TASK_DATA(t);
 
     ia105->posX = TO_WORLD_POS(me->x, spriteRegionX);
@@ -56,14 +54,13 @@ static bool32 sub_80809B8(Sprite_IA105 *ia105)
         screenX = (ia105->posX + ia105->offsetX) - gCamera.x;
         screenY = (ia105->posY + ia105->offsetY) - gCamera.y;
 
-        playerX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-        playerY = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+        playerX = I(gPlayer.x) - gCamera.x;
+        playerY = I(gPlayer.y) - gCamera.y;
 
         someX = ia105->width - ia105->offsetX;
         someY = ia105->height - ia105->offsetY;
 
-        if ((screenX <= playerX) && (screenX + someX >= playerX) && (screenY <= playerY)
-            && (screenY + someY >= playerY)) {
+        if ((screenX <= playerX) && (screenX + someX >= playerX) && (screenY <= playerY) && (screenY + someY >= playerY)) {
             return TRUE;
         }
     }

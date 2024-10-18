@@ -12,6 +12,7 @@
 #include "game/interactables_2/hot_crater/hook_rail.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 #include "constants/zones.h"
@@ -61,20 +62,19 @@ static void sub_8072BB8(void);
 #define PLAYER_TOUCH_DIRECTION_FORWARDS 1
 #define PLAYER_TOUCH_DIRECTION_REVERSE  2
 
-void CreateEntity_HookRail(u32 triggerType, MapEntity *me, u16 spriteRegionX,
-                           u16 spriteRegionY, u8 spriteY)
+void CreateEntity_HookRail(u32 triggerType, MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     struct Task *t;
     Sprite_HookRail *hookRail;
     switch (triggerType) {
         case 0:
-            t = TaskCreate(sub_8072F38, 0x28, 0x2010, 0, sub_8072FD4);
+            t = TaskCreate(sub_8072F38, sizeof(Sprite_HookRail), 0x2010, 0, sub_8072FD4);
             break;
         case 1:
-            t = TaskCreate(sub_8072F38, 0x28, 0x2010, 0, sub_8072FD4);
+            t = TaskCreate(sub_8072F38, sizeof(Sprite_HookRail), 0x2010, 0, sub_8072FD4);
             break;
         case 2:
-            t = TaskCreate(sub_8072F8C, 0x28, 0x2010, 0, sub_8072FD4);
+            t = TaskCreate(sub_8072F8C, sizeof(Sprite_HookRail), 0x2010, 0, sub_8072FD4);
             break;
         default:
             SET_MAP_ENTITY_INITIALIZED(me);
@@ -108,7 +108,7 @@ static void sub_8072BB8(void)
 
     if (gPlayer.timerInvulnerability == 120) {
         sub_8073088(hookRail);
-    } else if (gPlayer.unk5E & gPlayerControls.jump) {
+    } else if (gPlayer.frameInput & gPlayerControls.jump) {
         sub_807321C();
         sub_8073048(hookRail);
     } else {
@@ -119,7 +119,7 @@ static void sub_8072BB8(void)
         gPlayer.speedGroundX = ClampRailSpeed(gPlayer.speedGroundX);
 
         x = hookRail->x - gCamera.x;
-        playerX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
+        playerX = I(gPlayer.x) - gCamera.x;
 
         if (hookRail->triggerType == 0) {
             if (playerX < x + hookRail->width) {
@@ -142,7 +142,7 @@ static void sub_8072C90(void)
 
     if (gPlayer.timerInvulnerability == 120) {
         sub_8073088(hookRail);
-    } else if (gPlayer.unk5E & gPlayerControls.jump) {
+    } else if (gPlayer.frameInput & gPlayerControls.jump) {
         sub_807321C();
         sub_8073048(hookRail);
     } else if (gPlayer.rotation != 109 && gPlayer.rotation != 19) {
@@ -168,7 +168,7 @@ static void sub_8072D40(void)
 
     if (gPlayer.timerInvulnerability == 120) {
         sub_8073168(hookRail);
-    } else if (gPlayer.unk5E & gPlayerControls.jump) {
+    } else if (gPlayer.frameInput & gPlayerControls.jump) {
         sub_807321C();
         sub_8073148(hookRail);
     } else {
@@ -186,27 +186,27 @@ static void sub_8072D40(void)
 static void sub_8072DCC(Sprite_HookRail *hookRail)
 {
     gPlayer.moveState |= MOVESTATE_400000;
-    gPlayer.unk64 = 55;
-    sub_80218E4(&gPlayer);
+    gPlayer.charState = CHARSTATE_HANGING;
+    Player_TransitionCancelFlyingAndBoost(&gPlayer);
     sub_8023B5C(&gPlayer, 14);
-    gPlayer.unk16 = 6;
-    gPlayer.unk17 = 14;
+    gPlayer.spriteOffsetX = 6;
+    gPlayer.spriteOffsetY = 14;
     gPlayer.moveState &= ~MOVESTATE_4;
-    gPlayer.y = Q_24_8(hookRail->y + HOOK_HEIGHT);
+    gPlayer.y = Q(hookRail->y + HOOK_HEIGHT);
     hookRail->grindDistance = 0;
     if (hookRail->triggerType == 0) {
         gPlayer.moveState |= MOVESTATE_FACING_LEFT;
         gPlayer.speedGroundX = gPlayer.speedAirX;
 
-        if (gPlayer.speedGroundX > -Q_24_8(1)) {
-            gPlayer.speedGroundX = -Q_24_8(1);
+        if (gPlayer.speedGroundX > -Q(1)) {
+            gPlayer.speedGroundX = -Q(1);
         }
         gPlayer.rotation = 128;
     } else {
         gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
         gPlayer.speedGroundX = gPlayer.speedAirX;
-        if (gPlayer.speedGroundX < Q_24_8(1)) {
-            gPlayer.speedGroundX = Q_24_8(1);
+        if (gPlayer.speedGroundX < Q(1)) {
+            gPlayer.speedGroundX = Q(1);
         }
 
         gPlayer.rotation = 0;
@@ -225,14 +225,11 @@ static u32 IsPlayerTouching(Sprite_HookRail *hookRail)
 
     x = hookRail->x - gCamera.x;
     y = hookRail->y - gCamera.y;
-    playerX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-    playerY = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+    playerX = I(gPlayer.x) - gCamera.x;
+    playerY = I(gPlayer.y) - gCamera.y;
 
-    if (x + hookRail->width <= playerX
-        && (x + hookRail->width) + (hookRail->offsetX - hookRail->width) >= playerX) {
-        if (y + hookRail->height <= playerY
-            && (y + hookRail->height) + (hookRail->offsetY - hookRail->height)
-                >= playerY) {
+    if (x + hookRail->width <= playerX && (x + hookRail->width) + (hookRail->offsetX - hookRail->width) >= playerX) {
+        if (y + hookRail->height <= playerY && (y + hookRail->height) + (hookRail->offsetY - hookRail->height) >= playerY) {
             s16 railEndX = x + ((hookRail->offsetX + hookRail->width) >> 1);
             if (playerX < railEndX) {
                 return PLAYER_TOUCH_DIRECTION_FORWARDS;
@@ -268,8 +265,7 @@ static void sub_8072F8C(void)
 {
     Sprite_HookRail *hookRail = TASK_DATA(gCurTask);
 
-    if (IsPlayerTouching(hookRail) != PLAYER_TOUCH_DIRECTION_NONE
-        && gPlayer.unk64 == 55) {
+    if (IsPlayerTouching(hookRail) != PLAYER_TOUCH_DIRECTION_NONE && gPlayer.charState == CHARSTATE_HANGING) {
         sub_80730BC(hookRail);
     }
 
@@ -286,12 +282,12 @@ static void sub_8072FD4(struct Task *unused)
 static void sub_8072FD8(Sprite_HookRail *hookRail)
 {
     if (hookRail->triggerType == 0) {
-        gPlayer.x = Q_24_8(hookRail->x + hookRail->width);
+        gPlayer.x = Q(hookRail->x + hookRail->width);
         hookRail->joinedX = gPlayer.x;
         hookRail->joinedY = gPlayer.y;
         gPlayer.rotation = 109;
     } else {
-        gPlayer.x = Q_24_8(hookRail->x + hookRail->offsetX);
+        gPlayer.x = Q(hookRail->x + hookRail->offsetX);
         hookRail->joinedX = gPlayer.x;
         hookRail->joinedY = gPlayer.y;
         gPlayer.rotation = 19;
@@ -299,10 +295,7 @@ static void sub_8072FD8(Sprite_HookRail *hookRail)
     gCurTask->main = sub_8072C90;
 }
 
-static void sub_8073034(UNUSED Sprite_HookRail *hookRail)
-{
-    gCurTask->main = sub_8072F38;
-}
+static void sub_8073034(UNUSED Sprite_HookRail *hookRail) { gCurTask->main = sub_8072F38; }
 
 static void sub_8073048(UNUSED Sprite_HookRail *hookRail)
 {
@@ -325,7 +318,7 @@ static void sub_8073088(UNUSED Sprite_HookRail *hookRail)
 
 static void sub_80730BC(Sprite_HookRail *hookRail)
 {
-    gPlayer.y = Q_24_8(hookRail->y + HOOK_HEIGHT);
+    gPlayer.y = Q(hookRail->y + HOOK_HEIGHT);
     if (gPlayer.rotation == 109) {
         gPlayer.rotation = 128;
     } else {
@@ -338,7 +331,7 @@ static void sub_80730BC(Sprite_HookRail *hookRail)
 static void sub_80730F0(UNUSED Sprite_HookRail *hookRail)
 {
     gPlayer.moveState &= ~MOVESTATE_400000;
-    gPlayer.unk64 = 14;
+    gPlayer.charState = CHARSTATE_FALLING_VULNERABLE_B;
     gPlayer.transition = PLTRANS_PT5;
     if (gPlayer.rotation == 128) {
         gPlayer.rotation = 109;
@@ -368,7 +361,7 @@ static s16 ClampRailSpeed(s16 groundSpeedX)
 {
     s16 speed;
 
-    if (gPlayer.unk5A) {
+    if (gPlayer.isBoosting) {
         speed = groundSpeedX;
         if (speed > Q_8_8(BOOSTED_MAX_RAIL_SPEED)) {
             speed = Q_8_8(BOOSTED_MAX_RAIL_SPEED);
@@ -385,16 +378,14 @@ static s16 ClampRailSpeed(s16 groundSpeedX)
 
 static void sub_80731D4(void)
 {
-    gPlayer.speedAirX
-        = Q_24_8_TO_INT(gPlayer.speedGroundX * COS_24_8(gPlayer.rotation * 4));
-    gPlayer.speedAirY
-        = Q_24_8_TO_INT(gPlayer.speedGroundX * SIN_24_8(gPlayer.rotation * 4));
+    gPlayer.speedAirX = I(gPlayer.speedGroundX * COS_24_8(gPlayer.rotation * 4));
+    gPlayer.speedAirY = I(gPlayer.speedGroundX * SIN_24_8(gPlayer.rotation * 4));
 }
 
 static void sub_807321C(void)
 {
     gPlayer.moveState &= ~MOVESTATE_400000;
-    gPlayer.transition = PLTRANS_PT3;
+    gPlayer.transition = PLTRANS_INIT_JUMP;
 }
 
 static bool32 sub_8073238(Sprite_HookRail *hookRail)
@@ -402,7 +393,7 @@ static bool32 sub_8073238(Sprite_HookRail *hookRail)
     s16 x = hookRail->x - gCamera.x;
     s16 y = hookRail->y - gCamera.y;
 
-    if (x < -128 || x > 368 || y < -128 || y > 288) {
+    if (x < -128 || x > (DISPLAY_WIDTH + 128) || y < -128 || y > (DISPLAY_HEIGHT + 128)) {
         return TRUE;
     }
 
@@ -415,20 +406,17 @@ static void sub_8073280(Sprite_HookRail *hookRail)
     TaskDestroy(gCurTask);
 }
 
-void CreateEntity_HookRail_Unused(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                  u8 spriteY)
+void CreateEntity_HookRail_Unused(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     CreateEntity_HookRail(0, me, spriteRegionX, spriteRegionY, spriteY);
 }
 
-void CreateEntity_HookRail_Start(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                 u8 spriteY)
+void CreateEntity_HookRail_Start(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     CreateEntity_HookRail(1, me, spriteRegionX, spriteRegionY, spriteY);
 }
 
-void CreateEntity_HookRail_End(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                               u8 spriteY)
+void CreateEntity_HookRail_End(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     CreateEntity_HookRail(2, me, spriteRegionX, spriteRegionY, spriteY);
 }

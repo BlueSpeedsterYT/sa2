@@ -2,11 +2,13 @@
 #include "core.h"
 #include "flags.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/camera.h"
 #include "game/stage/background/callbacks.h"
 #include "game/stage/player.h"
+
+#include "constants/tilemaps.h"
 
 extern const Background gStageCameraBgTemplates[4];
 
@@ -97,6 +99,8 @@ const u8 gUnknown_080D5B50[DISPLAY_HEIGHT] = {
     0
 };
 
+static s16 sUnknown_03000408 = 0;
+
 void CreateStageBg_Zone3(void)
 {
     Background *background = &gStageBackgroundsRam.unk0;
@@ -105,7 +109,7 @@ void CreateStageBg_Zone3(void)
 
     *background = gStageCameraBgTemplates[3];
 
-    background->tilemapId = 0x171;
+    background->tilemapId = TM_MUSIC_PLANT_MOVING_STARS;
     background->graphics.dest = (void *)BG_SCREEN_ADDR(24);
     background->layoutVram = (void *)BG_SCREEN_ADDR(27);
     background->targetTilesX = 0x20;
@@ -118,15 +122,9 @@ void CreateStageBg_Zone3(void)
     gBgScrollRegs[3][1] = 0;
 }
 
-typedef struct {
-    u8 filler[0x408];
-    s16 unk408;
-} Unk3000408;
-
 // (85.02%) https://decomp.me/scratch/Esyzr
 #if 01
-NONMATCH("asm/non_matching/game/stage/background/StageBgUpdate_Zone3Acts12.inc",
-         void StageBgUpdate_Zone3Acts12(s32 a, s32 b))
+NONMATCH("asm/non_matching/game/stage/background/StageBgUpdate_Zone3Acts12.inc", void StageBgUpdate_Zone3Acts12(s32 a, s32 b))
 #else
 void StageBgUpdate_Zone3Acts12(s32 a, s32 b)
 #endif
@@ -138,7 +136,7 @@ void StageBgUpdate_Zone3Acts12(s32 a, s32 b)
     Vec2_16 *cursorStack;
     u8 *cursor;
     s32 pFlags;
-#ifdef NON_MATCHING
+#ifndef NON_MATCHING
     register s16 sl asm("sl") = 0;
     register u16 *bgBuffer asm("r5") = gBgOffsetsHBlank;
     register s16 r3 asm("r3") = (Div(b, 60) << 16) >> 16;
@@ -152,17 +150,14 @@ void StageBgUpdate_Zone3Acts12(s32 a, s32 b)
     gBgScrollRegs[3][1] = r3;
 
     if (IS_SINGLE_PLAYER) {
-        if ((gPlayer.moveState & MOVESTATE_8000000)
-            && (gSpecialRingCount >= SPECIAL_STAGE_REQUIRED_SP_RING_COUNT)) {
-            Unk3000408 *unk = IWRAM_PTR(NULL);
-            if (unk->unk408 == 0) {
-                unk->unk408 = a;
+        if ((gPlayer.moveState & MOVESTATE_GOAL_REACHED) && (gSpecialRingCount >= SPECIAL_STAGE_REQUIRED_SP_RING_COUNT)) {
+            if (sUnknown_03000408 == 0) {
+                sUnknown_03000408 = a;
             }
-            unk->unk408 += Q_24_8_TO_INT(gPlayer.speedGroundX);
-            a = unk->unk408;
+            sUnknown_03000408 += I(gPlayer.speedGroundX);
+            a = sUnknown_03000408;
         } else {
-            Unk3000408 *unk = IWRAM_PTR(NULL);
-            unk->unk408 = 0;
+            sUnknown_03000408 = 0;
         }
         // _0801CC72
         i = 0;

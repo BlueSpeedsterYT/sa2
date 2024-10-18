@@ -5,6 +5,7 @@
 #include "task.h"
 #include "sprite.h"
 #include "tilemap.h"
+#include "animation_commands.h"
 #include "input_recorder.h"
 
 struct MultiSioData_0_0 {
@@ -142,21 +143,30 @@ struct Unk_03003674 {
     const s32 *unk18;
 }; /* size = 0x1C */
 
+struct SpriteTables {
+    /* 0x00 */ const ACmd **const *animations;
+    /* 0x04 */ const SpriteOffset *const *dimensions;
+    /* 0x08 */ const u16 **const oamData;
+    /* 0x0C */ const u16 *const palettes;
+    /* 0x10 */ const u8 *const tiles_4bpp;
+    /* 0x14 */ const u8 *const tiles_8bpp;
+};
+
 // No idea why this exists when there is a
 // better random number generator in the math
 // module
-#define PseudoRandom32()                                                                \
-    ({                                                                                  \
-        gPseudoRandom = (gPseudoRandom * 0x196225) + 0x3C6EF35F;                        \
-        gPseudoRandom;                                                                  \
+#define PseudoRandom32()                                                                                                                   \
+    ({                                                                                                                                     \
+        gPseudoRandom = (gPseudoRandom * 0x196225) + 0x3C6EF35F;                                                                           \
+        gPseudoRandom;                                                                                                                     \
     })
 
-#define MultiplayerPseudoRandom32()                                                     \
-    ({                                                                                  \
-        gMultiplayerPseudoRandom = (gMultiplayerPseudoRandom * 0x196225) + 0x3C6EF35F;  \
-        gMultiplayerPseudoRandom;                                                       \
+#define MultiplayerPseudoRandom32()                                                                                                        \
+    ({                                                                                                                                     \
+        gMultiplayerPseudoRandom = (gMultiplayerPseudoRandom * 0x196225) + 0x3C6EF35F;                                                     \
+        gMultiplayerPseudoRandom;                                                                                                          \
     })
-#define PseudoRandBetween(min, max) ((PseudoRandom32() & ((-min) + (max))) + (min))
+#define PseudoRandBetween(min, max) ((PseudoRandom32() & ((-min) + (max - 1))) + (min))
 
 extern u32 gFlags;
 extern u32 gFlagsPreVBlank;
@@ -214,7 +224,7 @@ extern u8 gNumHBlankIntrs;
 extern u8 gIwramHeap[0x2204];
 extern u8 gEwramHeap[0x20080];
 
-extern u32 gVramHeapStartAddr;
+extern void *gVramHeapStartAddr;
 extern u16 gVramHeapMaxTileSlots;
 extern u16 gVramHeapState[256];
 
@@ -228,20 +238,21 @@ extern u16 gDispCnt;
 #define WINREG_WIN1V  3
 #define WINREG_WININ  4
 #define WINREG_WINOUT 5
-extern u16 gWinRegs[6];
+#if (WIN_RANGE(0xFF, 0) == 0xFF00)
+typedef u16 winreg_t;
+#else
+typedef u32 winreg_t;
+#endif
+extern winreg_t gWinRegs[6];
 extern struct BlendRegs gBldRegs;
 extern BgAffineReg gBgAffineRegs[NUM_AFFINE_BACKGROUNDS];
 extern u16 gObjPalette[OBJ_PLTT_SIZE / sizeof(u16)];
 extern u16 gBgPalette[BG_PLTT_SIZE / sizeof(u16)];
 extern u16 gBgCntRegs[4];
 
-extern s16 gUnknown_03000408;
-
-// TODO: Turn this into a struct-array:
+// TODO: Turn this into a struct-array?
 //       [4]{s16 x, s16 y}
-//       Should we introduce a
-//       "#define NUM_BACKGROUNDS 4" in gba/defines.h?
-extern s16 gBgScrollRegs[4][2];
+extern s16 gBgScrollRegs[NUM_BACKGROUNDS][2];
 
 extern OamData gUnknown_030022C8;
 extern OamData gOamBuffer2[OAM_ENTRY_COUNT];
@@ -264,21 +275,54 @@ extern u16 gUnknown_03001944;
 extern u8 gUnknown_03001948;
 extern u16 gUnknown_0300194C;
 
-struct MapHeader **gTilemapsRef; // TODO: make this an array and add size
+extern Tilemap **gTilemapsRef; // TODO: make this an array and add size
 extern u8 gUnknown_03002280[4][4];
-extern u8 gUnknown_03004D80[16];
+extern u8 gUnknown_03004D80[16]; // TODO: Is this 4 (# backgrounds), instead of 16?
+
+#define LOG_GRAPHICS_QUEUE !TRUE
+#if (!PLATFORM_GBA && LOG_GRAPHICS_QUEUE)
+#define GFX_QUEUE_LOG_ADD(gfx)                                                                                                             \
+    printf("GFX %d: src 0x%p, dst 0x%p, size 0x%04X\n", gVramGraphicsCopyQueueIndex, (gfx)->src,                                           \
+           (void *)((intptr_t)(gfx)->dest - (intptr_t)VRAM), (gfx)->size);
+#else
+#define GFX_QUEUE_LOG_ADD(gfx)
+#endif
+extern struct GraphicsData *gVramGraphicsCopyQueue[32];
+extern u8 gVramGraphicsCopyQueueIndex;
+// Because the graphics in the queue only get copied if
+// (gVramGraphicsCopyCursor != gVramGraphicsCopyQueueIndex),
+// just making them equal will pause the queue.
+#define PAUSE_GRAPHICS_QUEUE() gVramGraphicsCopyCursor = gVramGraphicsCopyQueueIndex;
+
+#define INC_GRAPHICS_QUEUE_CURSOR(cursor) cursor = (cursor + 1) % ARRAY_COUNT(gVramGraphicsCopyQueue);
+
+/* Make sure that both pointers are valid */
+#ifndef DEBUG
+#define TEST_GFX_POINTERS(gfx)
+#else
+#define TEST_GFX_POINTERS(gfx)                                                                                                             \
+    {                                                                                                                                      \
+        volatile u8 testVarDst = *(u8 *)((gfx)->dest);                                                                                     \
+        volatile u8 testVarSrc = *(u8 *)((gfx)->src);                                                                                      \
+    }
+#endif
+
+#define ADD_TO_GRAPHICS_QUEUE(gfx)                                                                                                         \
+    TEST_GFX_POINTERS(gfx);                                                                                                                \
+    gVramGraphicsCopyQueue[gVramGraphicsCopyQueueIndex] = gfx;                                                                             \
+    /* Log has to happen before gVramGraphicsCopyQueueIndex increment */                                                                   \
+    GFX_QUEUE_LOG_ADD(gfx)                                                                                                                 \
+    INC_GRAPHICS_QUEUE_CURSOR(gVramGraphicsCopyQueueIndex);
 
 extern u16 *gUnknown_030022AC;
 extern void *gUnknown_030022C0;
 extern s16 gMosaicReg;
 extern u8 gUnknown_030026F4;
-extern struct GraphicsData *gVramGraphicsCopyQueue[32];
 extern u16 gUnknown_03002820;
 extern u8 gUnknown_03002874;
 extern void *gUnknown_03002878;
 extern u8 gUnknown_0300287C;
 extern u8 gUnknown_03002A80;
-extern u8 gVramGraphicsCopyQueueIndex;
 extern u16 gUnknown_03002A8C;
 // When paused, the previously-active OAM elements get moved to the end
 // of the OAM. This is the index of the first currently-inactive element
@@ -297,6 +341,8 @@ extern FuncType_030053A0 gUnknown_030053A0[4];
 extern s32 gPseudoRandom;
 extern u8 gUnknown_03002710[128];
 extern struct MultiBootParam gMultiBootParam;
+
+extern const struct SpriteTables *gRefSpriteTables;
 
 void GameInit(void);
 void GameLoop(void);

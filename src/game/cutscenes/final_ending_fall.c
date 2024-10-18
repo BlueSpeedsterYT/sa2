@@ -65,7 +65,7 @@ struct FinalEndingFallCutScene {
     u32 unk47C[6];
 
     // vramPtr
-    vu32 unk494;
+    void *unk494;
 
     u8 unk498;
 }; /* 0x49C */
@@ -80,12 +80,10 @@ static const u16 gUnknown_080E1648[4] = {
     TM_CUTSCENE_FINAL_ENDING_FALL_BG_DARK_2,
 };
 static const TileInfo gUnknown_080E1650[29] = {
-    { 15, 823, 0 }, { 30, 815, 0 }, { 9, 817, 0 },   { 4, 816, 0 },   { 4, 816, 1 },
-    { 0, 907, 0 },  { 0, 908, 0 },  { 104, 785, 0 }, { 104, 785, 2 }, { 80, 786, 0 },
-    { 80, 786, 2 }, { 99, 787, 0 }, { 99, 787, 2 },  { 72, 788, 0 },  { 72, 788, 2 },
-    { 56, 789, 0 }, { 56, 789, 2 }, { 48, 785, 1 },  { 48, 785, 3 },  { 80, 786, 1 },
-    { 80, 786, 3 }, { 80, 787, 1 }, { 80, 787, 3 },  { 64, 788, 1 },  { 64, 788, 3 },
-    { 42, 789, 1 }, { 42, 789, 3 }, { 30, 790, 0 },  { 30, 790, 1 },
+    { 15, 823, 0 },  { 30, 815, 0 }, { 9, 817, 0 },  { 4, 816, 0 },  { 4, 816, 1 },  { 0, 907, 0 },  { 0, 908, 0 },  { 104, 785, 0 },
+    { 104, 785, 2 }, { 80, 786, 0 }, { 80, 786, 2 }, { 99, 787, 0 }, { 99, 787, 2 }, { 72, 788, 0 }, { 72, 788, 2 }, { 56, 789, 0 },
+    { 56, 789, 2 },  { 48, 785, 1 }, { 48, 785, 3 }, { 80, 786, 1 }, { 80, 786, 3 }, { 80, 787, 1 }, { 80, 787, 3 }, { 64, 788, 1 },
+    { 64, 788, 3 },  { 42, 789, 1 }, { 42, 789, 3 }, { 30, 790, 0 }, { 30, 790, 1 },
 };
 
 static const u8 gUnknown_080E1738[] = {
@@ -100,8 +98,7 @@ static const u8 gUnknown_080E1752[0x10] = {
 };
 
 static const s16 gUnknown_080E1762[][2] = {
-    { 15, 20 }, { 10, 5 },   { 50, 20 },  { 80, 10 },
-    { 100, 5 }, { 130, 10 }, { 200, 15 }, { 230, 8 },
+    { 15, 20 }, { 10, 5 }, { 50, 20 }, { 80, 10 }, { 100, 5 }, { 130, 10 }, { 200, 15 }, { 230, 8 },
 };
 
 static const s16 gUnknown_080E1782[][2] = {
@@ -141,7 +138,7 @@ void CreateFinalEndingFallCutScene(void)
     m4aMPlayAllStop();
     m4aSongNumStart(MUS_FINAL_ENDING);
 
-    t = TaskCreate(sub_8092690, 0x49C, 0x3100, 0, sub_8092800);
+    t = TaskCreate(sub_8092690, sizeof(struct FinalEndingFallCutScene), 0x3100, 0, sub_8092800);
     scene = TASK_DATA(t);
 
     scene->unk35C = 0;
@@ -195,8 +192,8 @@ void CreateFinalEndingFallCutScene(void)
     fade = &scene->unk350;
     fade->flags = (SCREEN_FADE_FLAG_2 | SCREEN_FADE_FLAG_DARKEN);
     fade->window = SCREEN_FADE_USE_WINDOW_1;
-    fade->brightness = Q_24_8(0);
-    fade->speed = Q_24_8(5. / 16.);
+    fade->brightness = Q(0);
+    fade->speed = Q(5. / 16.);
     fade->bldCnt = (BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
     fade->bldAlpha = 0;
 
@@ -204,20 +201,20 @@ void CreateFinalEndingFallCutScene(void)
     {
         Sprite *s;
         s = &scene->unk80;
-        s->graphics.dest = (void *)OBJ_VRAM0;
+        s->graphics.dest = OBJ_VRAM0;
         scene->unk494 += gUnknown_080E1650[0].numTiles * 0x20;
         s->graphics.anim = gUnknown_080E1650[0].anim;
         s->variant = gUnknown_080E1650[0].variant;
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(0);
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -230,13 +227,13 @@ void CreateFinalEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = (DISPLAY_WIDTH / 2);
         s->y = (DISPLAY_HEIGHT / 2);
-        s->unk1A = SPRITE_OAM_ORDER(0);
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
     }
 
@@ -249,13 +246,13 @@ void CreateFinalEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0x78;
         s->y = 0x50;
-        s->unk1A = SPRITE_OAM_ORDER(0);
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
     }
 
@@ -269,13 +266,13 @@ void CreateFinalEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(2);
+        s->oamFlags = SPRITE_OAM_ORDER(2);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 2;
-        s->unk10 = 0x2000;
+        s->frameFlags = 0x2000;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -288,13 +285,13 @@ void CreateFinalEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(1);
+        s->oamFlags = SPRITE_OAM_ORDER(1);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 2;
-        s->unk10 = 0x2000;
+        s->frameFlags = 0x2000;
         s->hitboxes[0].index = -1;
     }
 
@@ -307,13 +304,13 @@ void CreateFinalEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(0);
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 2;
-        s->unk10 = 0x2000;
+        s->frameFlags = 0x2000;
         s->hitboxes[0].index = -1;
     }
 
@@ -327,13 +324,13 @@ void CreateFinalEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(0);
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 2;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -348,13 +345,13 @@ void CreateFinalEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(0);
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -450,7 +447,7 @@ void sub_8091CB0(void)
     } else if (scene->unk35C == 10) {
         sub_80928C8(scene);
         gDispCnt |= 0x2000;
-        gWinRegs[0] = 0xA0;
+        gWinRegs[0] = WIN_RANGE(0, DISPLAY_HEIGHT);
         gWinRegs[2] = 0xF0;
         gWinRegs[4] |= 0x3F;
         gWinRegs[5] |= 0x1F;
@@ -474,7 +471,7 @@ void sub_8091E60(void)
     struct FinalEndingFallCutScene *scene = TASK_DATA(gCurTask);
     ScreenFade *fade = &scene->unk350;
 
-    fade->speed = Q_24_8(5. / 16.);
+    fade->speed = Q(5. / 16.);
     fade->flags = 1;
 
     sub_8091F68(scene);
@@ -527,8 +524,7 @@ void sub_8091F68(struct FinalEndingFallCutScene *scene)
     }
 
     if (gBgScrollRegs[0][1] < 0x88 && scene->unk35C < 10) {
-        if (scene->unk474 > 0 && (gBgScrollRegs[1][1] & 7) == 0
-            && (scene->unk474 >> 8) > gBgScrollRegs[1][1]) {
+        if (scene->unk474 > 0 && (gBgScrollRegs[1][1] & 7) == 0 && (scene->unk474 >> 8) > gBgScrollRegs[1][1]) {
             scene->unk364++;
         }
 
@@ -707,8 +703,8 @@ void sub_80923AC(struct FinalEndingFallCutScene *scene)
 
                 if (UpdateSpriteAnimation(s) != 1) {
                     s->animCursor = 0;
-                    s->timeUntilNextFrame = 0;
-                    s->unk10 &= ~0x4000;
+                    s->qAnimDelay = 0;
+                    s->frameFlags &= ~0x4000;
                 }
                 DisplaySprite(s);
             }
@@ -773,7 +769,7 @@ void sub_8092690(void)
     sub_80923AC(scene);
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         if (scene->unk35C == 0) {
             gCurTask->main = sub_8092780;
         } else {
@@ -797,7 +793,7 @@ void sub_8092714(void)
     sub_80923AC(scene);
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_8091CB0;
     }
 }
@@ -824,7 +820,7 @@ void CreateFinalEndingLandingCutScene(void);
 
 void sub_80927E8(void)
 {
-    struct Task *t = gCurTask;
+    struct Task UNUSED *t = gCurTask;
     CreateFinalEndingLandingCutScene();
     TaskDestroy(gCurTask);
 }

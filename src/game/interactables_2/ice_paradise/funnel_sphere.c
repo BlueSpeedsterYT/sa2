@@ -1,3 +1,5 @@
+#include <stdlib.h> // abs
+
 #include "global.h"
 #include "core.h"
 #include "malloc_vram.h"
@@ -10,6 +12,7 @@
 #include "game/interactables_2/ice_paradise/funnel_sphere.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -72,14 +75,14 @@ static void sub_8077F7C(void)
 #endif
 
     if (funnelSphere->unk1C == 1) {
-        r7 = Q_24_8_TO_INT(funnelSphere->unkC) - funnelSphere->y;
+        r7 = I(funnelSphere->unkC) - funnelSphere->y;
 
         r4 = (0x20 - r7) * 0x40;
-        r4 = Q_24_8_TO_INT(r4 * SIN_24_8(MUL_4(r6)));
+        r4 = I(r4 * SIN_24_8(MUL_4(r6)));
         gPlayer.y = funnelSphere->unkC + r4;
 
         r4 = r7 * 2;
-        r4 = Q_24_8_TO_INT(COS_24_8(MUL_4(r6)) * 0x20 * COS_24_8(MUL_4(r4 & 0xFF)));
+        r4 = I(COS_24_8(MUL_4(r6)) * 0x20 * COS_24_8(MUL_4(r4 & 0xFF)));
         gPlayer.x = funnelSphere->unk8 + r4;
 
         r4 = r6;
@@ -99,20 +102,19 @@ static void sub_8077F7C(void)
         r7--;
 #endif
 
-        gPlayer.rotation
-            = Q_24_8_TO_INT((0x40 - r4) * COS_24_8(MUL_4((r7 * 2) & 0xFF))) + 0x40;
+        gPlayer.rotation = I((0x40 - r4) * COS_24_8(MUL_4((r7 * 2) & 0xFF))) + 0x40;
 
         gPlayer.speedAirX = COS_24_8(MUL_4(gPlayer.rotation));
         gPlayer.speedAirY = SIN_24_8(MUL_4(gPlayer.rotation));
         funnelSphere->unkC += 0x40;
     } else {
-        r7 = funnelSphere->y - Q_24_8_TO_INT(funnelSphere->unkC);
+        r7 = funnelSphere->y - I(funnelSphere->unkC);
         r4 = (0x20 - r7) * 0x40;
-        r4 = Q_24_8_TO_INT(-(r4 * SIN_24_8(MUL_4(r6))));
+        r4 = I(-(r4 * SIN_24_8(MUL_4(r6))));
         gPlayer.y = funnelSphere->unkC + r4;
 
         r4 = r7 * 2;
-        r4 = Q_24_8_TO_INT(COS_24_8(MUL_4(r6)) * 0x20 * COS_24_8(MUL_4(r4 & 0xFF)));
+        r4 = I(COS_24_8(MUL_4(r6)) * 0x20 * COS_24_8(MUL_4(r4 & 0xFF)));
         gPlayer.x = funnelSphere->unk8 + r4;
 
         r4 = r6;
@@ -126,8 +128,7 @@ static void sub_8077F7C(void)
         r7--;
 #endif
 
-        gPlayer.rotation
-            = Q_24_8_TO_INT((0xC0 - r4) * COS_24_8(MUL_4((r7 * 2) & 0xFF))) - 0x40;
+        gPlayer.rotation = I((0xC0 - r4) * COS_24_8(MUL_4((r7 * 2) & 0xFF))) - 0x40;
 
         gPlayer.speedAirX = COS_24_8(MUL_4(gPlayer.rotation));
         gPlayer.speedAirY = SIN_24_8(MUL_4(gPlayer.rotation));
@@ -143,7 +144,7 @@ static void sub_8078170(Sprite_FunnelSphere *funnelSphere)
     s32 character;
     Player_SetMovestate_IsInScriptedSequence();
     gPlayer.moveState |= MOVESTATE_400000;
-    gPlayer.unk64 = 4;
+    gPlayer.charState = CHARSTATE_SPIN_ATTACK;
 
     m4aSongNumStart(SE_SPIN_ATTACK);
     gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
@@ -151,17 +152,15 @@ static void sub_8078170(Sprite_FunnelSphere *funnelSphere)
     switch (gPlayer.character) {
         case CHARACTER_CREAM:
         case CHARACTER_TAILS:
-            funnelSphere->unk14
-                = (gPlayer.unk94->s.unk10 & SPRITE_FLAG_MASK_PRIORITY) >> 12;
-            gPlayer.unk94->s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-            gPlayer.unk94->s.unk10 |= SPRITE_FLAG(PRIORITY, 1);
+            funnelSphere->unk14 = (gPlayer.unk94->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY) >> 12;
+            gPlayer.unk94->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+            gPlayer.unk94->s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
         case CHARACTER_SONIC:
         case CHARACTER_KNUCKLES:
         case CHARACTER_AMY:
-            funnelSphere->unk12
-                = (gPlayer.unk90->s.unk10 & SPRITE_FLAG_MASK_PRIORITY) >> 12;
-            gPlayer.unk90->s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-            gPlayer.unk90->s.unk10 |= SPRITE_FLAG(PRIORITY, 1);
+            funnelSphere->unk12 = (gPlayer.unk90->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY) >> 12;
+            gPlayer.unk90->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+            gPlayer.unk90->s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
     }
 
     if (gPlayer.speedAirX < Q_8_8(9)) {
@@ -182,13 +181,13 @@ static void sub_8078254(Sprite_FunnelSphere *funnelSphere)
     switch (gPlayer.character) {
         case CHARACTER_CREAM:
         case CHARACTER_TAILS:
-            gPlayer.unk94->s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-            gPlayer.unk94->s.unk10 |= SPRITE_FLAG(PRIORITY, funnelSphere->unk14);
+            gPlayer.unk94->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+            gPlayer.unk94->s.frameFlags |= SPRITE_FLAG(PRIORITY, funnelSphere->unk14);
         case CHARACTER_SONIC:
         case CHARACTER_KNUCKLES:
         case CHARACTER_AMY:
-            gPlayer.unk90->s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-            gPlayer.unk90->s.unk10 |= SPRITE_FLAG(PRIORITY, funnelSphere->unk12);
+            gPlayer.unk90->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+            gPlayer.unk90->s.frameFlags |= SPRITE_FLAG(PRIORITY, funnelSphere->unk12);
     }
 
     gCurTask->main = sub_8078414;
@@ -201,13 +200,13 @@ static void sub_80782FC(Sprite_FunnelSphere *funnelSphere)
     switch (gPlayer.character) {
         case CHARACTER_CREAM:
         case CHARACTER_TAILS:
-            gPlayer.unk94->s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-            gPlayer.unk94->s.unk10 |= SPRITE_FLAG(PRIORITY, funnelSphere->unk14);
+            gPlayer.unk94->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+            gPlayer.unk94->s.frameFlags |= SPRITE_FLAG(PRIORITY, funnelSphere->unk14);
         case CHARACTER_SONIC:
         case CHARACTER_KNUCKLES:
         case CHARACTER_AMY:
-            gPlayer.unk90->s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-            gPlayer.unk90->s.unk10 |= SPRITE_FLAG(PRIORITY, funnelSphere->unk12);
+            gPlayer.unk90->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+            gPlayer.unk90->s.frameFlags |= SPRITE_FLAG(PRIORITY, funnelSphere->unk12);
     }
     gCamera.unk50 &= ~1;
     gCurTask->main = sub_8078414;
@@ -222,8 +221,8 @@ static bool32 sub_80783A4(Sprite_FunnelSphere *funnelSphere)
     } else {
         s16 x = funnelSphere->x - gCamera.x;
         s16 y = funnelSphere->y - gCamera.y;
-        s16 playerX = (Q_24_8_TO_INT(gPlayer.x) - gCamera.x);
-        s16 playerY = (Q_24_8_TO_INT(gPlayer.y) - gCamera.y);
+        s16 playerX = (I(gPlayer.x) - gCamera.x);
+        s16 playerY = (I(gPlayer.y) - gCamera.y);
         s16 dX = x - playerX;
         s16 dY = y - playerY;
         if (dX * dX + dY * dY <= (12 * 12)) {
@@ -259,17 +258,17 @@ static void sub_807844C(void)
         gPlayer.x += gPlayer.speedAirX;
     }
 
-    if (Q_24_8_TO_INT(gPlayer.x) >= funnelSphere->x + 0x20) {
+    if (I(gPlayer.x) >= funnelSphere->x + 0x20) {
         sub_80784B0(funnelSphere);
     }
 }
 
 static void sub_80784B0(Sprite_FunnelSphere *funnelSphere)
 {
-    gPlayer.x = Q_24_8(funnelSphere->x + 0x20);
+    gPlayer.x = Q(funnelSphere->x + 0x20);
     funnelSphere->unk10 = 0x200;
-    funnelSphere->unk8 = Q_24_8(funnelSphere->x + 0x40);
-    funnelSphere->unkC = Q_24_8(funnelSphere->y);
+    funnelSphere->unk8 = Q(funnelSphere->x + 0x40);
+    funnelSphere->unkC = Q(funnelSphere->y);
     m4aSongNumStart(SE_293);
     gCurTask->main = sub_8077F7C;
 }
@@ -293,7 +292,7 @@ static bool32 sub_807854C(Sprite_FunnelSphere *funnelSphere)
     s16 x = funnelSphere->x - gCamera.x;
     s16 y = funnelSphere->y - gCamera.y;
 
-    if (x < -128 || x > 368 || y < -0x80 || y > 288) {
+    if (x < -128 || x > (DISPLAY_WIDTH + 128) || y < -128 || y > (DISPLAY_HEIGHT + 128)) {
         return TRUE;
     }
 
@@ -306,10 +305,9 @@ static void sub_8078594(Sprite_FunnelSphere *funnelSphere)
     TaskDestroy(gCurTask);
 }
 
-void CreateEntity_FunnelSphere(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                               u8 spriteY)
+void CreateEntity_FunnelSphere(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(sub_8078414, 0x28, 0x2010, 0, sub_8078688);
+    struct Task *t = TaskCreate(sub_8078414, sizeof(Sprite_FunnelSphere), 0x2010, 0, sub_8078688);
     Sprite_FunnelSphere *funnelSphere = TASK_DATA(t);
     funnelSphere->me = me;
     funnelSphere->spriteX = me->x;
@@ -330,7 +328,7 @@ static void sub_8078634(void)
     }
 
     gPlayer.y += gPlayer.speedAirY;
-    y = funnelSphere->y - Q_24_8_TO_INT(gPlayer.y);
+    y = funnelSphere->y - I(gPlayer.y);
 
     if (abs(y) >= 72) {
         sub_8078254(funnelSphere);

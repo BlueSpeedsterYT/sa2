@@ -7,8 +7,6 @@
 #include "task.h"
 #include "trig.h"
 
-#define NUM_PROJECTILES_MAX 4
-
 typedef struct {
     /* 0x00 */ Sprite s;
     /* 0x30 */ s32 x;
@@ -33,8 +31,7 @@ void TaskDestructor_8051200(struct Task *);
 
 void CreateProjectile(ProjInit *init)
 {
-    struct Task *t = TaskCreate(Task_805102C, sizeof(ProjectileA), 0x4000, 0,
-                                TaskDestructor_80511EC);
+    struct Task *t = TaskCreate(Task_805102C, sizeof(ProjectileA), 0x4000, 0, TaskDestructor_80511EC);
     ProjectileA *proj = TASK_DATA(t);
     Sprite *s;
     s32 velocityX, velocityY;
@@ -54,8 +51,7 @@ void CreateProjectile(ProjInit *init)
 
 void CreateSeveralProjectiles(ProjInit *init, u8 count, s8 spreadAngle)
 {
-    struct Task *t = TaskCreate(Task_80510B0, sizeof(ProjectileB), 0x4000, 0,
-                                TaskDestructor_8051200);
+    struct Task *t = TaskCreate(Task_80510B0, sizeof(ProjectileB), 0x4000, 0, TaskDestructor_8051200);
     ProjectileB *proj = TASK_DATA(t);
     Sprite *s;
     u8 i;
@@ -90,13 +86,13 @@ void Task_805102C(void)
     proj->x += proj->velocityX;
     proj->y += proj->velocityY;
 
-    s->x = Q_24_8_TO_INT(proj->x) - gCamera.x;
-    s->y = Q_24_8_TO_INT(proj->y) - gCamera.y;
+    s->x = I(proj->x) - gCamera.x;
+    s->y = I(proj->y) - gCamera.y;
 
     if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
         TaskDestroy(gCurTask);
     } else {
-        sub_800C84C(s, Q_24_8_TO_INT(proj->x), Q_24_8_TO_INT(proj->y));
+        sub_800C84C(s, I(proj->x), I(proj->y));
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
     }
@@ -120,15 +116,14 @@ void Task_80510B0(void)
         proj->positions[i].x += proj->velocities[i][0];
         proj->positions[i].y += proj->velocities[i][1];
 
-        s->x = Q_24_8_TO_INT(proj->positions[i].x) - gCamera.x;
-        s->y = Q_24_8_TO_INT(proj->positions[i].y) - gCamera.y;
+        s->x = I(proj->positions[i].x) - gCamera.x;
+        s->y = I(proj->positions[i].y) - gCamera.y;
 
         if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
             proj->isActive[i] = FALSE;
         }
 
-        sub_800C84C(s, Q_24_8_TO_INT(proj->positions[i].x),
-                    Q_24_8_TO_INT(proj->positions[i].y));
+        sub_800C84C(s, I(proj->positions[i].x), I(proj->positions[i].y));
         DisplaySprite(s);
     }
 

@@ -31,11 +31,9 @@ static void sub_807B318(Sprite_LightGlobe *);
 static void sub_807B350(Sprite_LightGlobe *);
 static void sub_807B3B0(void);
 
-void CreateEntity_LightGlobe(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                             u8 spriteY)
+void CreateEntity_LightGlobe(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_Interactable080, sizeof(Sprite_LightGlobe), 0x2010,
-                                0, TaskDestructor_Interactable080);
+    struct Task *t = TaskCreate(Task_Interactable080, sizeof(Sprite_LightGlobe), 0x2010, 0, TaskDestructor_Interactable080);
     Sprite_LightGlobe *globe = TASK_DATA(t);
     Sprite *s;
 
@@ -48,18 +46,18 @@ void CreateEntity_LightGlobe(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY
     globe->base.regionY = spriteRegionY;
     globe->base.me = me;
     globe->base.spriteX = me->x;
-    globe->base.spriteY = spriteY;
+    globe->base.id = spriteY;
 
     s = &globe->s;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
     s->graphics.dest = VramMalloc(9);
     s->graphics.anim = SA2_ANIM_LIGHT_GLOBE;
     s->variant = 0;
@@ -74,16 +72,16 @@ static bool32 sub_807B190(Sprite_LightGlobe *globe)
 
     temp3 = globe->unk3C;
     temp3 -= gCamera.x;
-    temp3 += Q_24_8_TO_INT(globe->unk44);
+    temp3 += I(globe->unk44);
 
     temp4 = globe->unk40;
     temp4 -= gCamera.y;
-    temp4 += Q_24_8_TO_INT(globe->unk46);
+    temp4 += I(globe->unk46);
 
     temp5 = temp3;
     temp6 = temp4;
 
-    if (temp5 < -128 || temp5 > 368 || temp6 < -128 || temp6 > 416) {
+    if (temp5 < -128 || temp5 > (DISPLAY_WIDTH + 128) || temp6 < -128 || (temp6 > (DISPLAY_HEIGHT + 128) + 128)) {
         return TRUE;
     }
     return FALSE;
@@ -99,15 +97,15 @@ static bool32 sub_807B1F0(Sprite_LightGlobe *globe)
 
     r3 = globe->unk3C;
     r3 -= gCamera.x;
-    r3 += Q_24_8_TO_INT(globe->unk44);
+    r3 += I(globe->unk44);
 
     r2 = globe->unk40;
     r2 -= gCamera.y;
-    r2 += Q_24_8_TO_INT(globe->unk46);
+    r2 += I(globe->unk46);
 
-    r0 = Q_24_8_TO_INT(gPlayer.x);
+    r0 = I(gPlayer.x);
     r0 -= gCamera.x;
-    r1 = Q_24_8_TO_INT(gPlayer.y);
+    r1 = I(gPlayer.y);
     r1 -= gCamera.y;
 
     r3_16 = r3;
@@ -164,8 +162,8 @@ static void sub_807B318(Sprite_LightGlobe *globe)
 static void sub_807B350(Sprite_LightGlobe *globe)
 {
     Sprite *s = &globe->s;
-    s->x = globe->unk3C - gCamera.x + Q_24_8_TO_INT(globe->unk44);
-    s->y = globe->unk40 - gCamera.y + Q_24_8_TO_INT(globe->unk46);
+    s->x = globe->unk3C - gCamera.x + I(globe->unk44);
+    s->y = globe->unk40 - gCamera.y + I(globe->unk46);
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 }
@@ -180,7 +178,7 @@ static void sub_807B3B0(void)
 {
     Sprite_LightGlobe *globe = TASK_DATA(gCurTask);
 
-    if (globe->s.unk10 & 0x4000) {
+    if (globe->s.frameFlags & 0x4000) {
         sub_807B398(globe);
     } else {
         sub_807B350(globe);

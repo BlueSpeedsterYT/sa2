@@ -374,8 +374,12 @@ extern const struct ToneData voicegroup_pokemon_cry;
 extern char gNumMusicPlayers[];
 extern char gMaxLines[];
 
-#define NUM_MUSIC_PLAYERS ((u16)gNumMusicPlayers)
-#define MAX_LINES ((u32)gMaxLines)
+#if PLATFORM_GBA
+#define NUM_MUSIC_PLAYERS ((u16)(uintptr_t)gNumMusicPlayers)
+#else
+#define NUM_MUSIC_PLAYERS 4
+#endif
+#define MAX_LINES ((uintptr_t)gMaxLines)
 
 u32 umul3232H32(u32 multiplier, u32 multiplicand);
 void SoundMain(void);

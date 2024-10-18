@@ -4,7 +4,7 @@
 #include "task.h"
 #include "malloc_vram.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -12,6 +12,7 @@
 #include "lib/m4a.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/songs.h"
 #include "constants/text.h"
 
@@ -26,20 +27,15 @@ struct CourseStartCountdown {
 };
 
 const TileInfo gUnknown_080D7518[NUM_CHARACTERS] = {
-    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0,
-                    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_SONIC)),
+    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0, SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_SONIC)),
 
-    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0,
-                    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_CREAM)),
+    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0, SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_CREAM)),
 
-    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0,
-                    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_TAILS)),
+    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0, SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_TAILS)),
 
-    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0,
-                    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_KNUCKLES)),
+    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0, SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_KNUCKLES)),
 
-    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0,
-                    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_AMY)),
+    TextElementAlt4(SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF, 0, SA2_ANIM_CHAR(SA2_CHAR_ANIM_BEFORE_COUNTDOWN, CHARACTER_AMY)),
 };
 
 void sub_8036168(void);
@@ -51,8 +47,8 @@ void CreateCourseStartCountdown(bool8 playerSkippedIntro)
     struct CourseStartCountdown *countdown;
     Sprite *s;
 
-    gUnknown_03005424 |= EXTRA_STATE__100;
-    t = TaskCreate(sub_8036168, 0x6C, 0x3000, 0, sub_8036638);
+    gStageFlags |= STAGE_FLAG__100;
+    t = TaskCreate(sub_8036168, sizeof(struct CourseStartCountdown), 0x3000, 0, sub_8036638);
     countdown = TASK_DATA(t);
 
     countdown->unk6A = 0;
@@ -69,28 +65,28 @@ void CreateCourseStartCountdown(bool8 playerSkippedIntro)
     s->graphics.anim = SA2_ANIM_COUNTDOWN;
     s->variant = SA2_ANIM_VARIANT_COUNTDOWN_3;
     s->prevVariant = -1;
-    s->unk1A = SPRITE_OAM_ORDER(4);
+    s->oamFlags = SPRITE_OAM_ORDER(4);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0;
+    s->frameFlags = 0;
 
     s = &countdown->sprMachine;
     s->graphics.dest = VramMalloc(0xE);
     s->graphics.anim = SA2_ANIM_LEVEL_START_MACHINE;
     s->variant = 0;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2400;
+    s->frameFlags = 0x2400;
 }
 
 void CreateRaceStartMessage(void);
@@ -102,8 +98,7 @@ void sub_8036168(void)
     Sprite *s;
 
     // Skip intro
-    if (IS_SINGLE_PLAYER && countdown->unk68 > (GBA_FRAMES_PER_SECOND * 3)
-        && gPressedKeys & (A_BUTTON | B_BUTTON)) {
+    if (IS_SINGLE_PLAYER && countdown->unk68 > (GBA_FRAMES_PER_SECOND * 3) && gPressedKeys & (A_BUTTON | B_BUTTON)) {
         countdown->unk68 = GBA_FRAMES_PER_SECOND * 3;
     }
 
@@ -117,9 +112,9 @@ void sub_8036168(void)
 
     if (--countdown->unk68 == 0) {
         gPlayer.moveState &= ~MOVESTATE_IGNORE_INPUT;
-        gUnknown_03005424 &= ~EXTRA_STATE__ACT_START;
-        gUnknown_03005424 &= ~EXTRA_STATE__100;
-        gPlayer.unk64 = 9;
+        gStageFlags &= ~STAGE_FLAG__ACT_START;
+        gStageFlags &= ~STAGE_FLAG__100;
+        gPlayer.charState = CHARSTATE_WALK_A;
         if (countdown->unk6A != 0) {
             gPlayer.speedGroundX = Q_8_8(9);
         } else {
@@ -128,8 +123,8 @@ void sub_8036168(void)
 
         sub_8018818();
         CreateRaceStartMessage();
-        countdown->unk60 = Q_24_8_TO_INT(gPlayer.x);
-        countdown->unk64 = Q_24_8_TO_INT(gPlayer.y);
+        countdown->unk60 = I(gPlayer.x);
+        countdown->unk64 = I(gPlayer.y);
         m4aSongNumStart(VOICE__ANNOUNCER__GO);
         gCurTask->main = sub_8036398;
     } else {
@@ -145,24 +140,22 @@ void sub_8036168(void)
     }
 
     s = &countdown->sprMachine;
-    s->x = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-    s->y = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+    s->x = I(gPlayer.x) - gCamera.x;
+    s->y = I(gPlayer.y) - gCamera.y;
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
     if (countdown->unk68 < (GBA_FRAMES_PER_SECOND * 3)) {
         s = &countdown->sprCountdownDigits;
-        s->variant = SA2_ANIM_VARIANT_COUNTDOWN_1
-            - Div(countdown->unk68, GBA_FRAMES_PER_SECOND);
+        s->variant = SA2_ANIM_VARIANT_COUNTDOWN_1 - Div(countdown->unk68, GBA_FRAMES_PER_SECOND);
         s->prevVariant = -1;
-        s->x = (Q_24_8_TO_INT(gPlayer.x) - gCamera.x) + 0x18;
-        s->y = (Q_24_8_TO_INT(gPlayer.y) - gCamera.y) - 0x18;
+        s->x = (I(gPlayer.x) - gCamera.x) + 0x18;
+        s->y = (I(gPlayer.y) - gCamera.y) - 0x18;
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
     }
 
-    if (countdown->unk68 >= (int)((1 + 1. / 6.) * GBA_FRAMES_PER_SECOND)
-        && countdown->unk68 < 3 * GBA_FRAMES_PER_SECOND) {
+    if (countdown->unk68 >= (int)((1 + 1. / 6.) * GBA_FRAMES_PER_SECOND) && countdown->unk68 < 3 * GBA_FRAMES_PER_SECOND) {
         gPlayer.anim = gUnknown_080D7518[gSelectedCharacter].anim;
         gPlayer.variant = gUnknown_080D7518[gSelectedCharacter].variant;
         gPlayer.unk6C = 1;
@@ -207,7 +200,7 @@ struct RaceStartMessage {
 
 void CreateRaceStartMessage(void)
 {
-    struct Task *t = TaskCreate(sub_8036524, 0x7C, 0x3000, 0, sub_8036654);
+    struct Task *t = TaskCreate(sub_8036524, sizeof(struct RaceStartMessage), 0x3000, 0, sub_8036654);
     struct RaceStartMessage *startMessage = TASK_DATA(t);
     Sprite *s;
 
@@ -217,28 +210,28 @@ void CreateRaceStartMessage(void)
     s->graphics.anim = SA2_ANIM_COUNTDOWN_START;
     s->variant = SA2_ANIM_VARIANT_COUNTDOWN_START_L;
     s->prevVariant = -1;
-    s->unk1A = SPRITE_OAM_ORDER(4);
+    s->oamFlags = SPRITE_OAM_ORDER(4);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = gUnknown_030054B8++ | 0x60;
+    s->frameFlags = gUnknown_030054B8++ | 0x60;
 
     s = &startMessage->unk3C;
     s->graphics.dest = VramMalloc(0x40);
     s->graphics.anim = SA2_ANIM_COUNTDOWN_START;
     s->variant = SA2_ANIM_VARIANT_COUNTDOWN_START_R;
     s->prevVariant = -1;
-    s->unk1A = SPRITE_OAM_ORDER(4);
+    s->oamFlags = SPRITE_OAM_ORDER(4);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = gUnknown_030054B8++ | 0x60;
+    s->frameFlags = gUnknown_030054B8++ | 0x60;
 }
 
 void sub_8036524(void)
@@ -259,7 +252,7 @@ void sub_8036524(void)
 
     s->x = (DISPLAY_WIDTH / 2);
     s->y = (DISPLAY_HEIGHT / 4);
-    s->unk10 = gUnknown_030054B8++ | 0x60;
+    s->frameFlags = gUnknown_030054B8++ | 0x60;
     transformConfig->rotation = 0;
     unk78 = startMessage->unk78;
     if (unk78 < 0x10) {
@@ -273,7 +266,7 @@ void sub_8036524(void)
     transformConfig->x = s->x;
     transformConfig->y = s->y;
     UpdateSpriteAnimation(s);
-    sub_8004860(s, transformConfig);
+    TransformSprite(s, transformConfig);
     DisplaySprite(s);
 
     s = &startMessage->unk3C;
@@ -281,7 +274,7 @@ void sub_8036524(void)
 
     s->x = (DISPLAY_WIDTH / 2);
     s->y = (DISPLAY_HEIGHT / 4);
-    s->unk10 = gUnknown_030054B8++ | 0x60;
+    s->frameFlags = gUnknown_030054B8++ | 0x60;
     transformConfig->rotation = 0;
     unk78 = startMessage->unk78;
     if (unk78 < 0x10) {
@@ -295,7 +288,7 @@ void sub_8036524(void)
     transformConfig->x = s->x;
     transformConfig->y = s->y;
     UpdateSpriteAnimation(s);
-    sub_8004860(s, transformConfig);
+    TransformSprite(s, transformConfig);
     DisplaySprite(s);
 }
 

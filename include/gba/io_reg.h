@@ -1,7 +1,15 @@
 #ifndef GUARD_GBA_IO_REG_H
 #define GUARD_GBA_IO_REG_H
 
+#include <stdint.h>
+
+#define IO_SIZE 0x400
+#if !PORTABLE
 #define REG_BASE 0x4000000 // I/O register base address
+#else
+// TODO: Needs to be u8 because of the address macros
+extern unsigned char REG_BASE[IO_SIZE];
+#endif
 
 // I/O register offsets
 
@@ -95,46 +103,53 @@
 #define REG_OFFSET_FIFO_A      0xa0
 #define REG_OFFSET_FIFO_B      0xa4
 
-#define REG_OFFSET_DMA0        0xb0
-#define REG_OFFSET_DMA0SAD     0xb0
-#define REG_OFFSET_DMA0SAD_L   0xb0
-#define REG_OFFSET_DMA0SAD_H   0xb2
+#define REG_OFFSET_DMA         0xb0
+#if !USE_NEW_DMA
+#define REG_OFFSET_DMA0SAD     REG_OFFSET_DMA
 #define REG_OFFSET_DMA0DAD     0xb4
-#define REG_OFFSET_DMA0DAD_L   0xb4
-#define REG_OFFSET_DMA0DAD_H   0xb6
 #define REG_OFFSET_DMA0CNT     0xb8
 #define REG_OFFSET_DMA0CNT_L   0xb8
 #define REG_OFFSET_DMA0CNT_H   0xba
-#define REG_OFFSET_DMA1        0xbc
 #define REG_OFFSET_DMA1SAD     0xbc
-#define REG_OFFSET_DMA1SAD_L   0xbc
-#define REG_OFFSET_DMA1SAD_H   0xbe
 #define REG_OFFSET_DMA1DAD     0xc0
-#define REG_OFFSET_DMA1DAD_L   0xc0
-#define REG_OFFSET_DMA1DAD_H   0xc2
 #define REG_OFFSET_DMA1CNT     0xc4
 #define REG_OFFSET_DMA1CNT_L   0xc4
 #define REG_OFFSET_DMA1CNT_H   0xc6
-#define REG_OFFSET_DMA2        0xc8
 #define REG_OFFSET_DMA2SAD     0xc8
-#define REG_OFFSET_DMA2SAD_L   0xc8
-#define REG_OFFSET_DMA2SAD_H   0xca
 #define REG_OFFSET_DMA2DAD     0xcc
-#define REG_OFFSET_DMA2DAD_L   0xcc
-#define REG_OFFSET_DMA2DAD_H   0xce
 #define REG_OFFSET_DMA2CNT     0xd0
 #define REG_OFFSET_DMA2CNT_L   0xd0
 #define REG_OFFSET_DMA2CNT_H   0xd2
-#define REG_OFFSET_DMA3        0xd4
 #define REG_OFFSET_DMA3SAD     0xd4
-#define REG_OFFSET_DMA3SAD_L   0xd4
-#define REG_OFFSET_DMA3SAD_H   0xd6
 #define REG_OFFSET_DMA3DAD     0xd8
-#define REG_OFFSET_DMA3DAD_L   0xd8
-#define REG_OFFSET_DMA3DAD_H   0xda
 #define REG_OFFSET_DMA3CNT     0xdc
 #define REG_OFFSET_DMA3CNT_L   0xdc
 #define REG_OFFSET_DMA3CNT_H   0xde
+#else
+// To fit this into the same memory footprint on 64bit,
+// We need to put the control registers behind the pointers to avoid padding.
+#define REG_OFFSET_DMA0SAD     REG_OFFSET_DMA
+#define REG_OFFSET_DMA1SAD     (REG_OFFSET_DMA0SAD + sizeof(uintptr_t))
+#define REG_OFFSET_DMA2SAD     (REG_OFFSET_DMA1SAD + sizeof(uintptr_t))
+#define REG_OFFSET_DMA3SAD     (REG_OFFSET_DMA2SAD + sizeof(uintptr_t))
+#define REG_OFFSET_DMA0DAD     (REG_OFFSET_DMA3SAD + sizeof(uintptr_t))
+#define REG_OFFSET_DMA1DAD     (REG_OFFSET_DMA0DAD + sizeof(uintptr_t))
+#define REG_OFFSET_DMA2DAD     (REG_OFFSET_DMA1DAD + sizeof(uintptr_t))
+#define REG_OFFSET_DMA3DAD     (REG_OFFSET_DMA2DAD + sizeof(uintptr_t))
+
+#define REG_OFFSET_DMA0CNT     (REG_OFFSET_DMA3DAD + sizeof(uintptr_t))
+#define REG_OFFSET_DMA0CNT_L   (REG_OFFSET_DMA0CNT + 0)
+#define REG_OFFSET_DMA0CNT_H   (REG_OFFSET_DMA0CNT_L + sizeof(uint16_t))
+#define REG_OFFSET_DMA1CNT     (REG_OFFSET_DMA0CNT_H + sizeof(uint16_t))
+#define REG_OFFSET_DMA1CNT_L   (REG_OFFSET_DMA1CNT + 0)
+#define REG_OFFSET_DMA1CNT_H   (REG_OFFSET_DMA1CNT_L + sizeof(uint16_t))
+#define REG_OFFSET_DMA2CNT     (REG_OFFSET_DMA1CNT_H + sizeof(uint16_t))
+#define REG_OFFSET_DMA2CNT_L   (REG_OFFSET_DMA2CNT + 0)
+#define REG_OFFSET_DMA2CNT_H   (REG_OFFSET_DMA2CNT_L + sizeof(uint16_t))
+#define REG_OFFSET_DMA3CNT     (REG_OFFSET_DMA2CNT_H + sizeof(uint16_t))
+#define REG_OFFSET_DMA3CNT_L   (REG_OFFSET_DMA3CNT + 0)
+#define REG_OFFSET_DMA3CNT_H   (REG_OFFSET_DMA3CNT_L + sizeof(uint16_t))
+#endif
 
 #define REG_OFFSET_TMCNT       0x100
 #define REG_OFFSET_TMCNT_L     0x100
@@ -274,25 +289,21 @@
 #define REG_ADDR_FIFO_A      (REG_BASE + REG_OFFSET_FIFO_A)
 #define REG_ADDR_FIFO_B      (REG_BASE + REG_OFFSET_FIFO_B)
 
-#define REG_ADDR_DMA0        (REG_BASE + REG_OFFSET_DMA0)
 #define REG_ADDR_DMA0SAD     (REG_BASE + REG_OFFSET_DMA0SAD)
 #define REG_ADDR_DMA0DAD     (REG_BASE + REG_OFFSET_DMA0DAD)
 #define REG_ADDR_DMA0CNT     (REG_BASE + REG_OFFSET_DMA0CNT)
 #define REG_ADDR_DMA0CNT_L   (REG_BASE + REG_OFFSET_DMA0CNT_L)
 #define REG_ADDR_DMA0CNT_H   (REG_BASE + REG_OFFSET_DMA0CNT_H)
-#define REG_ADDR_DMA1        (REG_BASE + REG_OFFSET_DMA1)
 #define REG_ADDR_DMA1SAD     (REG_BASE + REG_OFFSET_DMA1SAD)
 #define REG_ADDR_DMA1DAD     (REG_BASE + REG_OFFSET_DMA1DAD)
 #define REG_ADDR_DMA1CNT     (REG_BASE + REG_OFFSET_DMA1CNT)
 #define REG_ADDR_DMA1CNT_L   (REG_BASE + REG_OFFSET_DMA1CNT_L)
 #define REG_ADDR_DMA1CNT_H   (REG_BASE + REG_OFFSET_DMA1CNT_H)
-#define REG_ADDR_DMA2        (REG_BASE + REG_OFFSET_DMA2)
 #define REG_ADDR_DMA2SAD     (REG_BASE + REG_OFFSET_DMA2SAD)
 #define REG_ADDR_DMA2DAD     (REG_BASE + REG_OFFSET_DMA2DAD)
 #define REG_ADDR_DMA2CNT     (REG_BASE + REG_OFFSET_DMA2CNT)
 #define REG_ADDR_DMA2CNT_L   (REG_BASE + REG_OFFSET_DMA2CNT_L)
 #define REG_ADDR_DMA2CNT_H   (REG_BASE + REG_OFFSET_DMA2CNT_H)
-#define REG_ADDR_DMA3        (REG_BASE + REG_OFFSET_DMA3)
 #define REG_ADDR_DMA3SAD     (REG_BASE + REG_OFFSET_DMA3SAD)
 #define REG_ADDR_DMA3DAD     (REG_BASE + REG_OFFSET_DMA3DAD)
 #define REG_ADDR_DMA3CNT     (REG_BASE + REG_OFFSET_DMA3CNT)
@@ -437,26 +448,26 @@
 #define REG_FIFO_A      (*(vu32 *)REG_ADDR_FIFO_A)
 #define REG_FIFO_B      (*(vu32 *)REG_ADDR_FIFO_B)
 
-#define REG_DMA0SAD     (*(vu32 *)REG_ADDR_DMA0SAD)
-#define REG_DMA0DAD     (*(vu32 *)REG_ADDR_DMA0DAD)
+#define REG_DMA0SAD     (*(volatile uintptr_t *)REG_ADDR_DMA0SAD)
+#define REG_DMA0DAD     (*(volatile uintptr_t *)REG_ADDR_DMA0DAD)
 #define REG_DMA0CNT     (*(vu32 *)REG_ADDR_DMA0CNT)
 #define REG_DMA0CNT_L   (*(vu16 *)REG_ADDR_DMA0CNT_L)
 #define REG_DMA0CNT_H   (*(vu16 *)REG_ADDR_DMA0CNT_H)
 
-#define REG_DMA1SAD     (*(vu32 *)REG_ADDR_DMA1SAD)
-#define REG_DMA1DAD     (*(vu32 *)REG_ADDR_DMA1DAD)
+#define REG_DMA1SAD     (*(volatile uintptr_t *)REG_ADDR_DMA1SAD)
+#define REG_DMA1DAD     (*(volatile uintptr_t *)REG_ADDR_DMA1DAD)
 #define REG_DMA1CNT     (*(vu32 *)REG_ADDR_DMA1CNT)
 #define REG_DMA1CNT_L   (*(vu16 *)REG_ADDR_DMA1CNT_L)
 #define REG_DMA1CNT_H   (*(vu16 *)REG_ADDR_DMA1CNT_H)
 
-#define REG_DMA2SAD     (*(vu32 *)REG_ADDR_DMA2SAD)
-#define REG_DMA2DAD     (*(vu32 *)REG_ADDR_DMA2DAD)
+#define REG_DMA2SAD     (*(volatile uintptr_t *)REG_ADDR_DMA2SAD)
+#define REG_DMA2DAD     (*(volatile uintptr_t *)REG_ADDR_DMA2DAD)
 #define REG_DMA2CNT     (*(vu32 *)REG_ADDR_DMA2CNT)
 #define REG_DMA2CNT_L   (*(vu16 *)REG_ADDR_DMA2CNT_L)
 #define REG_DMA2CNT_H   (*(vu16 *)REG_ADDR_DMA2CNT_H)
 
-#define REG_DMA3SAD     (*(vu32 *)REG_ADDR_DMA3SAD)
-#define REG_DMA3DAD     (*(vu32 *)REG_ADDR_DMA3DAD)
+#define REG_DMA3SAD     (*(volatile uintptr_t *)REG_ADDR_DMA3SAD)
+#define REG_DMA3DAD     (*(volatile uintptr_t *)REG_ADDR_DMA3DAD)
 #define REG_DMA3CNT     (*(vu32 *)REG_ADDR_DMA3CNT)
 #define REG_DMA3CNT_L   (*(vu16 *)REG_ADDR_DMA3CNT_L)
 #define REG_DMA3CNT_H   (*(vu16 *)REG_ADDR_DMA3CNT_H)
@@ -527,12 +538,21 @@
 #define DISPSTAT_VCOUNT_INTR 0x0020 // V-Count interrupt enabled
 
 // BGCNT
-#define BGCNT_PRIORITY(n)          (n) // Values 0 - 3. Lower priority BGs will be drawn on top of higher priority BGs.
-#define BGCNT_CHARBASE(n)   ((n) << 2) // Values 0 - 3. Base block for tile pixel data.
+// Values 0 - 3. Lower priority BGs will be drawn on top of higher priority BGs.
+#define BGCNT_PRIORITY(n)          (n)
+// Values 0 - 3. Base block for tile pixel data.
+// Target pointer: BG_CHAR_ADDR(n)
+#define BGCNT_CHARBASE(n)   ((n) << 2)
 #define BGCNT_MOSAIC            0x0040
 #define BGCNT_16COLOR           0x0000 // 4 bits per pixel
 #define BGCNT_256COLOR          0x0080 // 8 bits per pixel
 #define BGCNT_SCREENBASE(n) ((n) << 8) // Values 0 - 31. Base block for tile map.
+#if !WIDESCREEN_HACK
+#define BGCNT_SCREENBASE_MASK   0x1F00
+#else
+// Luckily BGCNT_WRAP is not used with text-mode backgrounds, which stage maps are.
+#define BGCNT_SCREENBASE_MASK   0x3F00
+#endif
 #define BGCNT_WRAP              0x2000 // Only affects affine BGs. Text BGs wrap by default.
 #define BGCNT_TXT256x256        0x0000 // Internal screen size size of text mode BG in pixels.
 #define BGCNT_TXT512x256        0x4000
@@ -725,6 +745,7 @@
 #define KEY_AND_INTR    0x8000
 #define DPAD_ANY        0x00F0
 #define DPAD_SIDEWAYS   (DPAD_LEFT | DPAD_RIGHT)
+#define DPAD_VERTICAL   (DPAD_DOWN | DPAD_UP)
 #define JOY_EXCL_DPAD   0x030F
 
 // interrupt flags

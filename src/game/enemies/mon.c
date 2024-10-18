@@ -2,7 +2,7 @@
 #include "malloc_vram.h"
 #include "sprite.h"
 
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/mon.h"
@@ -31,41 +31,39 @@ typedef struct {
 void CreateEntity_Mon(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     u32 r2;
-    struct Task *t = TaskCreate(Task_MonMain, sizeof(Sprite_Mon), 0x4010, 0,
-                                TaskDestructor_80095E8);
+    struct Task *t = TaskCreate(Task_MonMain, sizeof(Sprite_Mon), 0x4010, 0, TaskDestructor_80095E8);
     Sprite_Mon *mon = TASK_DATA(t);
     Sprite *s = &mon->s;
     mon->base.regionX = spriteRegionX;
     mon->base.regionY = spriteRegionY;
     mon->base.me = me;
     mon->base.spriteX = me->x;
-    mon->base.spriteY = spriteY;
+    mon->base.id = spriteY;
 
     // TODO: Isn't this always -1?
     r2 = (-me->d.sData[0] | me->d.sData[0]);
 
-    mon->x = Q_24_8(TO_WORLD_POS(me->x, spriteRegionX));
-    mon->y = Q_24_8(TO_WORLD_POS(me->y, spriteRegionY));
+    mon->x = Q(TO_WORLD_POS(me->x, spriteRegionX));
+    mon->y = Q(TO_WORLD_POS(me->y, spriteRegionY));
 
-    mon->y += Q_24_8(sub_801F07C(Q_24_8_TO_INT(mon->y), Q_24_8_TO_INT(mon->x), r2 >> 31,
-                                 8, NULL, sub_801EE64));
+    mon->y += Q(sub_801F07C(I(mon->y), I(mon->x), r2 >> 31, 8, NULL, sub_801EE64));
 
     s->x = 0;
     s->y = 0;
     SET_MAP_ENTITY_INITIALIZED(me);
 
     s->graphics.dest = VramMalloc(25);
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
 
-    mon->speedY = -Q_24_8(5.5);
-    mon->offsetY = +Q_24_8(0);
+    mon->speedY = -Q(5.5);
+    mon->offsetY = +Q(0);
     s->graphics.anim = SA2_ANIM_MON;
     s->variant = 0;
     s->prevVariant = -1;
@@ -77,18 +75,19 @@ static void Task_MonMain(void)
     Sprite *s = &mon->s;
     MapEntity *me = mon->base.me;
 
-    s->x = Q_24_8_TO_INT(mon->x) - gCamera.x;
-    s->y = Q_24_8_TO_INT(mon->y) - gCamera.y;
+    s->x = I(mon->x) - gCamera.x;
+    s->y = I(mon->y) - gCamera.y;
 
-    if (sub_800C4FC(s, Q_24_8_TO_INT(mon->x), Q_24_8_TO_INT(mon->y), 0)) {
+    if (sub_800C4FC(s, I(mon->x), I(mon->y), 0)) {
         TaskDestroy(gCurTask);
+        return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
         SET_MAP_ENTITY_NOT_INITIALIZED(me, mon->base.spriteX);
         TaskDestroy(gCurTask);
+        return;
     } else {
-        if ((gPlayer.x > mon->x - Q_24_8(DISPLAY_WIDTH / 2))
-            && (gPlayer.x < mon->x + Q_24_8(DISPLAY_WIDTH / 2))
-            && (gPlayer.y > mon->y - Q_24_8(50)) && (gPlayer.y < mon->y + Q_24_8(50))) {
+        if ((gPlayer.x > mon->x - Q(DISPLAY_WIDTH / 2)) && (gPlayer.x < mon->x + Q(DISPLAY_WIDTH / 2)) && (gPlayer.y > mon->y - Q(50))
+            && (gPlayer.y < mon->y + Q(50))) {
             gCurTask->main = Task_Mon_2;
             s->graphics.anim = SA2_ANIM_MON;
             s->variant = 2;
@@ -107,19 +106,21 @@ static void Task_Mon_2(void)
     Sprite *s = &mon->s;
     MapEntity *me = mon->base.me;
 
-    s->x = Q_24_8_TO_INT(mon->x) - gCamera.x;
-    s->y = Q_24_8_TO_INT(mon->y) - gCamera.y;
+    s->x = I(mon->x) - gCamera.x;
+    s->y = I(mon->y) - gCamera.y;
 
-    if (sub_800C4FC(s, Q_24_8_TO_INT(mon->x), Q_24_8_TO_INT(mon->y), 0)) {
+    if (sub_800C4FC(s, I(mon->x), I(mon->y), 0)) {
         TaskDestroy(gCurTask);
+        return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
         SET_MAP_ENTITY_NOT_INITIALIZED(me, mon->base.spriteX);
         TaskDestroy(gCurTask);
+        return;
     } else {
         Player_UpdateHomingPosition(mon->x, mon->y);
         if (UpdateSpriteAnimation(s) == 0) {
-            mon->speedY = -Q_24_8(5.5);
-            mon->offsetY = +Q_24_8(0.0);
+            mon->speedY = -Q(5.5);
+            mon->offsetY = +Q(0.0);
             s->graphics.anim = SA2_ANIM_MON;
             s->variant = 1;
             s->prevVariant = -1;
@@ -136,17 +137,19 @@ static void Task_Mon_3(void)
     Sprite *s = &mon->s;
     MapEntity *me = mon->base.me;
 
-    mon->speedY += Q_24_8(52. / 256.);
+    mon->speedY += Q(52. / 256.);
     mon->offsetY += mon->speedY;
 
-    s->x = Q_24_8_TO_INT(mon->x) - gCamera.x;
-    s->y = Q_24_8_TO_INT(mon->y + mon->offsetY) - gCamera.y;
+    s->x = I(mon->x) - gCamera.x;
+    s->y = I(mon->y + mon->offsetY) - gCamera.y;
 
-    if (sub_800C4FC(s, Q_24_8_TO_INT(mon->x), Q_24_8_TO_INT(mon->y + mon->offsetY), 0)) {
+    if (sub_800C4FC(s, I(mon->x), I(mon->y + mon->offsetY), 0)) {
         TaskDestroy(gCurTask);
+        return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
         SET_MAP_ENTITY_NOT_INITIALIZED(me, mon->base.spriteX);
         TaskDestroy(gCurTask);
+        return;
     } else {
         if (mon->offsetY >= 0) {
             s->graphics.anim = SA2_ANIM_MON;
@@ -166,22 +169,22 @@ static void Task_Mon_4(void)
     Sprite *s = &mon->s;
     MapEntity *me = mon->base.me;
 
-    s->x = Q_24_8_TO_INT(mon->x) - gCamera.x;
-    s->y = Q_24_8_TO_INT(mon->y) - gCamera.y;
+    s->x = I(mon->x) - gCamera.x;
+    s->y = I(mon->y) - gCamera.y;
 
-    if (sub_800C4FC(s, Q_24_8_TO_INT(mon->x), Q_24_8_TO_INT(mon->y), 0)) {
+    if (sub_800C4FC(s, I(mon->x), I(mon->y), 0)) {
         TaskDestroy(gCurTask);
+        return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
         SET_MAP_ENTITY_NOT_INITIALIZED(me, mon->base.spriteX);
         TaskDestroy(gCurTask);
+        return;
     } else {
         Player_UpdateHomingPosition(mon->x, mon->y);
 
         if (UpdateSpriteAnimation(s) == 0) {
-            if ((gPlayer.x > mon->x - Q_24_8(DISPLAY_WIDTH / 2))
-                && (gPlayer.x < mon->x + Q_24_8(DISPLAY_WIDTH / 2))
-                && (gPlayer.y > mon->y - Q_24_8(50))
-                && (gPlayer.y < mon->y + Q_24_8(50))) {
+            if ((gPlayer.x > mon->x - Q(DISPLAY_WIDTH / 2)) && (gPlayer.x < mon->x + Q(DISPLAY_WIDTH / 2)) && (gPlayer.y > mon->y - Q(50))
+                && (gPlayer.y < mon->y + Q(50))) {
 
                 ENEMY_TURN_TO_PLAYER(mon->x, s);
 

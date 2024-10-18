@@ -1,3 +1,5 @@
+#include <string.h> // memcpy
+
 #include "global.h"
 #include "lib/agb_flash.h"
 #include "malloc_ewram.h"
@@ -54,25 +56,22 @@ struct SaveSectorData *gSaveSectorDataBuffer = NULL;
 static s16 FindNewestSaveGameSector(void);
 static s16 FindOldestSaveGameSector(void);
 
-static bool16 UnpackSaveSectorData(struct SaveGame *gameState,
-                                   struct SaveSectorData *save);
-static bool16 PackSaveSectorData(struct SaveSectorData *save,
-                                 struct SaveGame *gameState);
+static bool16 UnpackSaveSectorData(struct SaveGame *gameState, struct SaveSectorData *save);
+static bool16 PackSaveSectorData(struct SaveSectorData *save, struct SaveGame *gameState);
 
-static bool16 ReadSaveSectorAndVerifyChecksum(struct SaveSectorData *save,
-                                              s16 sectorNum);
+static bool16 ReadSaveSectorAndVerifyChecksum(struct SaveSectorData *save, s16 sectorNum);
 static u16 WriteToSaveSector(struct SaveSectorData *data, s16 sectorNum);
 static u16 EraseSaveSector(s16 sectorNum);
 static bool16 HasChangesToSave(void);
 static bool16 StringEquals(u16 *string1, u16 *string2, s16 length);
 
-#define CalcChecksum(save)                                                              \
-    ({                                                                                  \
-        u32 j, checksum = 0;                                                            \
-        for (j = 0; j < SECTOR_CHECKSUM_OFFSET; j += sizeof(u32)) {                     \
-            checksum += *(u32 *)((u32)(save) + j);                                      \
-        }                                                                               \
-        checksum;                                                                       \
+#define CalcChecksum(save)                                                                                                                 \
+    ({                                                                                                                                     \
+        u32 j, checksum = 0;                                                                                                               \
+        for (j = 0; j < SECTOR_CHECKSUM_OFFSET; j += sizeof(uintptr_t)) {                                                                  \
+            checksum += *(uintptr_t *)((void *)(save) + j);                                                                                \
+        }                                                                                                                                  \
+        checksum;                                                                                                                          \
     })
 
 #define UNLOCK_FLAG_CREAM       1 << 0
@@ -102,25 +101,21 @@ void InsertMultiplayerProfile(u32 playerId, u16 *name)
 
     for (i = 0; i < 10; i++) {
         struct MultiplayerScore *score = &gLoadedSaveGame->multiplayerScores[i];
-        if (playerId == score->playerId
-            && StringEquals(name, score->playerName, MAX_PLAYER_NAME_LENGTH)) {
+        if (playerId == score->playerId && StringEquals(name, score->playerName, MAX_PLAYER_NAME_LENGTH)) {
             struct MultiplayerScore scoreCopy;
             memcpy(&scoreCopy, score, sizeof(struct MultiplayerScore));
 
             for (j = i; j > 0; j--) {
-                gLoadedSaveGame->multiplayerScores[j]
-                    = gLoadedSaveGame->multiplayerScores[j - 1];
+                gLoadedSaveGame->multiplayerScores[j] = gLoadedSaveGame->multiplayerScores[j - 1];
             }
-            memcpy(&gLoadedSaveGame->multiplayerScores[0], &scoreCopy,
-                   sizeof(struct MultiplayerScore));
+            memcpy(&gLoadedSaveGame->multiplayerScores[0], &scoreCopy, sizeof(struct MultiplayerScore));
             return;
         }
     }
 
     // otherwise, insert the score at the beginning
     for (i = 9; i > 0; i--) {
-        gLoadedSaveGame->multiplayerScores[i]
-            = gLoadedSaveGame->multiplayerScores[i - 1];
+        gLoadedSaveGame->multiplayerScores[i] = gLoadedSaveGame->multiplayerScores[i - 1];
     }
 
     gLoadedSaveGame->multiplayerScores[0].playerId = playerId;
@@ -160,8 +155,7 @@ void RecordMultiplayerResult(u32 id, u16 *name, s16 result)
 
     for (i = 0; i < NUM_MULTIPLAYER_SCORES; i++) {
         struct MultiplayerScore *score = &gLoadedSaveGame->multiplayerScores[i];
-        if (id == score->playerId
-            && StringEquals(name, score->playerName, MAX_PLAYER_NAME_LENGTH)) {
+        if (id == score->playerId && StringEquals(name, score->playerName, MAX_PLAYER_NAME_LENGTH)) {
             switch (result) {
                 case MULTIPLAYER_RESULT_WIN:
                     if (score->wins < MAX_MULTIPLAYER_SCORE) {
@@ -207,7 +201,7 @@ static void GenerateNewSaveGame(struct SaveGame *gameState)
 
     record = (void *)gameState->timeRecords.table;
     for (i = 0; i < NUM_TIME_RECORD_ROWS; i++, record++) {
-        *record = MAX_COURSE_TIME;
+        *record = (s16)MAX_COURSE_TIME;
     }
 
     gameState->multiplayerWins = 0;
@@ -256,9 +250,9 @@ static void InitSaveGameSectorData(struct SaveSectorData *save)
     save->multiplayerLoses = 0;
     save->multiplayerDraws = 0;
 
-    record = (u16 *)save->timeRecords.table;
+    record = (s16 *)save->timeRecords.table;
     for (i = 0; i < NUM_TIME_RECORD_ROWS; i++, record++) {
-        *record = MAX_COURSE_TIME;
+        *record = (s16)MAX_COURSE_TIME;
     }
 
     p2 = save->multiplayerScores;
@@ -430,8 +424,7 @@ static bool16 PackSaveSectorData(struct SaveSectorData *save, struct SaveGame *g
     save->multiplayerDraws = gameState->multiplayerDraws;
 
     memcpy(&save->timeRecords, &gameState->timeRecords, sizeof(gameState->timeRecords));
-    memcpy(save->multiplayerScores, gameState->multiplayerScores,
-           sizeof(gameState->multiplayerScores));
+    memcpy(save->multiplayerScores, gameState->multiplayerScores, sizeof(gameState->multiplayerScores));
 
     save->id = Random32();
     save->score = gameState->score;
@@ -512,8 +505,7 @@ static u16 WriteToSaveSector(struct SaveSectorData *data, s16 sectorNum)
     DmaStop(2);
     DmaStop(3);
 
-    result = ProgramFlashSectorAndVerifyNBytes(sectorNum, data,
-                                               sizeof(struct SaveSectorData));
+    result = ProgramFlashSectorAndVerifyNBytes(sectorNum, data, sizeof(struct SaveSectorData));
 
     REG_IE = preIE;
     REG_IME = preIME;
@@ -621,8 +613,7 @@ static s16 FindNewestSaveGameSector(void)
     return bestSector;
 }
 
-static bool16 UnpackSaveSectorData(struct SaveGame *gameState,
-                                   struct SaveSectorData *save)
+static bool16 UnpackSaveSectorData(struct SaveGame *gameState, struct SaveSectorData *save)
 {
     s16 i;
 
@@ -742,8 +733,7 @@ static bool16 UnpackSaveSectorData(struct SaveGame *gameState,
     gameState->multiplayerDraws = save->multiplayerDraws;
     gameState->timeRecords = save->timeRecords;
 
-    memcpy(gameState->multiplayerScores, save->multiplayerScores,
-           sizeof(save->multiplayerScores));
+    memcpy(gameState->multiplayerScores, save->multiplayerScores, sizeof(save->multiplayerScores));
     gameState->score = save->score;
     return TRUE;
 }
@@ -841,9 +831,8 @@ static void GenerateCompletedSaveGame(struct SaveGame *gameState)
     gameState->score = 0;
 
     for (i = 0; i < 5; i++) {
-        gameState->unlockedLevels[i] = i == CHARACTER_SONIC
-            ? LEVEL_INDEX(ZONE_FINAL, ACT_TRUE_AREA_53) + 1
-            : LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) + 1;
+        gameState->unlockedLevels[i]
+            = i == CHARACTER_SONIC ? LEVEL_INDEX(ZONE_FINAL, ACT_TRUE_AREA_53) + 1 : LEVEL_INDEX(ZONE_FINAL, ACT_XX_FINAL_ZONE) + 1;
         gameState->chaosEmeralds[i] = ALL_ZONE_CHAOS_EMERALDS | CHAOS_EMERALDS_COMPLETED;
     }
 

@@ -9,6 +9,7 @@
 #include "game/interactables_2/note_particle.h"
 #include "game/interactables_2/music_plant/keyboard.h"
 
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 #include "constants/zones.h"
@@ -55,11 +56,9 @@ const s16 sKeyboardAccelTechnoBase[3][2] = {
     { Q_8_8(5.0), Q_8_8(8.0) },
 };
 
-void CreateEntity_Keyboard(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                           u8 spriteY, u32 type)
+void CreateEntity_Keyboard(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY, u32 type)
 {
-    struct Task *t = TaskCreate(Task_Keyboard, sizeof(Sprite_Keyboard), 0x2010, 0,
-                                TaskDestructor_Keyboard);
+    struct Task *t = TaskCreate(Task_Keyboard, sizeof(Sprite_Keyboard), 0x2010, 0, TaskDestructor_Keyboard);
 
     Sprite_Keyboard *kb = TASK_DATA(t);
     kb->kbType = type;
@@ -90,7 +89,7 @@ static void sub_8076448(Sprite_Keyboard *kb)
     s16 r5, r6, r7, r8;
 
     kb->unk1 = 8;
-    gPlayer.unk64 = 4;
+    gPlayer.charState = CHARSTATE_SPIN_ATTACK;
     gPlayer.transition = PLTRANS_PT5;
 
     if (LEVEL_TO_ZONE(gCurrentLevel) == ZONE_6) {
@@ -231,10 +230,8 @@ static void sub_8076448(Sprite_Keyboard *kb)
     }
 
     if (LEVEL_TO_ZONE(gCurrentLevel) != ZONE_6) {
-        sub_8080C78(Q_24_8_TO_INT(gPlayer.x), Q_24_8_TO_INT(gPlayer.y), 5, 30, r7, r5,
-                    0);
-        sub_8080C78(Q_24_8_TO_INT(gPlayer.x), Q_24_8_TO_INT(gPlayer.y), 5, 30, r8, r6,
-                    1);
+        sub_8080C78(I(gPlayer.x), I(gPlayer.y), 5, 30, r7, r5, 0);
+        sub_8080C78(I(gPlayer.x), I(gPlayer.y), 5, 30, r8, r6, 1);
     }
 }
 
@@ -244,13 +241,11 @@ static bool32 sub_8076780(Sprite_Keyboard *kb)
         if (kb->unk1 == 0) {
             s16 screenX = kb->posX - gCamera.x;
             s16 screenY = kb->posY - gCamera.y;
-            s16 playerX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-            s16 playerY = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+            s16 playerX = I(gPlayer.x) - gCamera.x;
+            s16 playerY = I(gPlayer.y) - gCamera.y;
 
-            if (((screenX + kb->unkC) <= playerX)
-                && (((screenX + kb->unkC) + (kb->unk10 - kb->unkC)) >= playerX)
-                && ((screenY + kb->unkE) <= playerY)
-                && (((screenY + kb->unkE) + (kb->unk12 - kb->unkE)) >= playerY)) {
+            if (((screenX + kb->unkC) <= playerX) && (((screenX + kb->unkC) + (kb->unk10 - kb->unkC)) >= playerX)
+                && ((screenY + kb->unkE) <= playerY) && (((screenY + kb->unkE) + (kb->unk12 - kb->unkE)) >= playerY)) {
                 return TRUE;
             }
         } else {
@@ -280,10 +275,8 @@ static bool32 sub_8076848(Sprite_Keyboard *kb)
     s16 screenX = kb->posX - gCamera.x;
     s16 screenY = kb->posY - gCamera.y;
 
-    if (((screenX + kb->unk18) < -(CAM_REGION_WIDTH / 2))
-        || ((screenX + kb->unk14) > DISPLAY_WIDTH + (CAM_REGION_WIDTH / 2))
-        || (screenY + kb->unk1A < -(CAM_REGION_WIDTH / 2))
-        || ((screenY + kb->unk16) > DISPLAY_HEIGHT + (CAM_REGION_WIDTH / 2))) {
+    if (((screenX + kb->unk18) < -(CAM_REGION_WIDTH / 2)) || ((screenX + kb->unk14) > DISPLAY_WIDTH + (CAM_REGION_WIDTH / 2))
+        || (screenY + kb->unk1A < -(CAM_REGION_WIDTH / 2)) || ((screenY + kb->unk16) > DISPLAY_HEIGHT + (CAM_REGION_WIDTH / 2))) {
         return TRUE;
     }
 
@@ -296,23 +289,17 @@ static void DespawnKeyboard(Sprite_Keyboard *kb)
     TaskDestroy(gCurTask);
 }
 
-void CreateEntity_Keyboard_Vertical(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                    u8 spriteY)
+void CreateEntity_Keyboard_Vertical(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    CreateEntity_Keyboard(me, spriteRegionX, spriteRegionY, spriteY,
-                          MUSIC_PLANT_KEYBOARD_TYPE_VERTICAL);
+    CreateEntity_Keyboard(me, spriteRegionX, spriteRegionY, spriteY, MUSIC_PLANT_KEYBOARD_TYPE_VERTICAL);
 }
 
-void CreateEntity_Keyboard_Horizontal_PushLeft(MapEntity *me, u16 spriteRegionX,
-                                               u16 spriteRegionY, u8 spriteY)
+void CreateEntity_Keyboard_Horizontal_PushLeft(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    CreateEntity_Keyboard(me, spriteRegionX, spriteRegionY, spriteY,
-                          MUSIC_PLANT_KEYBOARD_TYPE_HORIZONTAL_LEFT);
+    CreateEntity_Keyboard(me, spriteRegionX, spriteRegionY, spriteY, MUSIC_PLANT_KEYBOARD_TYPE_HORIZONTAL_LEFT);
 }
 
-void CreateEntity_Keyboard_Horizontal_PushRight(MapEntity *me, u16 spriteRegionX,
-                                                u16 spriteRegionY, u8 spriteY)
+void CreateEntity_Keyboard_Horizontal_PushRight(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    CreateEntity_Keyboard(me, spriteRegionX, spriteRegionY, spriteY,
-                          MUSIC_PLANT_KEYBOARD_TYPE_HORIZONTAL_RIGHT);
+    CreateEntity_Keyboard(me, spriteRegionX, spriteRegionY, spriteY, MUSIC_PLANT_KEYBOARD_TYPE_HORIZONTAL_RIGHT);
 }

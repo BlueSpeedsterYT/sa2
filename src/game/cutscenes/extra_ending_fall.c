@@ -47,7 +47,7 @@ struct ExtraEndingCutScene {
     u16 unk396;
 
     // vramPtr
-    vu32 unk398;
+    void *unk398;
 
     s32 unk39C;
 
@@ -69,28 +69,23 @@ void sub_8090480(void);
 void sub_8091480(struct Task *);
 
 static const TileInfo gUnknown_080E12FC[] = {
-    { 24, 818, 0 }, { 30, 819, 0 }, { 35, 822, 0 }, { 80, 824, 3 }, { 30, 824, 2 },
-    { 21, 824, 1 }, { 10, 824, 0 }, { 4, 821, 0 },  { 35, 820, 0 }, { 15, 823, 0 },
-    { 42, 791, 0 }, { 42, 791, 1 }, { 64, 791, 2 }, { 15, 792, 0 }, { 6, 793, 0 },
-    { 6, 794, 0 },  { 15, 795, 0 }, { 6, 796, 0 },  { 6, 797, 0 },  { 4, 798, 0 },
-    { 24, 799, 0 }, { 42, 822, 1 },
+    { 24, 818, 0 }, { 30, 819, 0 }, { 35, 822, 0 }, { 80, 824, 3 }, { 30, 824, 2 }, { 21, 824, 1 }, { 10, 824, 0 }, { 4, 821, 0 },
+    { 35, 820, 0 }, { 15, 823, 0 }, { 42, 791, 0 }, { 42, 791, 1 }, { 64, 791, 2 }, { 15, 792, 0 }, { 6, 793, 0 },  { 6, 794, 0 },
+    { 15, 795, 0 }, { 6, 796, 0 },  { 6, 797, 0 },  { 4, 798, 0 },  { 24, 799, 0 }, { 42, 822, 1 },
 };
 
 static const u32 gUnknown_080E13AC[12][3] = {
-    { 110, 90, 704 }, { 110, 75, 448 }, { 125, 98, 640 }, { 130, 80, 768 },
-    { 128, 82, 512 }, { 132, 85, 480 }, { 130, 70, 320 }, { 135, 76, 640 },
-    { 130, 63, 448 }, { 135, 71, 480 }, { 130, 68, 404 }, { 125, 87, 768 },
+    { 110, 90, 704 }, { 110, 75, 448 }, { 125, 98, 640 }, { 130, 80, 768 }, { 128, 82, 512 }, { 132, 85, 480 },
+    { 130, 70, 320 }, { 135, 76, 640 }, { 130, 63, 448 }, { 135, 71, 480 }, { 130, 68, 404 }, { 125, 87, 768 },
 };
 
 static const u32 gUnknown_080E143C[6][3] = {
-    { 120, 80, 704 }, { 120, 80, 448 }, { 120, 80, 640 },
-    { 120, 80, 768 }, { 120, 80, 512 }, { 120, 80, 480 },
+    { 120, 80, 704 }, { 120, 80, 448 }, { 120, 80, 640 }, { 120, 80, 768 }, { 120, 80, 512 }, { 120, 80, 480 },
 };
 
 static const u32 gUnknown_080E1484[12][3] = {
-    { 110, 80, 3 }, { 115, 80, 3 }, { 120, 80, 2 }, { 125, 80, 3 },
-    { 130, 80, 2 }, { 135, 80, 3 }, { 140, 80, 2 }, { 135, 80, 5 },
-    { 130, 80, 4 }, { 125, 80, 3 }, { 120, 80, 4 }, { 115, 80, 2 },
+    { 110, 80, 3 }, { 115, 80, 3 }, { 120, 80, 2 }, { 125, 80, 3 }, { 130, 80, 2 }, { 135, 80, 3 },
+    { 140, 80, 2 }, { 135, 80, 5 }, { 130, 80, 4 }, { 125, 80, 3 }, { 120, 80, 4 }, { 115, 80, 2 },
 };
 
 static const u16 gUnknown_080E1514[14] = {
@@ -105,8 +100,7 @@ static const u8 gUnknown_080E154A[] = {
 };
 
 UNUSED static const u32 gUnknown_080E155C[] = {
-    32,  128,     112,    640,     192,    768,    896,    288,    736,    608,
-    448, 1310735, 327690, 1310770, 655440, 327780, 655490, 983240, 524518,
+    32, 128, 112, 640, 192, 768, 896, 288, 736, 608, 448, 1310735, 327690, 1310770, 655440, 327780, 655490, 983240, 524518,
 };
 static const u32 gUnknown_080E15A8[8] = {
     512, 256, 128, 64, 640, 192, 96, 32,
@@ -115,20 +109,16 @@ static const u32 gUnknown_080E15A8[8] = {
 // TODO: extract these palettes?
 static const u8 gUnknown_080E15C8[][0x20] = {
     {
-        96,  110, 127, 1,  94,  2,  215, 1, 85,  0, 68, 8,   255, 127, 8,   33,
-        123, 111, 16,  66, 214, 90, 191, 3, 255, 2, 57, 103, 115, 78,  140, 49,
+        96, 110, 127, 1, 94, 2, 215, 1, 85, 0, 68, 8, 255, 127, 8, 33, 123, 111, 16, 66, 214, 90, 191, 3, 255, 2, 57, 103, 115, 78, 140, 49,
     },
     {
-        96, 110, 63,  1,  31,  2,  157, 1, 27,  0, 10,  0,  191, 115, 206, 20,
-        63, 99,  214, 53, 156, 78, 127, 3, 191, 2, 255, 90, 57,  66,  82,  37,
+        96, 110, 63, 1, 31, 2, 157, 1, 27, 0, 10, 0, 191, 115, 206, 20, 63, 99, 214, 53, 156, 78, 127, 3, 191, 2, 255, 90, 57, 66, 82, 37,
     },
     {
-        96,  110, 255, 0,  223, 1,  95, 1, 31,  0, 16,  0,  127, 103, 148, 8,
-        255, 86,  156, 41, 95,  66, 63, 3, 127, 2, 191, 78, 255, 53,  24,  25,
+        96, 110, 255, 0, 223, 1, 95, 1, 31, 0, 16, 0, 127, 103, 148, 8, 255, 86, 156, 41, 95, 66, 63, 3, 127, 2, 191, 78, 255, 53, 24, 25,
     },
     {
-        96,  110, 191, 0,  159, 1,  31,  1, 31, 0, 22,  0,  63,  91, 90,  0,
-        191, 74,  95,  29, 31,  54, 255, 2, 63, 2, 127, 66, 191, 41, 222, 12,
+        96, 110, 191, 0, 159, 1, 31, 1, 31, 0, 22, 0, 63, 91, 90, 0, 191, 74, 95, 29, 31, 54, 255, 2, 63, 2, 127, 66, 191, 41, 222, 12,
     },
 };
 
@@ -154,7 +144,7 @@ void CreateExtraEndingFallCutScene(void)
     m4aMPlayAllStop();
     m4aSongNumStart(MUS_EXTRA_ENDING);
 
-    t = TaskCreate(sub_8090480, 0x5CC, 0x3100, 0, sub_8091480);
+    t = TaskCreate(sub_8090480, sizeof(struct ExtraEndingCutScene), 0x3100, 0, sub_8091480);
     scene = TASK_DATA(t);
     scene->unk37C = 0;
     scene->unk390 = gUnknown_080E1514[0];
@@ -222,8 +212,8 @@ void CreateExtraEndingFallCutScene(void)
 
     fade = &scene->unk370;
     fade->window = SCREEN_FADE_USE_WINDOW_1;
-    fade->brightness = Q_24_8(0);
-    fade->speed = Q_24_8(0.5);
+    fade->brightness = Q(0);
+    fade->speed = Q(0.5);
     fade->bldCnt = (BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
     fade->bldAlpha = 0;
 
@@ -241,15 +231,15 @@ void CreateExtraEndingFallCutScene(void)
         s->y = 0;
 
         if (i < 2) {
-            s->unk1A = SPRITE_OAM_ORDER(i + 1);
+            s->oamFlags = SPRITE_OAM_ORDER(i + 1);
         } else {
-            s->unk1A = SPRITE_OAM_ORDER(i + 10);
+            s->oamFlags = SPRITE_OAM_ORDER(i + 10);
         }
 
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
+        s->qAnimDelay = 0;
         s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
         s->hitboxes[0].index = -1;
@@ -266,13 +256,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(4);
+        s->oamFlags = SPRITE_OAM_ORDER(4);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
+        s->qAnimDelay = 0;
         s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -287,13 +277,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(7);
+        s->oamFlags = SPRITE_OAM_ORDER(7);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -309,13 +299,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(9);
+        s->oamFlags = SPRITE_OAM_ORDER(9);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -330,13 +320,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(6);
+        s->oamFlags = SPRITE_OAM_ORDER(6);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -351,13 +341,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(5);
+        s->oamFlags = SPRITE_OAM_ORDER(5);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 1;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -372,13 +362,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(3);
+        s->oamFlags = SPRITE_OAM_ORDER(3);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -393,13 +383,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(0);
+        s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -414,13 +404,13 @@ void CreateExtraEndingFallCutScene(void)
         s->prevVariant = -1;
         s->x = 0;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(8);
+        s->oamFlags = SPRITE_OAM_ORDER(8);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0;
+        s->frameFlags = 0;
         s->hitboxes[0].index = -1;
         UpdateSpriteAnimation(s);
     }
@@ -486,7 +476,7 @@ void sub_8090480(void)
     sub_8090F6C(scene);
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_80913DC;
     }
 }
@@ -521,7 +511,7 @@ void sub_8090520(void)
     sub_8091044(scene);
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_8091468;
     }
 }
@@ -529,7 +519,7 @@ void sub_8090520(void)
 void sub_80905C0(void)
 {
     struct ExtraEndingCutScene *scene = TASK_DATA(gCurTask);
-    ScreenFade *fade = &scene->unk370;
+
     sub_8090E18(scene);
     sub_8091484(scene);
 
@@ -563,25 +553,25 @@ void sub_80905C0(void)
 void sub_809066C(struct ExtraEndingCutScene *scene)
 {
     if (scene->unk37C < 0xD) {
-        scene->unk3E0[0] = scene->unk460 << 8;
-        scene->unk3E0[1] = 0x5000;
+        scene->unk3E0[0] = Q(scene->unk460);
+        scene->unk3E0[1] = Q(80);
     } else if (scene->unk37C == 0xD) {
-        if (scene->unk3E0[1] > -0x3200) {
-            scene->unk3E0[1] -= 0x100;
+        if (scene->unk3E0[1] > -Q(50)) {
+            scene->unk3E0[1] -= Q(1);
 
-            if (scene->unk3E0[0] < 0xAA00) {
-                if (scene->unk38E < 0x400) {
+            if (scene->unk3E0[0] < Q(170)) {
+                if (scene->unk38E < Q(4)) {
                     scene->unk38E++;
                 }
                 scene->unk3E0[0] += SIN(scene->unk38E);
             }
         } else {
-            scene->unk3E0[0] = 0x7800;
+            scene->unk3E0[0] = Q(120);
             scene->unk37C++;
         }
     } else if (scene->unk37C == 0xF) {
-        if (scene->unk3E0[1] <= 0x54FF) {
-            scene->unk3E0[1] += 0x50;
+        if (scene->unk3E0[1] < Q(85)) {
+            scene->unk3E0[1] += Q(0.3125);
         } else {
             scene->unk37C++;
             scene->unk394 = 0x3C;
@@ -601,12 +591,11 @@ void sub_809066C(struct ExtraEndingCutScene *scene)
             scene->unk37C++;
         }
     } else {
-        if ((scene->unk3E0[1] > (scene->unk470[1] - 0x3C00))
-            && (scene->unk37C == 0x11)) {
+        if ((scene->unk3E0[1] > (scene->unk470[1] - Q(60))) && (scene->unk37C == 0x11)) {
             scene->unk37C++;
         }
-        if (scene->unk3E0[1] < (scene->unk470[1] - 0x2800)) {
-            scene->unk3E0[1] += 0x100;
+        if (scene->unk3E0[1] < (scene->unk470[1] - Q(40))) {
+            scene->unk3E0[1] += Q(1);
         }
     }
 
@@ -618,27 +607,27 @@ void sub_809066C(struct ExtraEndingCutScene *scene)
 void sub_8090800(struct ExtraEndingCutScene *scene)
 {
     if (scene->unk37C < 0xD) {
-        scene->unk470[0] = 0x7800;
-        scene->unk470[1] = 0x4600;
-    } else if (scene->unk37C == 0xD && scene->unk470[1] < 0x8C00) {
-        scene->unk470[1] += 0x80;
+        scene->unk470[0] = Q(120);
+        scene->unk470[1] = Q(70);
+    } else if (scene->unk37C == 0xD && scene->unk470[1] < Q(140)) {
+        scene->unk470[1] += Q(0.5);
     } else if (scene->unk37C == 0xE) {
-        if (scene->unk470[1] >= 0x5501) {
-            scene->unk470[1] -= 0x40;
+        if (scene->unk470[1] > Q(85)) {
+            scene->unk470[1] -= Q(0.25);
         } else {
             scene->unk37C++;
         }
     } else if (scene->unk37C < 0x11) {
-        if (scene->unk470[1] < 0x8700) {
-            scene->unk470[1] += 0x40;
+        if (scene->unk470[1] < Q(135)) {
+            scene->unk470[1] += Q(0.25);
         }
     } else {
         scene->unk470[1] -= 8;
     }
 
     if (scene->unk37C > 0xD) {
-        if (scene->unk396 < 0x400) {
-            scene->unk396 += 0x20;
+        if (scene->unk396 < Q(4)) {
+            scene->unk396 += Q(0.125);
         } else {
             scene->unk396 = 0;
         }
@@ -653,14 +642,14 @@ void sub_8090904(struct ExtraEndingCutScene *scene)
 
     if (scene->unk37C == 0xE || scene->unk37C == 0xD) {
         for (i = 0; i < 6; i++) {
-            if ((scene->unk47C[i][0] > -0xA00 && scene->unk47C[i][0] < 0xFA00)
-                || (scene->unk47C[i][1] > -0xA00 && scene->unk47C[i][1] < 0xAA00)) {
+            if ((scene->unk47C[i][0] > -Q(10) && scene->unk47C[i][0] < Q(250))
+                || (scene->unk47C[i][1] > -Q(10) && scene->unk47C[i][1] < Q(170))) {
                 if (i < 3) {
-                    scene->unk47C[i][0] -= scene->unk47C[i][2] * 0x100;
+                    scene->unk47C[i][0] -= Q(scene->unk47C[i][2]);
                 } else {
-                    scene->unk47C[i][0] += scene->unk47C[i][2] * 0x100;
+                    scene->unk47C[i][0] += Q(scene->unk47C[i][2]);
                 }
-                scene->unk47C[i][1] -= scene->unk47C[i][2] * 0x100;
+                scene->unk47C[i][1] -= Q(scene->unk47C[i][2]);
             }
         }
     }
@@ -669,15 +658,15 @@ void sub_8090904(struct ExtraEndingCutScene *scene)
         for (i = 0; i < 6; i++) {
             if (scene->unk381[i] < 0x11) {
                 if (i < 3) {
-                    if (scene->unk47C[i][0] < (scene->unk470[0] + 0x3C00)) {
-                        scene->unk47C[i][0] += scene->unk47C[i][2] * 0x80;
+                    if (scene->unk47C[i][0] < (scene->unk470[0] + Q(60))) {
+                        scene->unk47C[i][0] += scene->unk47C[i][2] * Q(0.5);
                     } else {
                         scene->unk381[i] |= 0x10;
                     }
 
                     if ((scene->unk381[i] & 1) == 0) {
-                        if (scene->unk47C[i][1] < (scene->unk470[1] - 0x1E00)) {
-                            scene->unk47C[i][1] += scene->unk47C[i][2] * 0x80;
+                        if (scene->unk47C[i][1] < (scene->unk470[1] - Q(30))) {
+                            scene->unk47C[i][1] += scene->unk47C[i][2] * Q(0.5);
                         } else {
                             scene->unk381[i] |= 1;
                         }
@@ -686,15 +675,15 @@ void sub_8090904(struct ExtraEndingCutScene *scene)
                         scene->unk387[i] = 2;
                     }
                 } else {
-                    if (scene->unk47C[i][0] > (scene->unk470[0] - 0x3C00)) {
-                        scene->unk47C[i][0] -= scene->unk47C[i][2] * 0x80;
+                    if (scene->unk47C[i][0] > (scene->unk470[0] - Q(60))) {
+                        scene->unk47C[i][0] -= scene->unk47C[i][2] * Q(0.5);
                     } else {
                         scene->unk381[i] |= 0x10;
                     }
 
                     if ((scene->unk381[i] & 1) == 0) {
-                        if (scene->unk47C[i][1] < (scene->unk470[1] - 0x1E00)) {
-                            scene->unk47C[i][1] += scene->unk47C[i][2] * 0x80;
+                        if (scene->unk47C[i][1] < (scene->unk470[1] - Q(30))) {
+                            scene->unk47C[i][1] += scene->unk47C[i][2] * Q(0.5);
                         } else {
                             scene->unk381[i] |= 1;
                         }
@@ -704,10 +693,9 @@ void sub_8090904(struct ExtraEndingCutScene *scene)
             }
 
             if (scene->unk381[i] > 0xF) {
-                s32 temp;
                 scene->unk47C[i][3] += scene->unk47C[i][2] * 2;
 
-                if (scene->unk47C[i][3] > 0x3FF00) {
+                if (scene->unk47C[i][3] > Q(1023)) {
                     scene->unk47C[i][3] = 0;
                 }
 
@@ -723,12 +711,11 @@ void sub_8090904(struct ExtraEndingCutScene *scene)
             if ((scene->unk381[i] & 1) != 0) {
                 scene->unk47C[i][4] += scene->unk47C[i][2] * 2;
 
-                if (scene->unk47C[i][4] > 0x3FF00) {
+                if (scene->unk47C[i][4] > Q(1023)) {
                     scene->unk47C[i][4] = 0;
                 }
 
-                scene->unk47C[i][1] = scene->unk470[1] - 0x1E00
-                    + ((SIN((scene->unk47C[i][4] & 0xFF) * 4) >> 6) * 8);
+                scene->unk47C[i][1] = scene->unk470[1] - Q(30) + ((SIN((scene->unk47C[i][4] & 0xFF) * 4) >> 6) * 8);
             }
 #ifndef NON_MATCHING
             ++i;
@@ -760,11 +747,10 @@ void sub_8090C24(struct ExtraEndingCutScene *scene)
 void sub_8090CA0(struct ExtraEndingCutScene *scene)
 {
     u8 i;
-    if (scene->unk37C > 0xC) {
+    if (scene->unk37C > 12) {
         for (i = 0; i < 6; i++) {
-            if ((scene->unk584[i][0] > -0xA00 && scene->unk584[i][0] < 0xFA00)
-                || (scene->unk584[i][1] > -0xA00 && scene->unk584[i][1] < 0xAA00)) {
-
+            if ((scene->unk584[i][0] > -Q(10) && scene->unk584[i][0] < Q(250))
+                || (scene->unk584[i][1] > -Q(10) && scene->unk584[i][1] < Q(170))) {
                 if (i < 3) {
                     scene->unk584[i][0] -= scene->unk584[i][2] >> 6;
                 } else {
@@ -852,11 +838,9 @@ void sub_8090F6C(struct ExtraEndingCutScene *scene)
         if (scene->unk37F != 0) {
             scene->unk37F--;
             if (scene->unk37E <= 3) {
-                DmaCopy32(3, gUnknown_080E15C8[scene->unk37E], &gObjPalette[0x30],
-                          sizeof(gUnknown_080E15C8[0]));
+                DmaCopy32(3, gUnknown_080E15C8[scene->unk37E], &gObjPalette[0x30], sizeof(gUnknown_080E15C8[0]));
             } else {
-                DmaCopy32(3, gUnknown_080E15C8[6 - scene->unk37E], &gObjPalette[0x30],
-                          sizeof(gUnknown_080E15C8[0]));
+                DmaCopy32(3, gUnknown_080E15C8[6 - scene->unk37E], &gObjPalette[0x30], sizeof(gUnknown_080E15C8[0]));
             }
         } else {
             scene->unk37E++;
@@ -900,7 +884,7 @@ void sub_8091044(struct ExtraEndingCutScene *scene)
                 max = 1;
             }
 
-            // TODO: Might be able to use Q_24_8_TO_INT() here
+            // TODO: Might be able to use I() here
             s->x = (scene->unk3A0[i][0] >> 8) - (max * 100);
             s->y = scene->unk3A0[i][1] >> 8;
 
@@ -981,16 +965,16 @@ void sub_8091044(struct ExtraEndingCutScene *scene)
 
             if (scene->unk37C >= 0xF) {
                 if (scene->unk387[i] == 1) {
-                    s->unk10 &= ~0x400;
+                    s->frameFlags &= ~0x400;
                 } else if (scene->unk387[i] == 2) {
-                    s->unk10 |= 0x400;
+                    s->frameFlags |= 0x400;
                 }
             } else {
                 if (i < 3) {
-                    s->unk10 &= ~0x400;
+                    s->frameFlags &= ~0x400;
 
                 } else {
-                    s->unk10 |= 0x400;
+                    s->frameFlags |= 0x400;
                 }
             }
 

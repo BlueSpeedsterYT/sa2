@@ -8,6 +8,7 @@
 #include "malloc_vram.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 
 typedef struct {
@@ -35,10 +36,9 @@ static void sub_80729D8(Sprite_WindUpStick *);
 static u32 sub_8072A5C(Sprite_WindUpStick *);
 static void sub_8072AC0(Sprite_WindUpStick *);
 
-void CreateEntity_WindUpStick(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                              u8 spriteY)
+void CreateEntity_WindUpStick(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(sub_8072998, 0x1C, 0x2010, 0, sub_80729D4);
+    struct Task *t = TaskCreate(sub_8072998, sizeof(Sprite_WindUpStick), 0x2010, 0, sub_80729D4);
     Sprite_WindUpStick *windUpStick = TASK_DATA(t);
     windUpStick->unk11 = 0;
     windUpStick->unk0 = TO_WORLD_POS(me->x, spriteRegionX);
@@ -63,69 +63,68 @@ static void sub_8072650(void)
     }
 
     if ((u8)(windUpStick->unk10 - 1) < 2) {
-        if (gPlayer.unk5C & 0x10) {
+        if (gPlayer.heldInput & 0x10) {
             if (sub_8072A28(windUpStick)) {
                 gPlayer.x += 0x80;
             }
         }
 
-        if (gPlayer.unk5C & 0x20) {
+        if (gPlayer.heldInput & 0x20) {
             if (sub_80729F4(windUpStick)) {
                 gPlayer.x -= 0x80;
             }
         }
     }
 
-    if (gPlayer.unk90->s.unk10 & 0x4000) {
+    if (gPlayer.unk90->s.frameFlags & 0x4000) {
         sub_80727F4(windUpStick);
     }
 }
 
 static void sub_80726E8(Sprite_WindUpStick *windUpStick)
 {
-    sub_80218E4(&gPlayer);
+    Player_TransitionCancelFlyingAndBoost(&gPlayer);
     sub_8023B5C(&gPlayer, 0xE);
-    gPlayer.unk16 = 6;
-    gPlayer.unk17 = 14;
+    gPlayer.spriteOffsetX = 6;
+    gPlayer.spriteOffsetY = 14;
     Player_SetMovestate_IsInScriptedSequence();
     gPlayer.moveState |= MOVESTATE_400000;
-    windUpStick->unk12 = (gUnknown_03005AF0.s.unk10 & SPRITE_FLAG_MASK_PRIORITY)
-        >> SPRITE_FLAG_SHIFT_PRIORITY;
-    gUnknown_03005AF0.s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AF0.s.unk10 |= SPRITE_FLAG(PRIORITY, 1);
-    gPlayer.y = Q_24_8(windUpStick->unk4 + 3);
+    windUpStick->unk12 = (gUnknown_03005AF0.s.frameFlags & SPRITE_FLAG_MASK_PRIORITY) >> SPRITE_FLAG_SHIFT_PRIORITY;
+    gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+    gPlayer.y = Q(windUpStick->unk4 + 3);
 
     switch (windUpStick->unk10) {
         case 1:
-            gPlayer.unk64 = 0x33;
+            gPlayer.charState = CHARSTATE_WINDUP_STICK_UPWARDS;
             gPlayer.speedAirX = 0;
-            gPlayer.speedAirY -= Q_24_8(6.5);
+            gPlayer.speedAirY -= Q(6.5);
             break;
         case 2:
 #ifndef NON_MATCHING
         {
-            register s16 *unk64 asm("r0") = &gPlayer.unk64;
-            *unk64 = 0x34;
+            register s16 *unk64 asm("r0") = &gPlayer.charState;
+            *unk64 = CHARSTATE_WINDUP_STICK_DOWNWARDS;
         }
 #else
-            gPlayer.unk64 = 0x34;
+            gPlayer.charState = CHARSTATE_WINDUP_STICK_DOWNWARDS;
 #endif
             gPlayer.speedAirX = 0;
             break;
         case 3:
-            gPlayer.unk64 = 0x35;
+            gPlayer.charState = CHARSTATE_WINDUP_STICK_SINGLE_TURN_UP;
             if (gPlayer.moveState & MOVESTATE_FACING_LEFT) {
-                gPlayer.speedGroundX -= Q_24_8(2.5);
+                gPlayer.speedGroundX -= Q(2.5);
             } else {
-                gPlayer.speedGroundX += Q_24_8(2.5);
+                gPlayer.speedGroundX += Q(2.5);
             }
             break;
         case 4:
-            gPlayer.unk64 = 0x36;
+            gPlayer.charState = CHARSTATE_WINDUP_STICK_SINGLE_TURN_DOWN;
             if (gPlayer.moveState & MOVESTATE_FACING_LEFT) {
-                gPlayer.speedGroundX -= Q_24_8(1.25);
+                gPlayer.speedGroundX -= Q(1.25);
             } else {
-                gPlayer.speedGroundX += Q_24_8(1.25);
+                gPlayer.speedGroundX += Q(1.25);
             }
             gPlayer.moveState ^= 1;
             break;
@@ -138,34 +137,34 @@ static void sub_80727F4(Sprite_WindUpStick *windUpStick)
     Player_ClearMovestate_IsInScriptedSequence();
     gPlayer.moveState &= ~MOVESTATE_400000;
 
-    gUnknown_03005AF0.s.unk10 &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AF0.s.unk10 |= SPRITE_FLAG(PRIORITY, windUpStick->unk12);
+    gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, windUpStick->unk12);
 
     switch (windUpStick->unk10) {
         case 1:
         case 3:
-            gPlayer.y = Q_24_8(windUpStick->unk4 + windUpStick->unkA);
+            gPlayer.y = Q(windUpStick->unk4 + windUpStick->unkA);
             break;
         case 2:
         case 4:
-            gPlayer.y = Q_24_8(windUpStick->unk4 + windUpStick->unkE);
+            gPlayer.y = Q(windUpStick->unk4 + windUpStick->unkE);
             break;
     }
 
     switch (windUpStick->unk10) {
         case 1:
-            gPlayer.unk64 = 0xE;
+            gPlayer.charState = CHARSTATE_FALLING_VULNERABLE_B;
             gPlayer.transition = PLTRANS_PT7;
             break;
         case 2:
-            gPlayer.unk64 = 0xE;
+            gPlayer.charState = CHARSTATE_FALLING_VULNERABLE_B;
             gPlayer.transition = PLTRANS_PT7;
             break;
         case 3:
-            gPlayer.transition = PLTRANS_PT1;
+            gPlayer.transition = PLTRANS_TOUCH_GROUND;
             break;
         case 4:
-            gPlayer.transition = PLTRANS_PT1;
+            gPlayer.transition = PLTRANS_TOUCH_GROUND;
             gPlayer.moveState ^= 1;
             break;
     }
@@ -182,15 +181,11 @@ static u8 sub_80728D4(Sprite_WindUpStick *windUpStick)
     if (PLAYER_IS_ALIVE) {
         s16 posX = windUpStick->unk0 - gCamera.x;
         s16 posY = windUpStick->unk4 - gCamera.y;
-        s16 playerX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-        s16 playerY = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+        s16 playerX = I(gPlayer.x) - gCamera.x;
+        s16 playerY = I(gPlayer.y) - gCamera.y;
 
-        if ((posX + windUpStick->unk8) <= playerX
-            && (posX + windUpStick->unk8) + (windUpStick->unkC - windUpStick->unk8)
-                >= playerX) {
-            if (posY + windUpStick->unkA <= playerY
-                && (posY + windUpStick->unkA) + (windUpStick->unkE - windUpStick->unkA)
-                    >= playerY) {
+        if ((posX + windUpStick->unk8) <= playerX && (posX + windUpStick->unk8) + (windUpStick->unkC - windUpStick->unk8) >= playerX) {
+            if (posY + windUpStick->unkA <= playerY && (posY + windUpStick->unkA) + (windUpStick->unkE - windUpStick->unkA) >= playerY) {
                 if (gPlayer.moveState & MOVESTATE_IN_AIR) {
                     if (gPlayer.speedAirY < 0) {
                         return 1;
@@ -244,7 +239,7 @@ bool32 sub_80729F4(Sprite_WindUpStick *windUpStick)
         x -= camX;
     });
 
-    s16 r0 = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
+    s16 r0 = I(gPlayer.x) - gCamera.x;
     return r1 < r0;
 }
 
@@ -258,7 +253,7 @@ bool32 sub_8072A28(Sprite_WindUpStick *windUpStick)
         x -= camX;
     });
 
-    s16 r0 = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
+    s16 r0 = I(gPlayer.x) - gCamera.x;
     return r1 > r0;
 }
 
@@ -267,8 +262,8 @@ bool32 sub_8072A5C(Sprite_WindUpStick *windUpStick)
     s16 x = windUpStick->unk0 - gCamera.x;
     s16 y = windUpStick->unk4 - gCamera.y;
 
-    if (x + windUpStick->unkC < -128 || x + windUpStick->unk8 > 368
-        || y + windUpStick->unkE < -128 || y + windUpStick->unkA > 288) {
+    if (x + windUpStick->unkC < -128 || x + windUpStick->unk8 > (DISPLAY_WIDTH + 128) || y + windUpStick->unkE < -128
+        || y + windUpStick->unkA > (DISPLAY_HEIGHT + 128)) {
         return TRUE;
     }
     return FALSE;

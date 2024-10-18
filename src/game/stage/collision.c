@@ -10,49 +10,90 @@ static ALIGNED(8) u32 gUnknown_3000420[3];
 
 s32 sub_801EF94(s32 p0, s32 p1, s32 layer);
 
-#define POS__NOT_MOD(i)                                                                 \
-    if (p3 > 0) {                                                                       \
-        return ~(p0 % 8u) + ((i)*TILE_WIDTH);                                           \
-    } else {                                                                            \
-        return (p0 % 8u) + ((i - 1) * TILE_WIDTH);                                      \
+#define POS__NOT_MOD(i)                                                                                                                    \
+    if (p3 > 0) {                                                                                                                          \
+        return ~(p0 % 8u) + ((i)*TILE_WIDTH);                                                                                              \
+    } else {                                                                                                                               \
+        return (p0 % 8u) + ((i - 1) * TILE_WIDTH);                                                                                         \
     }
 
 #define NEG__NOT_MOD(i) POS__NOT_MOD(-i)
 
-#define NEG__INV_NOT_MOD(i)                                                             \
-    if (p3 > 0) {                                                                       \
-        return ~(p0 % 8u) - ((i)*TILE_WIDTH);                                           \
-    } else {                                                                            \
-        return (p0 % 8u) - ((i + 1) * TILE_WIDTH);                                      \
+#define NEG__INV_NOT_MOD(i)                                                                                                                \
+    if (p3 > 0) {                                                                                                                          \
+        return ~(p0 % 8u) - ((i)*TILE_WIDTH);                                                                                              \
+    } else {                                                                                                                               \
+        return (p0 % 8u) - ((i + 1) * TILE_WIDTH);                                                                                         \
     }
 
-#define POS__RES_IF(i)                                                                  \
-    if (res > 0) {                                                                      \
-        res = (--res) - (p0 % 8u);                                                      \
-        return res + ((i)*TILE_WIDTH);                                                  \
-    } else {                                                                            \
-        return res + (p0 % 8u) + ((i)*TILE_WIDTH);                                      \
+#define POS__RES_IF(i)                                                                                                                     \
+    if (res > 0) {                                                                                                                         \
+        res--;                                                                                                                             \
+        res -= (p0 % 8u);                                                                                                                  \
+        return res + ((i)*TILE_WIDTH);                                                                                                     \
+    } else {                                                                                                                               \
+        return res + (p0 % 8u) + ((i)*TILE_WIDTH);                                                                                         \
     }
 
 #define NEG__RES_IF(i) POS__RES_IF(-i)
 
-#define POS__P3_IF(i)                                                                   \
-    if (p3 > 0) {                                                                       \
-        s32 v = (p0 % 8u);                                                              \
-        res = (((i) + 1) * TILE_WIDTH);                                                 \
-        return res - v;                                                                 \
-    } else {                                                                            \
-        return (p0 % 8u) + ((i)*TILE_WIDTH + 1);                                        \
+#define POS__P3_IF(i)                                                                                                                      \
+    if (p3 > 0) {                                                                                                                          \
+        s32 v = (p0 % 8u);                                                                                                                 \
+        res = (((i) + 1) * TILE_WIDTH);                                                                                                    \
+        return res - v;                                                                                                                    \
+    } else {                                                                                                                               \
+        return (p0 % 8u) + ((i)*TILE_WIDTH + 1);                                                                                           \
     }
 
-#define NEG__P3_IF(i)                                                                   \
-    if (p3 > 0) {                                                                       \
-        s32 v = (p0 % 8u);                                                              \
-        res = -(((i)-1) * TILE_WIDTH + 1);                                              \
-        return res - v;                                                                 \
-    } else {                                                                            \
-        return (p0 % 8u) - ((i)*TILE_WIDTH);                                            \
+#define NEG__P3_IF(i)                                                                                                                      \
+    if (p3 > 0) {                                                                                                                          \
+        s32 v = (p0 % 8u);                                                                                                                 \
+        res = -(((i)-1) * TILE_WIDTH + 1);                                                                                                 \
+        return res - v;                                                                                                                    \
+    } else {                                                                                                                               \
+        return (p0 % 8u) - ((i)*TILE_WIDTH);                                                                                               \
     }
+
+extern const Collision CollHeader_zone_1_act_1_fg;
+extern const Collision CollHeader_zone_1_act_2_fg;
+extern const Collision CollHeader_zone_1_act_boss_fg;
+extern const Collision CollHeader_zone_1_act_dummy_fg;
+extern const Collision CollHeader_zone_2_act_1_fg;
+extern const Collision CollHeader_zone_2_act_2_fg;
+extern const Collision CollHeader_zone_2_act_boss_fg;
+extern const Collision CollHeader_zone_3_act_1_fg;
+extern const Collision CollHeader_zone_3_act_2_fg;
+extern const Collision CollHeader_zone_3_act_boss_fg;
+extern const Collision CollHeader_zone_4_act_1_fg;
+extern const Collision CollHeader_zone_4_act_2_fg;
+extern const Collision CollHeader_zone_4_act_boss_fg;
+extern const Collision CollHeader_zone_5_act_1_fg;
+extern const Collision CollHeader_zone_5_act_2_fg;
+extern const Collision CollHeader_zone_5_act_boss_fg;
+extern const Collision CollHeader_zone_6_act_1_fg;
+extern const Collision CollHeader_zone_6_act_2_fg;
+extern const Collision CollHeader_zone_6_act_boss_fg;
+extern const Collision CollHeader_zone_7_act_1_fg;
+extern const Collision CollHeader_zone_7_act_2_fg;
+extern const Collision CollHeader_zone_7_act_boss_fg;
+extern const Collision CollHeader_zone_final_act_xx_fg;
+extern const Collision CollHeader_zone_final_act_ta53_fg;
+extern const Collision CollHeader_zone_final_act_unused_fg;
+
+const Collision *const gCollisionTable[] = {
+    &CollHeader_zone_1_act_1_fg,          &CollHeader_zone_1_act_2_fg,      &CollHeader_zone_1_act_boss_fg,
+    &CollHeader_zone_1_act_dummy_fg,      &CollHeader_zone_2_act_1_fg,      &CollHeader_zone_2_act_2_fg,
+    &CollHeader_zone_2_act_boss_fg,       &CollHeader_zone_1_act_dummy_fg,  &CollHeader_zone_3_act_1_fg,
+    &CollHeader_zone_3_act_2_fg,          &CollHeader_zone_3_act_boss_fg,   &CollHeader_zone_1_act_dummy_fg,
+    &CollHeader_zone_4_act_1_fg,          &CollHeader_zone_4_act_2_fg,      &CollHeader_zone_4_act_boss_fg,
+    &CollHeader_zone_1_act_dummy_fg,      &CollHeader_zone_5_act_1_fg,      &CollHeader_zone_5_act_2_fg,
+    &CollHeader_zone_5_act_boss_fg,       &CollHeader_zone_1_act_dummy_fg,  &CollHeader_zone_6_act_1_fg,
+    &CollHeader_zone_6_act_2_fg,          &CollHeader_zone_6_act_boss_fg,   &CollHeader_zone_1_act_dummy_fg,
+    &CollHeader_zone_7_act_1_fg,          &CollHeader_zone_7_act_2_fg,      &CollHeader_zone_7_act_boss_fg,
+    &CollHeader_zone_1_act_dummy_fg,      &CollHeader_zone_final_act_xx_fg, &CollHeader_zone_final_act_ta53_fg,
+    &CollHeader_zone_final_act_unused_fg,
+};
 
 s32 sub_801E4E4(s32 p0, s32 p1, s32 p2, s32 p3, u8 *data, Func801F07C func)
 {
@@ -61,7 +102,6 @@ s32 sub_801E4E4(s32 p0, s32 p1, s32 p2, s32 p3, u8 *data, Func801F07C func)
     u8 *data1;
     s32 res;
     s32 it;
-    s32 v;
 
     if (data == NULL)
         data = dummy;
@@ -152,10 +192,8 @@ s32 sub_801E6D4(s32 p0, s32 p1, s32 p2, s32 p3, u8 *data, Func801F07C func)
     u8 dummy[4];
     u8 *dummy_p;
     u8 *data1;
-    s32 result;
     s32 res;
     s32 r4;
-    s32 v;
 
     if (data == NULL)
         data = dummy;
@@ -389,13 +427,12 @@ s32 sub_801EB44(s32 p0, s32 p1, s32 layer)
     u32 tile;
     s32 hv;
     const Collision *coll;
-    s8 *hmap;
     s32 hIndex;
 
     p0 = CLAMP_32(p0, 0, gRefCollision->pxWidth - 1);
     p1 = CLAMP_32(p1, 0, gRefCollision->pxHeight - 1);
 
-    tile = sub_801EF94(p0, p1, layer & FLAG_PLAYER_x38__LAYER_MASK);
+    tile = sub_801EF94(p0, p1, layer & PLAYER_LAYER__MASK);
     mtTileIndex = tile & TILE_MASK_INDEX;
 
     yPixel = p1 % (unsigned)TILE_WIDTH;
@@ -450,13 +487,12 @@ s32 sub_801EC3C(s32 p0, s32 p1, s32 layer)
     u32 tile;
     s32 hv;
     const Collision *coll;
-    s8 *hmap;
     s32 hIndex;
 
     p1 = CLAMP_32(p1, 0, gRefCollision->pxWidth - 1);
     p0 = CLAMP_32(p0, 0, gRefCollision->pxHeight - 1);
 
-    tile = sub_801EF94(p1, p0, layer & FLAG_PLAYER_x38__LAYER_MASK);
+    tile = sub_801EF94(p1, p0, layer & PLAYER_LAYER__MASK);
     mtTileIndex = tile & TILE_MASK_INDEX;
 
     xPixel = p1 % (unsigned)TILE_WIDTH;
@@ -474,7 +510,7 @@ s32 sub_801EC3C(s32 p0, s32 p1, s32 layer)
         hv = TILE_WIDTH;
     }
 
-    if (layer & FLAG_PLAYER_x38__80) {
+    if (layer & PLAYER_LAYER__80) {
         s32 flags = gRefCollision->flags[mtTileIndex / (unsigned)TILE_WIDTH];
 
         // 2: one tile's flags' bit-width
@@ -504,7 +540,6 @@ s32 sub_801ED24(s32 p0, s32 p1, s32 p2, u8 *p3)
     u32 r0;
     s32 r3;
     s32 mtTileIndex;
-    s32 sb;
     u32 res;
     const Collision *coll;
     s32 hIndex;
@@ -580,7 +615,7 @@ s32 sub_801ED24(s32 p0, s32 p1, s32 p2, u8 *p3)
 }
 
 // TODO: Fix this register mess!
-// (100.00%) https://decomp.me/scratch/xGy3C
+// (100.00%) https://decomp.me/scratch/sJY4g
 s32 sub_801EE64(s32 p0in, s32 p1in, s32 p2in, u8 *p3in)
 {
 #ifndef NON_MATCHING
@@ -595,7 +630,6 @@ s32 sub_801EE64(s32 p0in, s32 p1in, s32 p2in, u8 *p3in)
     register s32 sb asm("sb");
     register u8 *p3 asm("sl") = p3in;
     register s32 res asm("r4");
-    register u8 *hm asm("r1");
 #else
     u32 r0;
     u32 r1;
@@ -608,7 +642,6 @@ s32 sub_801EE64(s32 p0in, s32 p1in, s32 p2in, u8 *p3in)
     s32 sb;
     u8 *p3 = p3in;
     s32 res;
-    u8 *hm;
 #endif
     u8 rotation;
 
@@ -640,16 +673,16 @@ s32 sub_801EE64(s32 p0in, s32 p1in, s32 p2in, u8 *p3in)
 
     sb = 1;
 
-    res = sub_801EF94(p1, p0, p2 & sb);
+    p0 = sub_801EF94(p1, p0, p2 & sb);
     r7 = 0x3FF;
-    r7 &= res;
+    r7 &= p0;
 
     r6 = 0x7;
     r3 = r6;
     r3 &= p1;
 
     r0 = 0x400;
-    r0 &= res;
+    r0 &= p0;
     if (r0) {
         r3 = r6 - r3;
     }
@@ -675,7 +708,7 @@ s32 sub_801EE64(s32 p0in, s32 p1in, s32 p2in, u8 *p3in)
     }
     // _0801EF1E
 
-    if (res & 0x800) {
+    if (p0 & 0x800) {
         if ((r3 != 8) && (r3 != 0)) {
             r0 = r3 + 8;
             r0 = (r3 > 0) ? r3 - 8 : r0;
@@ -710,7 +743,7 @@ s32 sub_801EE64(s32 p0in, s32 p1in, s32 p2in, u8 *p3in)
         register u8 *r1p asm("r1") = p3;
         *r1p = rotation;
 #else
-        *p3in = rotation;
+        *p3 = rotation;
 #endif
     }
 
@@ -729,24 +762,17 @@ s32 sub_801EF94(s32 p0, s32 p1, s32 layer)
     register s32 r3 asm("r3");
     register s32 r4 asm("r4");
     register s32 r5 asm("r5");
-    register s32 r6 asm("r6") = p1;
     s32 r7;
     register s32 r8 asm("r8");
-    register u16 **layers asm("r1");
 #else
     s32 r1;
     s32 r3;
     s32 r4;
     s32 r5;
-    s32 r6 = p1;
     s32 r7;
     s32 r8;
-    u16 **layers;
 #endif
     const Collision *coll;
-    u16 *map;
-    u32 mapIndex;
-    u32 mapIndex2;
     u32 mtIndex;
     s32 i;
     void *pMeta;
@@ -790,11 +816,12 @@ s32 sub_801EF94(s32 p0, s32 p1, s32 layer)
     coll = gRefCollision;
     mtIndex = ((u16 *)coll->map[layer])[(r3 * coll->levelX) + r8];
 
-#ifndef NON_MATCHING
     // ((r5 << 3) + (r5 << 2)) == r5 * TILES_PER_METATILE_AXIS
     r1 = ((r5 << 3) + (r5 << 2) + r7);
 
+#ifndef NON_MATCHING
     asm("" ::"r"(r5));
+#endif
 
     r3 = mtIndex * 256;
     mtIndex *= 32;
@@ -804,10 +831,6 @@ s32 sub_801EF94(s32 p0, s32 p1, s32 layer)
     pMeta += mtIndex;
     pMeta += i;
     result = *(u16 *)pMeta;
-#else
-    mtIndex = mtIndex * 288 + i;
-    result = coll->metatiles[mtIndex];
-#endif
 
     return result;
 }

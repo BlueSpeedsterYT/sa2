@@ -1,3 +1,5 @@
+#include <stdlib.h> // abs
+
 #include "global.h"
 #include "game/entity.h"
 #include "game/stage/player.h"
@@ -8,6 +10,7 @@
 #include "malloc_vram.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 
 typedef struct {
@@ -28,11 +31,9 @@ static void sub_8073600(void);
 static void sub_80736E0(Sprite_TurnAroundBar *);
 static void sub_807371C(Sprite_TurnAroundBar *);
 
-void CreateEntity_TurnAroundBar(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                u8 spriteY)
+void CreateEntity_TurnAroundBar(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_TurnAroundBarMain, sizeof(Sprite_TurnAroundBar),
-                                0x2010, 0, TaskDestructor_InteractableTurnAroundBar);
+    struct Task *t = TaskCreate(Task_TurnAroundBarMain, sizeof(Sprite_TurnAroundBar), 0x2010, 0, TaskDestructor_InteractableTurnAroundBar);
     Sprite_TurnAroundBar *turnAroundBar = TASK_DATA(t);
     Sprite *s = &turnAroundBar->s;
 
@@ -40,17 +41,17 @@ void CreateEntity_TurnAroundBar(MapEntity *me, u16 spriteRegionX, u16 spriteRegi
     turnAroundBar->base.regionY = spriteRegionY;
     turnAroundBar->base.me = me;
     turnAroundBar->base.spriteX = me->x;
-    turnAroundBar->base.spriteY = spriteY;
+    turnAroundBar->base.id = spriteY;
 
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
     s->graphics.dest = VramMalloc(0xC);
 
     s->graphics.anim = SA2_ANIM_TURNAROUND_BAR;
@@ -71,10 +72,10 @@ static void sub_8073474(Sprite_TurnAroundBar *turnAroundBar)
     gPlayer.y -= turnAroundBar->unk44;
 
     if (gPlayer.speedGroundX > 0) {
-        gPlayer.x = Q_24_8(turnAroundBar->x - 6);
+        gPlayer.x = Q(turnAroundBar->x - 6);
         gPlayer.speedGroundX += Q_8_8(1.25);
     } else {
-        gPlayer.x = Q_24_8(turnAroundBar->x + 6);
+        gPlayer.x = Q(turnAroundBar->x + 6);
         gPlayer.speedGroundX -= Q_8_8(1.25);
     }
 
@@ -82,7 +83,7 @@ static void sub_8073474(Sprite_TurnAroundBar *turnAroundBar)
     gPlayer.rotation = 0;
     gPlayer.speedAirY = 0;
     gPlayer.moveState = gPlayer.moveState ^ 1;
-    gPlayer.transition = PLTRANS_PT1;
+    gPlayer.transition = PLTRANS_TOUCH_GROUND;
 
     s->graphics.anim = 567;
     s->variant = 2;
@@ -99,8 +100,8 @@ static u32 sub_8073520(Sprite_TurnAroundBar *turnAroundBar)
 
     temp = turnAroundBar->x - gCamera.x;
     temp3 = turnAroundBar->y + -gCamera.y;
-    temp2 = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-    temp4 = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+    temp2 = I(gPlayer.x) - gCamera.x;
+    temp4 = I(gPlayer.y) - gCamera.y;
     if (temp - 6 <= temp2 && temp + 6 >= temp2) {
         if (temp3 - 32 <= temp4 && temp3 >= temp4) {
             if (abs(gPlayer.speedGroundX) < Q_8_8(4)) {
@@ -148,7 +149,7 @@ static void sub_8073600(void)
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
-    if (s->unk10 & 0x4000) {
+    if (s->frameFlags & 0x4000) {
         sub_80736E0(turnAroundBar);
     }
 }
@@ -167,16 +168,16 @@ static void sub_8073670(Sprite_TurnAroundBar *turnAroundBar)
     Player_SetMovestate_IsInScriptedSequence();
 
     gPlayer.moveState |= MOVESTATE_400000;
-    turnAroundBar->unk44 = Q_24_8(turnAroundBar->y) - gPlayer.y;
-    gPlayer.x = Q_24_8(turnAroundBar->x);
-    gPlayer.y = Q_24_8(turnAroundBar->y);
-    gPlayer.unk64 = 0x38;
+    turnAroundBar->unk44 = Q(turnAroundBar->y) - gPlayer.y;
+    gPlayer.x = Q(turnAroundBar->x);
+    gPlayer.y = Q(turnAroundBar->y);
+    gPlayer.charState = CHARSTATE_TURNAROUND_BAR;
 
     s->graphics.anim = SA2_ANIM_TURNAROUND_BAR;
     s->variant = 1;
 
     if (gPlayer.moveState & 1) {
-        s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+        s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
     }
     UpdateSpriteAnimation(s);
     gCurTask->main = sub_8073818;
@@ -187,7 +188,7 @@ static void sub_80736E0(Sprite_TurnAroundBar *turnAroundBar)
     Sprite *s = &turnAroundBar->s;
     s->graphics.anim = SA2_ANIM_TURNAROUND_BAR;
     s->variant = 0;
-    s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+    s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
     UpdateSpriteAnimation(s);
     gCurTask->main = Task_TurnAroundBarMain;
 }
@@ -198,7 +199,7 @@ static void sub_807371C(Sprite_TurnAroundBar *turnAroundBar)
     Player_ClearMovestate_IsInScriptedSequence();
     s->graphics.anim = SA2_ANIM_TURNAROUND_BAR;
     s->variant = 0;
-    s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+    s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
     UpdateSpriteAnimation(s);
     gCurTask->main = Task_TurnAroundBarMain;
 }
@@ -224,7 +225,7 @@ static bool32 sub_8073784(Sprite_TurnAroundBar *turnAroundBar)
     temp3 = temp;
     temp4 = temp2;
 
-    if (temp4 < -128 || temp4 > 368 || temp3 < -128 || temp3 > 288) {
+    if (temp4 < -128 || temp4 > (DISPLAY_WIDTH + 128) || temp3 < -128 || temp3 > (DISPLAY_HEIGHT + 128)) {
         return TRUE;
     }
 
@@ -233,7 +234,7 @@ static bool32 sub_8073784(Sprite_TurnAroundBar *turnAroundBar)
 
 static s16 ClampSpeed(s16 speed)
 {
-    if (gPlayer.unk5A != 0) {
+    if (gPlayer.isBoosting != 0) {
         if (speed > Q_8_8(15)) {
             speed = Q_8_8(15);
         } else if (speed < -Q_8_8(15)) {
@@ -262,7 +263,7 @@ static void sub_8073818(void)
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
 
-    if (s->unk10 & 0x4000) {
+    if (s->frameFlags & 0x4000) {
         sub_8073474(turnAroundBar);
     }
 }

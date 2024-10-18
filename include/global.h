@@ -1,7 +1,15 @@
 #ifndef GUARD_GLOBAL_H
 #define GUARD_GLOBAL_H
 
+#include "config.h"
 #include "gba/gba.h"
+
+#if PLATFORM_GBA
+#define ENABLE_AUDIO TRUE
+#else
+#define ENABLE_AUDIO     !TRUE
+#define ENABLE_VRAM_VIEW !TRUE
+#endif
 
 #define CONST_DATA __attribute__((section(".data")))
 
@@ -9,48 +17,61 @@
 // #include "variables.h"
 #include "functions.h"
 
+#if !PLATFORM_GBA
+#ifdef _WIN32
+void *Platform_malloc(int numBytes);
+void Platform_free(void *ptr);
+#define malloc(numBytes)    Platform_malloc(numBytes)
+#define calloc(count, size) Platform_malloc(count *size)
+#define free(numBytes)      Platform_free(numBytes)
+#endif
+#endif
+
 #define SIO_MULTI_CNT ((volatile struct SioMultiCnt *)REG_ADDR_SIOCNT)
 
 typedef void (*VoidFn)(void);
 
 // helper macros
 
-#if ((defined PORTABLE) || (defined NON_MATCHING))
+#if (PORTABLE)
 #define BUG_FIX
-#define UB_FIX
-#endif
 
-#if ((defined PORTABLE) && !(defined NON_MATCHING))
+#if !(defined NON_MATCHING)
+#define NON_MATCHING 1
+#endif
+#elif defined(DEBUG)
 #define NON_MATCHING 1
 #endif
 
 #ifdef NON_MATCHING
 #define ASM_FUNC(path, decl)
+#define TEMP_FIX 1
 #else
-#define ASM_FUNC(path, decl)                                                            \
+#define ASM_FUNC(path, decl)                                                                                                               \
     NAKED decl { asm(".include " #path); }
+#define TEMP_FIX 0
 #endif
 
 #ifdef NON_MATCHING
 #define NONMATCH(path, decl) decl
 #define END_NONMATCH
 #else
-#define NONMATCH(path, decl)                                                            \
-    NAKED decl                                                                          \
-    {                                                                                   \
-        asm(".include " #path);                                                         \
+#define NONMATCH(path, decl)                                                                                                               \
+    NAKED decl                                                                                                                             \
+    {                                                                                                                                      \
+        asm(".include " #path);                                                                                                            \
         if (0)
 #define END_NONMATCH }
 #endif
 
 /// IDE support
-#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__INTELLISENSE__)
+#if defined(__CYGWIN__) || defined(__INTELLISENSE__)
 // We define these when using certain IDEs to fool preproc
 #define _(x)  (x)
 #define __(x) (x)
-#define INCBIN(...)                                                                     \
-    {                                                                                   \
-        0                                                                               \
+#define INCBIN(...)                                                                                                                        \
+    {                                                                                                                                      \
+        0                                                                                                                                  \
     }
 #define INCBIN_U8  INCBIN
 #define INCBIN_U16 INCBIN
@@ -59,6 +80,10 @@ typedef void (*VoidFn)(void);
 #define INCBIN_S16 INCBIN
 #define INCBIN_S32 INCBIN
 #endif // IDE support
+
+// Use STR(<macro>) to turn the macro's *content* into a string
+#define STR_(x) #x
+#define STR(x)  STR_(x)
 
 // NOTE: This has to be kept as-is.
 //       If casted it to be signed,
@@ -110,7 +135,12 @@ typedef void (*VoidFn)(void);
 // Converts a Q2.12 fixed-point format number to a Q24.8 fixed point number
 #define Q_2_14_TO_Q_24_8(n) ((int)((n) >> 6))
 
-#define Q_24_8_MULTIPLY(intVal, floatVal) Q_24_8_TO_INT((intVal)*Q_24_8(floatVal))
+// Multiplies two Q values
+#define Q_MUL(qValA, qValB)         ((qValA * qValB) >> 8)
+#define Q_SQUARE(qVal)              Q_MUL(qVal, qVal)
+#define Q_DIV(qValA, qValB)         Div((qValA << 8), qValB)
+#define Q_DIV2(qValA, qValB)        ((qValA << 8) / qValB)
+#define Q_MUL_Q_F32(qVal, floatVal) Q_MUL(qVal, Q(floatVal))
 
 /*
  * Aliases for common macros
@@ -132,58 +162,58 @@ typedef void (*VoidFn)(void);
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-#define CLAMP(value, min, max)                                                          \
-    ({                                                                                  \
-        s32 clamped;                                                                    \
-        if ((value) < (min)) {                                                          \
-            clamped = (min);                                                            \
-        } else {                                                                        \
-            clamped = (value) > (max) ? (max) : (value);                                \
-        }                                                                               \
-        clamped;                                                                        \
+#define CLAMP(value, min, max)                                                                                                             \
+    ({                                                                                                                                     \
+        s32 clamped;                                                                                                                       \
+        if ((value) < (min)) {                                                                                                             \
+            clamped = (min);                                                                                                               \
+        } else {                                                                                                                           \
+            clamped = (value) > (max) ? (max) : (value);                                                                                   \
+        }                                                                                                                                  \
+        clamped;                                                                                                                           \
     })
 
-#define CLAMP_T(type, value, min, max)                                                  \
-    ({                                                                                  \
-        type clamped;                                                                   \
-        if ((value) >= (min)) {                                                         \
-            clamped = (value) > (max) ? (max) : (value);                                \
-        } else {                                                                        \
-            clamped = (min);                                                            \
-        }                                                                               \
-        clamped;                                                                        \
+#define CLAMP_T(type, value, min, max)                                                                                                     \
+    ({                                                                                                                                     \
+        type clamped;                                                                                                                      \
+        if ((value) >= (min)) {                                                                                                            \
+            clamped = (value) > (max) ? (max) : (value);                                                                                   \
+        } else {                                                                                                                           \
+            clamped = (min);                                                                                                               \
+        }                                                                                                                                  \
+        clamped;                                                                                                                           \
     })
 
 #define CLAMP_16(value, min, max) CLAMP_T(s16, value, min, max)
 #define CLAMP_32(value, min, max) CLAMP_T(s32, value, min, max)
 
-#define CLAMP_INLINE(var, min, max)                                                     \
-    ({                                                                                  \
-        if ((var) < (min)) {                                                            \
-            var = (min);                                                                \
-        } else if ((var) > (max)) {                                                     \
-            var = (max);                                                                \
-        }                                                                               \
+#define CLAMP_INLINE(var, min, max)                                                                                                        \
+    ({                                                                                                                                     \
+        if ((var) < (min)) {                                                                                                               \
+            var = (min);                                                                                                                   \
+        } else if ((var) > (max)) {                                                                                                        \
+            var = (max);                                                                                                                   \
+        }                                                                                                                                  \
     })
 
-#define CLAMP_INLINE_NO_ELSE(var, min, max)                                             \
-    ({                                                                                  \
-        if ((var) < (min)) {                                                            \
-            var = (min);                                                                \
-        }                                                                               \
-                                                                                        \
-        if ((var) > (max)) {                                                            \
-            var = (max);                                                                \
-        }                                                                               \
+#define CLAMP_INLINE_NO_ELSE(var, min, max)                                                                                                \
+    ({                                                                                                                                     \
+        if ((var) < (min)) {                                                                                                               \
+            var = (min);                                                                                                                   \
+        }                                                                                                                                  \
+                                                                                                                                           \
+        if ((var) > (max)) {                                                                                                               \
+            var = (max);                                                                                                                   \
+        }                                                                                                                                  \
     })
 
-#define CLAMP_INLINE2(var, min, max)                                                    \
-    ({                                                                                  \
-        if ((var) > (max)) {                                                            \
-            var = (max);                                                                \
-        } else if ((var) < (min)) {                                                     \
-            var = (min);                                                                \
-        }                                                                               \
+#define CLAMP_INLINE2(var, min, max)                                                                                                       \
+    ({                                                                                                                                     \
+        if ((var) > (max)) {                                                                                                               \
+            var = (max);                                                                                                                   \
+        } else if ((var) < (min)) {                                                                                                        \
+            var = (min);                                                                                                                   \
+        }                                                                                                                                  \
     })
 
 #define ABS(aValue) ((aValue) >= 0 ? (aValue) : -(aValue))
@@ -197,22 +227,22 @@ typedef void (*VoidFn)(void);
 #define GBA_FRAMES_PER_SECOND 60
 
 // TODO: fix casts here(?)
-#define XOR_SWAP(a, b)                                                                  \
-    a ^= (u8)b;                                                                         \
-    b ^= (u8)a;                                                                         \
+#define XOR_SWAP(a, b)                                                                                                                     \
+    a ^= (u8)b;                                                                                                                            \
+    b ^= (u8)a;                                                                                                                            \
     a = ((u8)b ^ (u8)a);
 
 // TODO: fix casts here
-#define SWAP_AND_NEGATE(a, b)                                                           \
-    a ^= (u8)b;                                                                         \
-    b ^= (u8)a;                                                                         \
-    a = ((u8)b ^ (u8)a) * -1;                                                           \
+#define SWAP_AND_NEGATE(a, b)                                                                                                              \
+    a ^= (u8)b;                                                                                                                            \
+    b ^= (u8)a;                                                                                                                            \
+    a = ((u8)b ^ (u8)a) * -1;                                                                                                              \
     b = (u8)b * -1;
 
-#define NEGATE(var)                                                                     \
-    ({                                                                                  \
-        s32 temp = var;                                                                 \
-        var = -temp;                                                                    \
+#define NEGATE(var)                                                                                                                        \
+    ({                                                                                                                                     \
+        s32 temp = var;                                                                                                                    \
+        var = -temp;                                                                                                                       \
     })
 #define DIRECT_NEGATE(var) (var = -var;)
 
@@ -243,6 +273,7 @@ struct BlendRegs {
 
 // TODO: Should this be in a GBA-specific header file?
 #define NUM_AFFINE_BACKGROUNDS 2
+#define NUM_BACKGROUNDS        4
 
 // Values to be passed top the affine registers
 // (used by BG2/BG3 in affine screen modes)
@@ -255,7 +286,7 @@ typedef struct {
 typedef void (*HBlankFunc)(int_vcount vcount);
 typedef void (*IntrFunc)(void);
 typedef void (*FuncType_030053A0)(void);
-typedef u32 (*SpriteUpdateFunc)(void);
+typedef bool32 (*VBlankFunc)(void);
 
 extern void *iwram_end;
 extern void *ewram_end;

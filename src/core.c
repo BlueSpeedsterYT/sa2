@@ -1,6 +1,5 @@
 #include "core.h"
 #include "global.h"
-#include "data.h"
 #include "lib/m4a.h"
 #include "malloc_ewram.h"
 #include "multi_sio.h"
@@ -37,7 +36,7 @@ struct BlendRegs gBldRegs ALIGNED(8) = {};
 u8 gOamFreeIndex = 0;
 struct Task gEmptyTask ALIGNED(16) = {};
 BgAffineReg gBgAffineRegs[NUM_AFFINE_BACKGROUNDS] ALIGNED(8) = {};
-u32 gVramHeapStartAddr = 0;
+void *gVramHeapStartAddr = NULL;
 u16 gUnknown_03001944 ALIGNED(4) = 0;
 u8 gUnknown_03001948 ALIGNED(4) = 0;
 u16 gUnknown_0300194C ALIGNED(4) = 0;
@@ -46,12 +45,11 @@ u32 gMultiSioStatusFlags = 0;
 bool8 gMultiSioEnabled = FALSE;
 
 struct Task *gTaskPtrs[] ALIGNED(16) = {};
-u32 gBgOffsetsBuffer[2][DISPLAY_HEIGHT]
-    = {}; /* TODO: Find out how this is different from gBgOffsetsHBlank */
+u32 gBgOffsetsBuffer[2][DISPLAY_HEIGHT] = {}; /* TODO: Find out how this is different from gBgOffsetsHBlank */
 u16 gObjPalette[] = {};
-struct MapHeader **gTilemapsRef = NULL;
+Tilemap **gTilemapsRef = NULL;
 u32 gFrameCount = 0;
-u16 gWinRegs[6] ALIGNED(16) = {};
+winreg_t gWinRegs[6] ALIGNED(16) = {};
 s32 gNumTasks = 0;
 u8 gUnknown_03002280[4][4] = {};
 u16 gInput = 0;
@@ -67,13 +65,13 @@ s16 gMosaicReg = 0;
 
 HBlankFunc gHBlankCallbacks[4] ALIGNED(16) = {};
 struct Task *gCurTask = NULL;
-u8 gUnknown_030026F4 = 0;
+u8 sLastCalledVblankFuncId = 0;
 u8 gKeysFirstRepeatIntervals[10] ALIGNED(16) = {};
 
 u16 gReleasedKeys ALIGNED(4) = 0;
 u8 gUnknown_03002710[] ALIGNED(16) = {};
 u32 gFlagsPreVBlank = 0;
-/* 0x03002794 */ const struct SpriteTables *gUnknown_03002794 = NULL;
+/* 0x03002794 */ const struct SpriteTables *gRefSpriteTables = NULL;
 struct GraphicsData *gVramGraphicsCopyQueue[] ALIGNED(16) = {};
 u16 gUnknown_03002820 = 0;
 s16 gBgScrollRegs[][2] ALIGNED(16) = {};
@@ -102,7 +100,7 @@ u8 gOamFirstPausedIndex ALIGNED(4) = 0;
 u8 gUnknown_03002AE4 ALIGNED(4) = 0;
 HBlankFunc gHBlankIntrs[4] ALIGNED(16) = {};
 
-u8 gIwramHeap[] = {};
+u8 gIwramHeap[0x2204] = {};
 EWRAM_DATA u8 gEwramHeap[] = {};
 
 Sprite *gUnknown_03004D10[] ALIGNED(16) = {};
@@ -129,7 +127,7 @@ static void UpdateScreenCpuSet(void);
 static void ClearOamBufferCpuSet(void);
 static void ClearOamBufferDma(void);
 static void GetInput(void);
-static u32 ProcessVramGraphicsCopyQueue(void);
+static bool32 ProcessVramGraphicsCopyQueue(void);
 
 static void VBlankIntr(void);
 static void HBlankIntr(void);
@@ -163,7 +161,13 @@ IntrFunc const gIntrTableTemplate[] = {
     NULL,
 };
 
-static SpriteUpdateFunc const spriteUpdateFuncs[] = {
+// TODO: Better name
+#define VBLANK_FUNC_ID_NONE 0xFF
+
+// Result of these:
+// FALSE: Not currently in vblank
+// TRUE:  Currently in VBlank /
+static VBlankFunc const sVblankFuncs[] = {
     ProcessVramGraphicsCopyQueue,
     sub_8004010,
     sub_80039E4,
@@ -179,9 +183,9 @@ void GameInit(void)
     gFlags = 0;
     gFlagsPreVBlank = 0;
 
-    if ((REG_RCNT & 0xc000) != 0x8000) {
+    if ((REG_RCNT & 0xC000) != 0x8000) {
         gFlags = FLAGS_200;
-        DmaSet(3, (void *)OBJ_VRAM0, EWRAM_START + 0x3B000, 0x80002800);
+        DmaCopy16(3, (void *)OBJ_VRAM0, EWRAM_START + 0x3B000, 0x5000);
     }
 
     // Skip the intro if these
@@ -196,7 +200,7 @@ void GameInit(void)
     DmaFill32(3, 0, (void *)OAM, OAM_SIZE);
     DmaFill32(3, 0, (void *)PLTT, PLTT_SIZE);
 
-    gUnknown_030026F4 = 0xff;
+    sLastCalledVblankFuncId = VBLANK_FUNC_ID_NONE;
     gUnknown_03002AE4 = 0;
     gUnknown_0300287C = 0;
     gUnknown_03005390 = 0;
@@ -252,12 +256,12 @@ void GameInit(void)
     gUnknown_03002820 = 0;
     gUnknown_03005398 = 0x100;
 
-    gWinRegs[0] = 0;
-    gWinRegs[1] = 0;
-    gWinRegs[2] = 0;
-    gWinRegs[3] = 0;
-    gWinRegs[4] = 0;
-    gWinRegs[5] = 0;
+    gWinRegs[WINREG_WIN0H] = 0;
+    gWinRegs[WINREG_WIN1H] = 0;
+    gWinRegs[WINREG_WIN0V] = 0;
+    gWinRegs[WINREG_WIN1V] = 0;
+    gWinRegs[WINREG_WININ] = 0;
+    gWinRegs[WINREG_WINOUT] = 0;
 
     gBldRegs.bldCnt = 0;
     gBldRegs.bldAlpha = 0;
@@ -276,13 +280,13 @@ void GameInit(void)
     gInputPlaybackData = NULL;
     gFrameCount = 0;
 
-#ifdef UB_FIX
+#ifdef BUG_FIX
     for (i = 0; i < ARRAY_COUNT(gIntrTableTemplate); i++)
 #else
     for (i = 0; i < 15; i++)
 #endif
     {
-        gIntrTable[i] = gIntrTableTemplate[i];
+        gIntrTable[i] = (IntrFunc)gIntrTableTemplate[i];
     }
 
     DmaFill32(3, 0, &gBgOffsetsBuffer, sizeof(gBgOffsetsBuffer));
@@ -325,9 +329,16 @@ void GameInit(void)
         SetFlashTimerIntr(1, &gIntrTable[5]);
     }
 
-    // Setup interrupt table
+    // Setup interrupt vector
+#if !PORTABLE
+    // On GBA the function gets pushed into IWRAM because executing it there is very,
+    // very fast
     DmaCopy32(3, IntrMain, gIntrMainBuf, sizeof(gIntrMainBuf));
-    INTR_VECTOR = gIntrMainBuf;
+    INTR_VECTOR = (void *)gIntrMainBuf;
+#else
+    // On platforms where the whole program is in main RAM anyway, that is not necessary
+    INTR_VECTOR = IntrMain;
+#endif
 
     REG_IME = INTR_FLAG_VBLANK;
     REG_IE = INTR_FLAG_VBLANK;
@@ -350,28 +361,37 @@ void GameLoop(void)
             m4aSoundMain();
         }
 
-        if (gUnknown_030026F4 == 0xff) {
+#if !PORTABLE
+        // TEMP: remove #if when all sVblankFuncs match
+        if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE)
+#endif
+        {
             GetInput();
+
             if (gMultiSioEnabled) {
                 gMultiSioStatusFlags = MultiSioMain(&gMultiSioSend, gMultiSioRecv, 0);
             }
+
             TasksExec();
         }
 
         gFlagsPreVBlank = gFlags;
         VBlankIntrWait();
+
         if (gFlags & FLAGS_4000) {
             UpdateScreenCpuSet();
+
             if (!(gFlags & FLAGS_PAUSE_GAME)) {
                 ClearOamBufferCpuSet();
             }
         } else {
             UpdateScreenDma();
+
             if (!(gFlags & FLAGS_PAUSE_GAME)) {
                 ClearOamBufferDma();
             }
         }
-        if ((gFlags & FLAGS_PAUSE_GAME)) {
+        if (gFlags & FLAGS_PAUSE_GAME) {
             gFlags |= FLAGS_800;
         } else {
             gFlags &= ~FLAGS_800;
@@ -409,8 +429,7 @@ static void UpdateScreenDma(void)
         REG_IE |= INTR_FLAG_HBLANK;
         DmaFill32(3, 0, gHBlankIntrs, sizeof(gHBlankIntrs));
         if (gNumHBlankCallbacks != 0) {
-            DmaCopy32(3, gHBlankCallbacks, gHBlankIntrs,
-                      gNumHBlankCallbacks * sizeof(HBlankFunc));
+            DmaCopy32(3, gHBlankCallbacks, gHBlankIntrs, gNumHBlankCallbacks * sizeof(HBlankFunc));
         }
         gNumHBlankIntrs = gNumHBlankCallbacks;
     } else {
@@ -419,10 +438,15 @@ static void UpdateScreenDma(void)
     }
 
     if (gFlags & FLAGS_4) {
+
         DmaCopy16(3, gBgOffsetsHBlank, gUnknown_03002878, gUnknown_03002A80);
     }
 
-    if (gUnknown_030026F4 == 0xff) {
+#if !PORTABLE
+    // TEMP: remove #if when all sVblankFuncs match
+    if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE)
+#endif
+    {
         CopyOamBufferToOam();
         DmaCopy16(3, gOamBuffer + 0x00, (void *)OAM + 0x000, 0x100);
         DmaCopy16(3, gOamBuffer + 0x20, (void *)OAM + 0x100, 0x100);
@@ -431,31 +455,47 @@ static void UpdateScreenDma(void)
     }
 
     for (i = 0; i < gUnknown_03001948; i++) {
-        gUnknown_030053A0[i]();
+#ifdef BUG_FIX
+        if (gUnknown_030053A0[i] != NULL)
+#endif
+        {
+            gUnknown_030053A0[i]();
+        }
     }
 
     if (gFlags & FLAGS_10) {
         DmaFill32(3, 0, gUnknown_030053A0, sizeof(gUnknown_030053A0));
         if (gUnknown_03004D50 != 0) {
-            DmaCopy32(3, gUnknown_03001870, gUnknown_030053A0,
-                      gUnknown_03004D50 * sizeof(FuncType_030053A0));
+            DmaCopy32(3, gUnknown_03001870, gUnknown_030053A0, gUnknown_03004D50 * sizeof(FuncType_030053A0));
         }
         gUnknown_03001948 = gUnknown_03004D50;
     } else {
         gUnknown_03001948 = 0;
     }
 
-    j = gUnknown_030026F4;
-    if (j == 0xff) {
+    j = sLastCalledVblankFuncId;
+    if (j == VBLANK_FUNC_ID_NONE) {
         j = 0;
     }
 
-    gUnknown_030026F4 = 0xff;
-    for (; j < ARRAY_COUNT(spriteUpdateFuncs); j++) {
-        if (spriteUpdateFuncs[j]() == 0) {
-            gUnknown_030026F4 = j;
+    sLastCalledVblankFuncId = VBLANK_FUNC_ID_NONE;
+
+#if PORTABLE
+    // TEMP/HACK: Always call all funcs
+    //            Remove #if when all sVblankFuncs match
+    j = 0;
+#endif
+
+    for (; j < ARRAY_COUNT(sVblankFuncs); j++) {
+#if PORTABLE
+        // TEMP/HACK
+        sVblankFuncs[j]();
+#else
+        if (sVblankFuncs[j]() == 0) {
+            sLastCalledVblankFuncId = j;
             break;
         }
+#endif
     }
 }
 
@@ -467,9 +507,12 @@ static void ClearOamBufferDma(void)
     if (!(gFlags & FLAGS_20)) {
         if (gBgOffsetsHBlank == gUnknown_03004D54) {
             gBgOffsetsHBlank = gUnknown_030022C0;
+
             gUnknown_030022AC = gUnknown_03004D54;
         } else {
+
             gBgOffsetsHBlank = gUnknown_03004D54;
+
             gUnknown_030022AC = gUnknown_030022C0;
         }
     }
@@ -517,7 +560,11 @@ static void UpdateScreenCpuSet(void)
         gNumHBlankIntrs = 0;
     }
 
-    if (gUnknown_030026F4 == 0xff) {
+#if !PORTABLE
+    // TEMP: remove #if when all sVblankFuncs match
+    if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE)
+#endif
+    {
         CopyOamBufferToOam();
         CpuFastCopy(gOamBuffer, (void *)OAM, OAM_SIZE);
     }
@@ -536,15 +583,15 @@ static void UpdateScreenCpuSet(void)
         gUnknown_03001948 = 0;
     }
 
-    j = gUnknown_030026F4;
-    if (j == 0xff) {
+    j = sLastCalledVblankFuncId;
+    if (j == VBLANK_FUNC_ID_NONE) {
         j = 0;
     }
 
-    gUnknown_030026F4 = 0xff;
-    for (; j < ARRAY_COUNT(spriteUpdateFuncs); j++) {
-        if (spriteUpdateFuncs[j]() == 0) {
-            gUnknown_030026F4 = j;
+    sLastCalledVblankFuncId = VBLANK_FUNC_ID_NONE;
+    for (; j < ARRAY_COUNT(sVblankFuncs); j++) {
+        if (sVblankFuncs[j]() == FALSE) {
+            sLastCalledVblankFuncId = j;
             break;
         }
     }
@@ -558,19 +605,20 @@ static void VBlankIntr(void)
     INTR_CHECK |= 1;
     gExecSoundMain = TRUE;
 
-    if (gFlagsPreVBlank & 4) {
+    if (gFlagsPreVBlank & FLAGS_4) {
         REG_IE |= INTR_FLAG_HBLANK;
         DmaWait(0);
+
         DmaCopy16(0, gBgOffsetsHBlank, gUnknown_03002878, gUnknown_03002A80);
         DmaSet(0, gBgOffsetsHBlank + gUnknown_03002A80, gUnknown_03002878,
-               ((DMA_ENABLE | DMA_START_HBLANK | DMA_REPEAT | DMA_DEST_RELOAD) << 16)
-                   | (gUnknown_03002A80 >> 1));
+               ((DMA_ENABLE | DMA_START_HBLANK | DMA_REPEAT | DMA_DEST_RELOAD) << 16) | (gUnknown_03002A80 >> 1));
+
     } else if (gUnknown_03002878) {
         REG_IE &= ~INTR_FLAG_HBLANK;
         gUnknown_03002878 = NULL;
     }
 
-    if (gFlagsPreVBlank & 0x40) {
+    if (gFlagsPreVBlank & FLAGS_40) {
         REG_DISPSTAT |= DISPSTAT_VCOUNT_INTR;
         REG_DISPSTAT &= 0xff;
         REG_DISPSTAT |= gUnknown_03002874 << 8;
@@ -583,16 +631,16 @@ static void VBlankIntr(void)
         REG_IE &= ~INTR_FLAG_VCOUNT;
     }
 
-    if (!(gFlagsPreVBlank & 0x8000)) {
+    if (!(gFlagsPreVBlank & FLAGS_8000)) {
         keys = ~REG_KEYINPUT & (START_BUTTON | SELECT_BUTTON | B_BUTTON | A_BUTTON);
         if (keys == (START_BUTTON | SELECT_BUTTON | B_BUTTON | A_BUTTON)) {
-            gFlags |= 0x8000;
+            gFlags |= FLAGS_8000;
             REG_IE = 0;
             REG_IME = 0;
             REG_DISPSTAT = DISPCNT_MODE_0;
             m4aMPlayAllStop();
             m4aSoundVSyncOff();
-            gFlags &= ~4;
+            gFlags &= ~FLAGS_4;
             DmaStop(0);
             DmaStop(1);
             DmaStop(2);
@@ -608,51 +656,76 @@ static void VBlankIntr(void)
 
 // TODO: Fix ProcessVramGraphicsCopyQueue so no need to cast
 struct GraphicsData_Hack {
-    u32 src;
-    u32 dest;
-    u16 remainingBytes;
+    uintptr_t src;
+    uintptr_t dest;
+    u16 size;
 };
 
 #define COPY_CHUNK_SIZE 1024
 
-static u32 ProcessVramGraphicsCopyQueue(void)
+static bool32 ProcessVramGraphicsCopyQueue(void)
 {
     u32 offset;
+#ifndef NON_MATCHING
     struct GraphicsData_Hack *graphics;
+#else
+    struct GraphicsData *graphics;
+#endif
 
     while (gVramGraphicsCopyCursor != gVramGraphicsCopyQueueIndex) {
-        graphics = (struct GraphicsData_Hack *)
-            gVramGraphicsCopyQueue[gVramGraphicsCopyCursor];
+        graphics = (void *)gVramGraphicsCopyQueue[gVramGraphicsCopyCursor];
 
-        if (graphics->remainingBytes != 0) {
-            for (offset = 0; graphics->remainingBytes > 0; offset += COPY_CHUNK_SIZE) {
-                if (graphics->remainingBytes > COPY_CHUNK_SIZE) {
-                    DmaCopy16(3, graphics->src + offset, graphics->dest + offset,
-                              COPY_CHUNK_SIZE);
-                    graphics->remainingBytes -= COPY_CHUNK_SIZE;
+        if (graphics->size != 0) {
+            for (offset = 0; graphics->size > 0; offset += COPY_CHUNK_SIZE) {
+                if (graphics->size > COPY_CHUNK_SIZE) {
+#ifdef BUG_FIX
+                    if ((graphics->src != 0) && (graphics->dest != 0))
+#endif
+                    {
+                        DmaCopy16(3, (void *)(graphics->src + offset), (void *)(graphics->dest + offset), COPY_CHUNK_SIZE);
+                        graphics->size -= COPY_CHUNK_SIZE;
+                    }
+#ifdef BUG_FIX
+                    else {
+                        graphics->size = 0;
+                    }
+#endif
                 } else {
-                    DmaCopy16(3, graphics->src + offset, graphics->dest + offset,
-                              graphics->remainingBytes);
-                    graphics->remainingBytes = 0;
+#ifdef BUG_FIX
+                    if ((graphics->src != 0) && (graphics->dest != 0))
+#endif
+                    {
+                        DmaCopy16(3, (void *)(graphics->src + offset), (void *)(graphics->dest + offset), graphics->size);
+                    }
+                    graphics->size = 0;
                 }
             }
         }
-
-        gVramGraphicsCopyCursor++;
-        gVramGraphicsCopyCursor &= ARRAY_COUNT(gVramGraphicsCopyQueue) - 1;
-
-        if (!(REG_DISPSTAT & DISPSTAT_VBLANK)) {
-            return 0;
+#ifdef BUG_FIX
+        // NOTE: Technically not necessary, but it's a bit cleaner this way.
+        if (graphics->size == 0) {
+            gVramGraphicsCopyQueue[gVramGraphicsCopyCursor] = NULL;
         }
+#endif
+
+        INC_GRAPHICS_QUEUE_CURSOR(gVramGraphicsCopyCursor);
+
+        // TODO: Once REG_DISPSTAT gets set correctly, and all graphics functions match, remove this #if.
+        //       Otherwise graphics will not get copied properly.
+#if !PORTABLE
+        if (!(REG_DISPSTAT & DISPSTAT_VBLANK)) {
+            return FALSE;
+        }
+#endif
     }
-    return 1;
+
+    return TRUE;
 }
 
 static void GetInput(void)
 {
     s8 i;
-    u8 *repeatKeyCounters = gRepeatedKeysTestCounter,
-       *firstIntervals = gKeysFirstRepeatIntervals,
+    u8 *repeatKeyCounters = gRepeatedKeysTestCounter, *firstIntervals = gKeysFirstRepeatIntervals,
        *continuedHoldIntervals = gKeysContinuedRepeatIntervals;
 
     gInput = (~REG_KEYINPUT & KEYS_MASK);
@@ -740,6 +813,7 @@ static void ClearOamBufferCpuSet(void)
 
     gFlags &= ~FLAGS_EXECUTE_HBLANK_CALLBACKS;
     if (!(gFlags & 0x20)) {
+
         if (gBgOffsetsHBlank == gUnknown_03004D54) {
             gBgOffsetsHBlank = gUnknown_030022C0;
             gUnknown_030022AC = gUnknown_03004D54;

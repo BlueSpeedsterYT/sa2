@@ -1,5 +1,5 @@
 #include "core.h"
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 #include "game/unknown_effect.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -22,8 +22,8 @@ u8 gUnknown_03005B7C = 0;
 
 void Task_UnknownEffect(void)
 {
-    s16 a = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-    s16 b = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+    s16 a = I(gPlayer.x) - gCamera.x;
+    s16 b = I(gPlayer.y) - gCamera.y;
     struct UnknownEffect87028 *effect = TASK_DATA(gCurTask);
 
     sub_80871C4(a, b, DISPLAY_HEIGHT - effect->unk0);
@@ -36,8 +36,8 @@ void Task_UnknownEffect(void)
 
 void sub_8087088(void)
 {
-    s16 a = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-    s16 b = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+    s16 a = I(gPlayer.x) - gCamera.x;
+    s16 b = I(gPlayer.y) - gCamera.y;
     struct UnknownEffect87028 *effect = TASK_DATA(gCurTask);
 
     sub_80871C4(a, b, 0x6E);
@@ -50,28 +50,23 @@ void sub_8087088(void)
 }
 
 static const ALIGNED(4) s8 gUnknown_080E02DC[8][2] = {
-    { 0, 0 },   { 3, -1 }, { -2, -4 }, { 0, 3 },
-    { -4, -2 }, { 3, -4 }, { 1, 3 },   { -2, 2 },
+    { 0, 0 }, { 3, -1 }, { -2, -4 }, { 0, 3 }, { -4, -2 }, { 3, -4 }, { 1, 3 }, { -2, 2 },
 };
 
 void sub_80870E8(void)
 {
-    s16 a = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-    s16 b = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+    s16 a = I(gPlayer.x) - gCamera.x;
+    s16 b = I(gPlayer.y) - gCamera.y;
     struct UnknownEffect87028 *effect = TASK_DATA(gCurTask);
 
-    sub_80871C4(a + gUnknown_080E02DC[effect->unk0 & 7][0],
-                b + gUnknown_080E02DC[effect->unk0 & 7][1], 160 - effect->unk0);
+    sub_80871C4(a + gUnknown_080E02DC[effect->unk0 & 7][0], b + gUnknown_080E02DC[effect->unk0 & 7][1], 160 - effect->unk0);
 
     gBldRegs.bldY = (effect->unk0 >> 4) + 4;
 
     effect->unk0 += 1;
     if (effect->unk0 > 160) {
-        if (!(gPlayer.moveState
-              & (MOVESTATE_IN_SCRIPTED | MOVESTATE_400000 | MOVESTATE_IGNORE_INPUT))
-            && !(gPlayer.itemEffect
-                 & (PLAYER_ITEM_EFFECT__INVINCIBILITY | PLAYER_ITEM_EFFECT__80))
-            && sub_800CBA4(&gPlayer) != 0) {
+        if (!(gPlayer.moveState & (MOVESTATE_IN_SCRIPTED | MOVESTATE_400000 | MOVESTATE_IGNORE_INPUT))
+            && !(gPlayer.itemEffect & (PLAYER_ITEM_EFFECT__INVINCIBILITY | PLAYER_ITEM_EFFECT__TELEPORT)) && sub_800CBA4(&gPlayer) != 0) {
             m4aSongNumStart(SE_SPIKES);
         }
         gBldRegs.bldY = 0;
@@ -166,8 +161,7 @@ void sub_80873A4(void);
 
 void sub_8087368(void)
 {
-    struct Task *t = TaskCreate(Task_UnknownEffect, sizeof(struct UnknownEffect87028),
-                                0x8000, 0, TaskDestructor_UnknownEffect);
+    struct Task *t = TaskCreate(Task_UnknownEffect, sizeof(struct UnknownEffect87028), 0x8000, 0, TaskDestructor_UnknownEffect);
     struct UnknownEffect87028 *effect = TASK_DATA(t);
     effect->unk0 = 0;
     sub_80873A4();

@@ -8,7 +8,7 @@
 #include "game/enemies/kyura.h"
 #include "game/enemies/projectiles.h"
 
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "constants/animations.h"
 
@@ -34,18 +34,17 @@ void Task_KyuraRecover(void);
 
 void CreateEntity_Kyura(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_KyuraMain, sizeof(Sprite_Kyura), 0x4040, 0,
-                                TaskDestructor_80095E8);
+    struct Task *t = TaskCreate(Task_KyuraMain, sizeof(Sprite_Kyura), 0x4040, 0, TaskDestructor_80095E8);
     Sprite_Kyura *kyura = TASK_DATA(t);
     Sprite *s = &kyura->s;
     kyura->base.regionX = spriteRegionX;
     kyura->base.regionY = spriteRegionY;
     kyura->base.me = me;
     kyura->base.spriteX = me->x;
-    kyura->base.spriteY = spriteY;
+    kyura->base.id = spriteY;
 
-    kyura->spawnX = Q_24_8(TO_WORLD_POS(me->x, spriteRegionX));
-    kyura->spawnY = Q_24_8(TO_WORLD_POS(me->y, spriteRegionY));
+    kyura->spawnX = Q(TO_WORLD_POS(me->x, spriteRegionX));
+    kyura->spawnY = Q(TO_WORLD_POS(me->y, spriteRegionY));
     kyura->offsetX = 0;
     kyura->offsetY = 0;
     kyura->unk54 = 0;
@@ -111,10 +110,10 @@ void Task_KyuraMain(void)
             init.numTiles = 3;
             init.anim = SA2_ANIM_KYURA_PROJ;
             init.variant = randomBool;
-            init.x = Q_24_8(pos.x + 1);
-            init.y = Q_24_8(pos.y + 20);
-            init.rot = Q_24_8(1.0);
-            init.speed = Q_24_8(2.0) - (Q_24_8(1.0) * randomBool);
+            init.x = Q(pos.x + 1);
+            init.y = Q(pos.y + 20);
+            init.rot = Q(1.0);
+            init.speed = Q(2.0) - (Q(1.0) * randomBool);
             CreateProjectile(&init);
         }
         gCurTask->main = Task_KyuraRecover;

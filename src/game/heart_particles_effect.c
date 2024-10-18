@@ -2,7 +2,7 @@
 #include "game/heart_particles_effect.h"
 #include "malloc_vram.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -24,14 +24,17 @@ typedef struct {
 static void sub_8086CBC(struct Task *);
 static void sub_8086A88(void);
 static void sub_8086A0C(HeartParticles *);
+#ifdef BUG_FIX
+static bool8 sub_8086B38(HeartParticles *unk998);
+#else
 static void sub_8086B38(HeartParticles *unk998);
+#endif
 static void sub_8086BE8(u8);
 
 void CreateHeartParticles(void)
 {
     u8 i;
-    struct Task *t
-        = TaskCreate(sub_8086A88, sizeof(HeartParticles), 0x4000, 0, sub_8086CBC);
+    struct Task *t = TaskCreate(sub_8086A88, sizeof(HeartParticles), 0x4000, 0, sub_8086CBC);
     HeartParticles *unk998 = TASK_DATA(t);
     unk998->unkC2 = 0;
     unk998->unkE4 = 0;
@@ -58,13 +61,13 @@ static void sub_8086A0C(HeartParticles *unk998)
         s->prevVariant = -1;
         s->x = -20;
         s->y = 0;
-        s->unk1A = SPRITE_OAM_ORDER(6);
+        s->oamFlags = SPRITE_OAM_ORDER(6);
         s->graphics.size = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
-        s->animSpeed = 0x10;
+        s->qAnimDelay = 0;
+        s->animSpeed = SPRITE_ANIM_SPEED(1.0);
         s->palId = 0;
-        s->unk10 = 0x2000;
+        s->frameFlags = 0x2000;
     }
 }
 
@@ -80,20 +83,29 @@ static void sub_8086A88(void)
         s->y = gPlayer.unk90->s.y;
     }
 
-    sub_8086B38(unk998);
+    {
+#ifdef BUG_FIX
+        bool8 wasDestroyed = sub_8086B38(unk998);
+        if (wasDestroyed) {
+            return;
+        }
+#else
+        sub_8086B38(unk998);
+#endif
 
-    if (unk998->unkE4 == 0) {
-        if (unk998->unkC2 == 0) {
-            sub_8086BE8(0);
-        }
-        if (unk998->unkC2 == 3) {
-            sub_8086BE8(1);
-        }
-        if (unk998->unkC2 == 7) {
-            sub_8086BE8(2);
-        }
-        if (unk998->unkC2 == 11) {
-            sub_8086BE8(3);
+        if (unk998->unkE4 == 0) {
+            if (unk998->unkC2 == 0) {
+                sub_8086BE8(0);
+            }
+            if (unk998->unkC2 == 3) {
+                sub_8086BE8(1);
+            }
+            if (unk998->unkC2 == 7) {
+                sub_8086BE8(2);
+            }
+            if (unk998->unkC2 == 11) {
+                sub_8086BE8(3);
+            }
         }
     }
 
@@ -103,12 +115,16 @@ static void sub_8086A88(void)
         unk998->unkC2 = 0;
     }
 
-    if (gPlayer.unk64 != 0x22) {
+    if (gPlayer.charState != 0x22) {
         unk998->unkE4 = 1;
     }
 }
 
+#ifdef BUG_FIX
+static bool8 sub_8086B38(HeartParticles *unk998)
+#else
 static void sub_8086B38(HeartParticles *unk998)
+#endif
 {
     u8 i;
     u8 j = 1;
@@ -116,14 +132,18 @@ static void sub_8086B38(HeartParticles *unk998)
 
     if (unk998->unkE4 != 0 && unk998->unkC0 == 0) {
         TaskDestroy(gCurTask);
+#ifdef BUG_FIX
+        return TRUE;
+#else
         return;
+#endif
     }
 
     for (i = 0; i < NUM_HEARTS; i++) {
         if (unk998->unkC0 & j) {
             s = &unk998->sprites[i];
-            s->x = Q_24_8_TO_INT(unk998->unkC4[i]) - gCamera.x;
-            s->y = Q_24_8_TO_INT(unk998->unkD4[i]) - gCamera.y;
+            s->x = I(unk998->unkC4[i]) - gCamera.x;
+            s->y = I(unk998->unkD4[i]) - gCamera.y;
 
             if (UpdateSpriteAnimation(s) == 0) {
                 unk998->unkC0 &= ~(1 << i);
@@ -133,6 +153,12 @@ static void sub_8086B38(HeartParticles *unk998)
         }
         j <<= 1;
     }
+
+#ifdef BUG_FIX
+    return FALSE;
+#else
+    return;
+#endif
 }
 
 static void sub_8086BE8(u8 i)
@@ -153,13 +179,13 @@ static void sub_8086BE8(u8 i)
 
     s = &unk998->sprites[i];
     s->prevVariant = -1;
-    s->x = Q_24_8_TO_INT(unk998->unkC4[i]) - gCamera.x;
-    s->y = Q_24_8_TO_INT(unk998->unkD4[i]) - gCamera.y;
+    s->x = I(unk998->unkC4[i]) - gCamera.x;
+    s->y = I(unk998->unkD4[i]) - gCamera.y;
 
     if (GRAVITY_IS_INVERTED) {
-        s->unk10 |= SPRITE_FLAG_MASK_Y_FLIP;
+        s->frameFlags |= SPRITE_FLAG_MASK_Y_FLIP;
     } else {
-        s->unk10 &= ~SPRITE_FLAG_MASK_Y_FLIP;
+        s->frameFlags &= ~SPRITE_FLAG_MASK_Y_FLIP;
     }
 
     UpdateSpriteAnimation(s);

@@ -17,8 +17,7 @@ void TaskDestructor_SparkEffect(struct Task *);
 // NOTE: This effect appears to be unused
 struct Task *CreateSparkEffect()
 {
-    struct Task *t = TaskCreate(Task_SparkEffect, sizeof(SparkEffect), 0x2001, 0,
-                                TaskDestructor_SparkEffect);
+    struct Task *t = TaskCreate(Task_SparkEffect, sizeof(SparkEffect), 0x2001, 0, TaskDestructor_SparkEffect);
 
     SparkEffect *spark = TASK_DATA(t);
     Sprite *s = &spark->s;
@@ -27,11 +26,11 @@ struct Task *CreateSparkEffect()
     s->graphics.anim = SA2_ANIM_SPARK_EFFECT;
     s->variant = 0;
     s->prevVariant = -1;
-    s->unk1A = SPRITE_OAM_ORDER(8);
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->oamFlags = SPRITE_OAM_ORDER(8);
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
 
     return t;
 }
@@ -47,13 +46,13 @@ void Task_SparkEffect(void)
         SparkEffect *spark = TASK_DATA(gCurTask);
         Sprite *s = &spark->s;
         struct Camera *cam = &gCamera;
-        s->x = Q_24_8_TO_INT(p->x) - cam->x;
-        s->y = (Q_24_8_TO_INT(p->y) + p->unk17) - cam->y;
+        s->x = I(p->x) - cam->x;
+        s->y = (I(p->y) + p->spriteOffsetY) - cam->y;
 
         if (!(p->moveState & MOVESTATE_FACING_LEFT)) {
-            s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+            s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
         } else {
-            s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+            s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
         }
 
         UpdateSpriteAnimation(s);

@@ -32,11 +32,9 @@ void sub_808F004(void);
 void sub_808F148(struct Task *);
 
 static const u16 sTilemapsCreditsSlides[] = {
-    TM_CREDITS_0,  TM_CREDITS_1,  TM_CREDITS_2,  TM_CREDITS_3,  TM_CREDITS_4,
-    TM_CREDITS_5,  TM_CREDITS_6,  TM_CREDITS_7,  TM_CREDITS_8,  TM_CREDITS_9,
-    TM_CREDITS_10, TM_CREDITS_11, TM_CREDITS_12, TM_CREDITS_13, TM_CREDITS_14,
-    TM_CREDITS_15, TM_CREDITS_16, TM_CREDITS_17, TM_CREDITS_18, TM_CREDITS_19,
-    TM_CREDITS_20, TM_CREDITS_21, TM_CREDITS_22, TM_CREDITS_23, TM_CREDITS_24,
+    TM_CREDITS_0,  TM_CREDITS_1,  TM_CREDITS_2,  TM_CREDITS_3,  TM_CREDITS_4,  TM_CREDITS_5,  TM_CREDITS_6,  TM_CREDITS_7,  TM_CREDITS_8,
+    TM_CREDITS_9,  TM_CREDITS_10, TM_CREDITS_11, TM_CREDITS_12, TM_CREDITS_13, TM_CREDITS_14, TM_CREDITS_15, TM_CREDITS_16, TM_CREDITS_17,
+    TM_CREDITS_18, TM_CREDITS_19, TM_CREDITS_20, TM_CREDITS_21, TM_CREDITS_22, TM_CREDITS_23, TM_CREDITS_24,
 };
 
 static const u8 gUnknown_080E12AA[] = { 6, 6, 8, 5, 0, 0 };
@@ -68,11 +66,9 @@ void CreateCreditsSlidesCutScene(u8 creditsVariant, u8 b, u8 c)
     scene->unk54 = 0x96;
     scene->unk50 = 0;
 
-    if (scene->creditsVariant == CREDITS_VARIANT_FINAL_ENDING
-        && gLoadedSaveGame->completedCharacters[CHARACTER_AMY]) {
+    if (scene->creditsVariant == CREDITS_VARIANT_FINAL_ENDING && gLoadedSaveGame->completedCharacters[CHARACTER_AMY]) {
         scene->unk4D = 1;
-    } else if (scene->creditsVariant == CREDITS_VARIANT_EXTRA_ENDING
-               && gLoadedSaveGame->extraEndingCreditsPlayed) {
+    } else if (scene->creditsVariant == CREDITS_VARIANT_EXTRA_ENDING && gLoadedSaveGame->extraEndingCreditsPlayed) {
         scene->unk4D = 2;
     } else {
         scene->unk4D = 0;
@@ -86,7 +82,7 @@ void CreateCreditsSlidesCutScene(u8 creditsVariant, u8 b, u8 c)
 
     fade = &scene->unk40;
     fade->window = SCREEN_FADE_USE_WINDOW_1;
-    fade->brightness = Q_24_8(0);
+    fade->brightness = Q(0);
     fade->bldAlpha = 0;
     fade->speed = 0x200;
     fade->bldCnt = (BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
@@ -120,7 +116,7 @@ void sub_808EF38(void)
 
     fade->flags = SCREEN_FADE_FLAG_LIGHTEN;
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         scene->unk50++;
 
         if (scene->unk50 < scene->unk51) {
@@ -163,7 +159,7 @@ void sub_808F004(void)
     }
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_808F068;
     }
 }
@@ -192,7 +188,7 @@ void sub_808F0BC(void)
     m4aMPlayFadeOutTemporarily(&gMPlayInfo_BGM, 24);
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         CreateCreditsEndCutScene(scene->creditsVariant);
         TaskDestroy(gCurTask);
     }

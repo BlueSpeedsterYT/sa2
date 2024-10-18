@@ -13,44 +13,45 @@
 #define SA2_ANIM_CHAR_ID_CHEESE 5
 
 #define SA2_NUM_PLAYER_CHAR_ANIMATIONS (91) // TODO: Don't use constant here
-#define SA2_ANIM_CHAR(anim, character)                                                  \
-    ((anim) + character * SA2_NUM_PLAYER_CHAR_ANIMATIONS)
+#define SA2_ANIM_CHAR(anim, character) ((anim) + character * SA2_NUM_PLAYER_CHAR_ANIMATIONS)
 
 // TODO: If possible, make player animations macros, so there's no redundancy
-#define SA2_CHAR_ANIM_IDLE               0
-#define SA2_CHAR_ANIM_TAUNT              1
-#define SA2_CHAR_ANIM_CROUCH             2
-#define SA2_CHAR_ANIM_SPIN_DASH          3
-#define SA2_CHAR_ANIM_SPIN_ATTACK        4
-#define SA2_CHAR_ANIM_WALK               9
-#define SA2_CHAR_ANIM_JUMP_1             10
-#define SA2_CHAR_ANIM_JUMP_2             11
-#define SA2_CHAR_ANIM_FALLING_VULNERABLE 13
-#define SA2_CHAR_ANIM_14                 14
-#define SA2_CHAR_ANIM_15                 15
-#define SA2_CHAR_ANIM_16                 16
-
-// TODO: Rename. "These "Insta Shield" is true for Sonic, but not the other characters.
-#define SA2_CHAR_ANIM_INSTA_SHIELD_1 17
-#define SA2_CHAR_ANIM_INSTA_SHIELD_2 18
-#define SA2_CHAR_ANIM_19             19
-
+#define SA2_CHAR_ANIM_IDLE                                   0
+#define SA2_CHAR_ANIM_TAUNT                                  1
+#define SA2_CHAR_ANIM_CROUCH                                 2
+#define SA2_CHAR_ANIM_SPIN_DASH                              3
+#define SA2_CHAR_ANIM_SPIN_ATTACK                            4
+#define SA2_CHAR_ANIM_5                                      5
+#define SA2_CHAR_ANIM_6                                      6
+#define SA2_CHAR_ANIM_BRAKE                                  7
+#define SA2_CHAR_ANIM_BRAKE_GOAL                             8
+#define SA2_CHAR_ANIM_WALK                                   9
+#define SA2_CHAR_ANIM_JUMP_1                                 10
+#define SA2_CHAR_ANIM_JUMP_2                                 11
+#define SA2_CHAR_ANIM_HIT_GROUND                             12
+#define SA2_CHAR_ANIM_FALLING_VULNERABLE                     13
+#define SA2_CHAR_ANIM_BOOSTLESS_ATTACK                       14
+#define SA2_CHAR_ANIM_AIR_ATTACK                             15
+#define SA2_CHAR_ANIM_BOOST_ATTACK                           16
+#define SA2_CHAR_ANIM_INSTA_SHIELD_1                         17
+#define SA2_CHAR_ANIM_INSTA_SHIELD_2                         18
+#define SA2_CHAR_ANIM_19                                     19
 #define SA2_CHAR_ANIM_20                                     20
 #define SA2_CHAR_ANIM_21                                     21
 #define SA2_CHAR_ANIM_22                                     22
 #define SA2_CHAR_ANIM_23                                     23
 #define SA2_CHAR_ANIM_24                                     24
-#define SA2_CHAR_ANIM_28                                     28
-#define SA2_CHAR_ANIM_29                                     29
+#define SA2_CHAR_ANIM_HIT                                    28
+#define SA2_CHAR_ANIM_DEAD                                   29
 #define SA2_CHAR_ANIM_BEFORE_COUNTDOWN                       30
 #define SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_GETTING_READY 0
 #define SA2_CHAR_ANIM_VARIANT_BEFORE_COUNTDOWN_LIFTOFF       1
-#define SA2_CHAR_ANIM_31                                     31
+#define SA2_CHAR_ANIM_GOAL_BRAKE                             31
 #define SA2_CHAR_ANIM_ACT_CLEAR                              32
 #define SA2_CHAR_ANIM_33                                     33
 #define SA2_CHAR_ANIM_34                                     34
 #define SA2_CHAR_ANIM_35                                     35
-#define SA2_CHAR_ANIM_36                                     36
+#define SA2_CHAR_ANIM_CUTSCENE_LOOK_UP                       36
 #define SA2_CHAR_ANIM_37                                     37
 #define SA2_CHAR_ANIM_38                                     38
 #define SA2_CHAR_ANIM_39                                     39
@@ -76,15 +77,24 @@
 #define SA2_CHAR_ANIM_55                                     55
 #define SA2_CHAR_ANIM_56                                     56
 #define SA2_CHAR_ANIM_57                                     57
-#define SA2_CHAR_ANIM_62                                     62
-#define SA2_CHAR_ANIM_63                                     63
-#define SA2_CHAR_ANIM_65                                     65
-#define SA2_CHAR_ANIM_66                                     66
-#define SA2_CHAR_ANIM_67                                     67
+#define SA2_CHAR_ANIM_IN_WHIRLWIND                           58
+#define SA2_CHAR_ANIM_GRABBING_HANDLE_A                      59
+#define SA2_CHAR_ANIM_GRABBING_HANDLE_B                      60
+#define SA2_CHAR_ANIM_HANGING                                61
+#define SA2_CHAR_ANIM_WINDUP_STICK_UPDOWN                    62
+#define SA2_CHAR_ANIM_WINDUP_STICK_SINGLE_TURN_UPDOWN        63
+#define SA2_CHAR_ANIM_TURNAROUND_BAR                         64
+#define SA2_CHAR_ANIM_SPRING_MUSIC_PLANT                     65
+#define SA2_CHAR_ANIM_NOTE_BLOCK                             66
+#define SA2_CHAR_ANIM_FLUTE_EXHAUST                          67
 #define SA2_CHAR_ANIM_68                                     68
 #define SA2_CHAR_ANIM_69                                     69
 #define SA2_CHAR_ANIM_70                                     70
+#define SA2_CHAR_ANIM_71                                     71
+#define SA2_CHAR_ANIM_72                                     72
+#define SA2_CHAR_ANIM_73                                     73
 #define SA2_CHAR_ANIM_BOOST_PALETTE                          74
+#define SA2_CHAR_ANIM_75                                     75
 #define SA2_CHAR_ANIM_80                                     80
 #define SA2_CHAR_ANIM_87                                     87
 
@@ -117,25 +127,23 @@
 #define SA2_ANIM_CHEESE_BACKFLIP                       457
 #define SA2_ANIM_CHEESE_NERVOUS                        458
 #define SA2_ANIM_CHEESE_PIROUETTE                      459
-#define SA2_ANIM_CHEESE_SHOCKED                                                         \
-    460 // Not sure about this one. They put their hand to their mouth, but it doesn't
-        // have an eating animation
-#define SA2_ANIM_CHEESE_LIFTING              461
-#define SA2_ANIM_CHEESE_CELEBRATING          462
-#define SA2_ANIM_CHEESE_STOMPING             463 // alternatively: SA2_ANIM_CHEESE_CANNON_BALL ?
-#define SA2_ANIM_CHEESE_SKY_UPPERCUT         464
-#define SA2_ANIM_CHEESE_DYING                465
-#define SA2_ANIM_CHEESE_STRUGGLING           466
-#define SA2_ANIM_CHEESE_SIDEWAYS_2           467
-#define SA2_ANIM_CHEESE_DOWNWARDS            468
-#define SA2_ANIM_CHEESE_469                  469
-#define SA2_ANIM_CHEESE_WAVING_PLAYER        470
-#define SA2_ANIM_SONIC_GOING_SUPER_0         471
-#define SA2_ANIM_SONIC_GOING_SUPER_1         472
-#define SA2_ANIM_SUPER_SONIC_SIDEWAYS        473
-#define SA2_ANIM_SUPER_SONIC_ATTACK_CLOUD    474
-#define SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET 475
-#define SA2_ANIM_SUPER_SONIC_FROZEN          476
+#define SA2_ANIM_CHEESE_SHOCKED                        460
+#define SA2_ANIM_CHEESE_LIFTING                        461
+#define SA2_ANIM_CHEESE_CELEBRATING                    462
+#define SA2_ANIM_CHEESE_STOMPING                       463 // alternatively: SA2_ANIM_CHEESE_CANNON_BALL ?
+#define SA2_ANIM_CHEESE_SKY_UPPERCUT                   464
+#define SA2_ANIM_CHEESE_DYING                          465
+#define SA2_ANIM_CHEESE_STRUGGLING                     466
+#define SA2_ANIM_CHEESE_SIDEWAYS_2                     467
+#define SA2_ANIM_CHEESE_DOWNWARDS                      468
+#define SA2_ANIM_CHEESE_469                            469
+#define SA2_ANIM_CHEESE_WAVING_PLAYER                  470
+#define SA2_ANIM_SONIC_GOING_SUPER_0                   471
+#define SA2_ANIM_SONIC_GOING_SUPER_1                   472
+#define SA2_ANIM_SUPER_SONIC_SIDEWAYS                  473
+#define SA2_ANIM_SUPER_SONIC_ATTACK_CLOUD              474
+#define SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET           475
+#define SA2_ANIM_SUPER_SONIC_FROZEN                    476
 // Defeating enemies / opening item boxes
 #define SA2_ANIM_DUST_CLOUD 477
 
@@ -293,6 +301,7 @@
 #define SA2_ANIM_DASH_RING_TEC_BAS               605
 #define SA2_ANIM_DIR_ARROW_TEC_BAS               606
 #define SA2_ANIM_SPIKES_TEC_BAS                  607
+#define SA2_ANIM_RAMP_TECHNO_BASE                608
 #define SA2_ANIM_609                             609
 #define SA2_ANIM_610                             610
 
@@ -372,6 +381,47 @@
 #define SA2_ANIM_EGG_SAUCER_PILOT_EGGMAN 684
 #define SA2_ANIM_EGG_SAUCER_DISK         685
 
+#define SA2_ANIM_EGG_GO_ROUND_CABIN           687
+#define SA2_ANIM_EGG_GO_ROUND_GUN             688
+#define SA2_ANIM_EGG_GO_ROUND_PROJECTILE      689
+#define SA2_ANIM_EGG_GO_ROUND_SPIKED_PLATFORM 690
+#define SA2_ANIM_EGG_GO_ROUND_PLATFORM        691
+#define SA2_ANIM_EGG_GO_ROUND_LINK            692
+#define SA2_ANIM_EGG_GO_ROUND_PILOT           693
+
+#define SA2_ANIM_EGG_FROG_CABIN          694
+#define SA2_ANIM_EGG_FROG_ARM_PIECE      695
+#define SA2_ANIM_EGG_FROG_ARM_PIECE_LONG 696
+#define SA2_ANIM_EGG_FROG_WHEELS         697
+#define SA2_ANIM_EGG_FROG_BOMB           698
+#define SA2_ANIM_EGG_FROG_BOMB_FLAME     699
+#define SA2_ANIM_EGG_FROG_ARM_SEGMENT    700
+
+#define SA2_ANIM_SUPER_EGG_ROBO_Z_PLATFORM      701
+#define SA2_ANIM_SUPER_EGG_ROBO_Z_PLATFORM_PROP 702
+#define SA2_ANIM_SUPER_EGG_ROBO_Z_ARM_LEFT      703
+#define SA2_ANIM_SUPER_EGG_ROBO_Z_ARM_RIGHT     704
+#define SA2_ANIM_SUPER_EGG_ROBO_Z_HEAD          705
+#define SA2_ANIM_SUPER_EGG_ROBO_Z_PROJ          706
+#define SA2_ANIM_SUPER_EGG_ROBO_Z_CLOUD         707
+
+#define SA2_ANIM_TRUE_AREA_53_BOSS_COCKPIT           708
+#define SA2_ANIM_TRUE_AREA_53_BOSS_SEGMENT_0         709
+#define SA2_ANIM_TRUE_AREA_53_BOSS_SEGMENT_1         710
+#define SA2_ANIM_TRUE_AREA_53_BOSS_SEGMENT_2         711
+#define SA2_ANIM_TRUE_AREA_53_BOSS_CANNON            712
+#define SA2_ANIM_TRUE_AREA_53_BOSS_EXPLOSION         713
+#define SA2_ANIM_TRUE_AREA_53_BOSS_CLOUD             714
+#define SA2_ANIM_TRUE_AREA_53_BOSS_MOUTH             715
+#define SA2_ANIM_TRUE_AREA_53_BOSS_ROCKET            716
+#define SA2_ANIM_TRUE_AREA_53_BOSS_PROJ_YELLOW       717
+#define SA2_ANIM_TRUE_AREA_53_BOSS_SUCK_FX           718
+#define SA2_ANIM_TRUE_AREA_53_BOSS_PROJ_RED          719
+#define SA2_ANIM_TRUE_AREA_53_BOSS_PARTICLE_0        720
+#define SA2_ANIM_TRUE_AREA_53_BOSS_PARTICLE_1        721
+#define SA2_ANIM_TRUE_AREA_53_BOSS_PARTICLE_2        722
+#define SA2_ANIM_TRUE_AREA_53_BOSS_COCKPIT_SEPERATED 723
+
 #define SA2_ANIM_ITEMBOX      724
 #define SA2_ANIM_ITEMBOX_TYPE 725
 
@@ -390,6 +440,8 @@
 #define SA2_ANIM_VARIANT_SCORE_1000 4
 #define TILE_COUNT__ANIM_SCORE      2 // TODO: Automate
 
+#define SA2_ANIM_MULTIPLAYER_UI_RING 729
+
 #define SA2_ANIM_SPECIAL_RING             730
 #define SA2_ANIM_VARIANT_SP_RING__IDLE    0
 #define SA2_ANIM_VARIANT_SP_RING__COLLECT 1
@@ -401,18 +453,16 @@
 #define SA2_ANIM_VARIANT_GAME_OVER_NUE   3
 #define SA2_ANIM_VARIANT_GAME_OVER_TIME  4
 
-#define SA2_ANIM_NOTIFICATION_RING_BONUS                735
-#define SA2_ANIM_CHAR_SELECT_CHARACTER                  736
-#define SA2_ANIM_VARIANT_CHAR_SELECT_CHARACTER_STATIC   0
-#define SA2_ANIM_VARIANT_CHAR_SELECT_CHARACTER_SELECTED 1
-#define SA2_CHAR_SELECT_NUM_CHARACTER_ANIMATIONS        2
-#define SA2_ANIM_VARIANT_SELECT_CHARACTER(character, type)                              \
-    ((character)*SA2_CHAR_SELECT_NUM_CHARACTER_ANIMATIONS + type)
+#define SA2_ANIM_NOTIFICATION_RING_BONUS                   735
+#define SA2_ANIM_CHAR_SELECT_CHARACTER                     736
+#define SA2_ANIM_VARIANT_CHAR_SELECT_CHARACTER_STATIC      0
+#define SA2_ANIM_VARIANT_CHAR_SELECT_CHARACTER_SELECTED    1
+#define SA2_CHAR_SELECT_NUM_CHARACTER_ANIMATIONS           2
+#define SA2_ANIM_VARIANT_SELECT_CHARACTER(character, type) ((character)*SA2_CHAR_SELECT_NUM_CHARACTER_ANIMATIONS + type)
 
 #define SA2_ANIM_CHAR_SELECT_CIRCLE                  737
 #define SA2_ANIM_VARIANT_CHAR_SELECT_CIRCLE_INACTIVE 0
-#define SA2_ANIM_VARIANT_CHAR_SELECT_CIRCLE_ACTIVE                                      \
-    (SA2_ANIM_VARIANT_CHAR_SELECT_CIRCLE_INACTIVE + NUM_CHARACTERS)
+#define SA2_ANIM_VARIANT_CHAR_SELECT_CIRCLE_ACTIVE   (SA2_ANIM_VARIANT_CHAR_SELECT_CIRCLE_INACTIVE + NUM_CHARACTERS)
 
 #define SA2_ANIM_CHAR_SELECT_ARROW                   738
 #define SA2_ANIM_VARIANT_CHAR_SELECT_ARROW_STATIC    0
@@ -421,6 +471,8 @@
 #define SA2_ANIM_CHAR_SELECT_RED_CROSS_BOX 742
 
 #define SA2_ANIM_ZONEX_NAME 762
+
+#define SA2_ANIM_EXTRA_CUTSCENE_CAPSULE 791
 
 // NOTE: Reused from SA1's character selection screen
 #define SA2_ANIM_AMY_UNLOCKED 810
@@ -488,10 +540,39 @@
 #define SA2_ANIM_VARIANT_SP_STAGE_HOLE_2 2
 #define SA2_ANIM_VARIANT_SP_STAGE_HOLE_3 3
 
+#define SA2_ANIM_SP_STAGE_MULTIPLIER            885
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x2 0
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x3 1
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x4 2
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x5 3
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x6 4
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x7 5
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x8 6
+#define SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x9 7
+
 #define SA2_ANIM_SP_STAGE_ARROW                890
 #define SA2_ANIM_VARIANT_SP_STAGE_ARROW_GREEN  0
 #define SA2_ANIM_VARIANT_SP_STAGE_ARROW_YELLOW 1
 #define SA2_ANIM_VARIANT_SP_STAGE_ARROW_RED    2
+
+#define SA2_ANIM_SP_STAGE_NOTIFS                             893
+#define SA2_ANIM_VARIANT_SP_STAGE_NOTIFS_SPECIAL_STAGE       0
+#define SA2_ANIM_VARIANT_SP_STAGE_NOTIFS_GOT_A_CHAOS_EMERALD 1
+#define SA2_ANIM_SP_STAGE_SCORE_BONUSES                      894
+#define SA2_ANIM_VARIANT_SP_STAGE_SCORE_BONUSES_RING         0
+#define SA2_ANIM_VARIANT_SP_STAGE_SCORE_BONUSES_CLEAR        1
+#define SA2_ANIM_VARIANT_SP_STAGE_SCORE_BONUSES_TOTAL        2
+
+#define SA2_ANIM_CHAOS_EMERALDS_UNLOCKED                895
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_RED    0
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_BLUE   1
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_YELLOW 2
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_GREEN  3
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_WHITE  4
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_CYAN   5
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_PURPLE 6
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_EMPTY  7
+#define SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_SHINE  8
 
 #define SA2_ANIM_898 898
 #define SA2_ANIM_899 899
@@ -674,6 +755,7 @@
 #define SA2_ANIM_ASCII            1119
 #define SA2_ANIM_ASCII_FIRST_CHAR '!'
 #define SA2_ANIM_ASCII_YEN        '\\'
+#define SA2_ANIM_ASCII_CHAR(c)    ((c)-SA2_ANIM_ASCII_FIRST_CHAR)
 #define SA2_ANIM_NUM_ASCII_CHARS  94
 
 // Used in Time Attack and stage results screen (/ stage outro)

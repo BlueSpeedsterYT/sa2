@@ -4,7 +4,7 @@
 #include "flags.h"
 #include "trig.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -32,10 +32,9 @@ void CreateStageBg_Zone7(void)
 {
     Background *bg = &gStageBackgroundsRam.unk0;
     const Background *src;
-    gDispCnt = DISPCNT_OBJ_ON | DISPCNT_BG2_ON | DISPCNT_BG1_ON | DISPCNT_OBJ_1D_MAP
-        | DISPCNT_MODE_0;
+    gDispCnt = DISPCNT_OBJ_ON | DISPCNT_BG2_ON | DISPCNT_BG1_ON | DISPCNT_OBJ_1D_MAP | DISPCNT_MODE_0;
 
-    gBgCntRegs[0] = 0x160F;
+    gBgCntRegs[0] = (BGCNT_TXT256x256 | BGCNT_SCREENBASE(22) | BGCNT_16COLOR | BGCNT_PRIORITY(15));
 
     src = gStageCameraBgTemplates;
     memcpy(bg, &src[3], sizeof(Background));
@@ -54,8 +53,7 @@ void CreateStageBg_Zone7(void)
 }
 
 // (98.52%) https://decomp.me/scratch/DUPkY
-NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Inside.inc",
-         void Zone7BgUpdate_Inside(s32 x, s32 y))
+NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Inside.inc", void Zone7BgUpdate_Inside(s32 x, s32 y))
 {
     u16 *dst;
     s32 someX;
@@ -66,12 +64,11 @@ NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Inside.inc",
     u8 r2;
     u8 r5;
 
-    if ((gPlayer.moveState & MOVESTATE_8000000)
-        && (gSpecialRingCount >= SPECIAL_STAGE_REQUIRED_SP_RING_COUNT)) {
+    if ((gPlayer.moveState & MOVESTATE_GOAL_REACHED) && (gSpecialRingCount >= SPECIAL_STAGE_REQUIRED_SP_RING_COUNT)) {
         if (gBgScrollRegs[3][0] == 0)
             gBgScrollRegs[3][0] = x;
 
-        gBgScrollRegs[3][0] += Q_24_8_TO_INT(gPlayer.speedGroundX);
+        gBgScrollRegs[3][0] += I(gPlayer.speedGroundX);
 
         x = gBgScrollRegs[3][0];
     }
@@ -130,8 +127,7 @@ NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Inside.inc",
             dst = gBgOffsetsHBlank;
             dst = ((void *)dst) + (r5 * 4);
 
-            for (lineY = r5, r2 = 0; ((lineY < DISPLAY_HEIGHT) && (r2 < 16));
-                 lineY++, r2++) {
+            for (lineY = r5, r2 = 0; ((lineY < DISPLAY_HEIGHT) && (r2 < 16)); lineY++, r2++) {
                 *dst++ = ip;
                 *dst++ = (240 - r5);
             }
@@ -186,15 +182,13 @@ NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Inside.inc",
             dst = gBgOffsetsHBlank;
             dst = ((void *)dst) + (r5 * 4);
 
-            for (lineY = r5, r2 = 0; ((lineY < DISPLAY_HEIGHT) && (r2 < 32));
-                 lineY++, r2++) {
+            for (lineY = r5, r2 = 0; ((lineY < DISPLAY_HEIGHT) && (r2 < 32)); lineY++, r2++) {
                 *dst++ = ip;
                 *dst++ = 208 - r5;
             }
 
             if (lineY < 80) {
-                for (r1 = (80 - lineY) >> 4, r2 = 0; ((lineY < 160) && (r2 < r1));
-                     lineY++, r2++) {
+                for (r1 = (80 - lineY) >> 4, r2 = 0; ((lineY < 160) && (r2 < r1)); lineY++, r2++) {
                     *dst++ = 0;
                     *dst++ = 168 - r5;
                 }
@@ -246,8 +240,7 @@ END_NONMATCH
 
 // (98.95%) https://decomp.me/scratch/7KDXI
 // (only register alloc issues, logic works as intended)
-NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Outside.inc",
-         void Zone7BgUpdate_Outside(s32 x, s32 y))
+NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Outside.inc", void Zone7BgUpdate_Outside(s32 x, s32 y))
 {
     u16 *lineShiftX;
     u8 frameCount;
@@ -272,15 +265,13 @@ NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Outside.inc",
 #endif
 
     for (i = 0; i < ARRAY_COUNT(sp); i++) {
-        sp[i] = 0xFF
-            & (Q_24_8_TO_INT(gUnknown_080D5C62[(i & 0x7)][0] * gStageTime)
-               + gUnknown_080D5C62[(i & 0x7)][1]);
+        sp[i] = 0xFF & (I(gUnknown_080D5C62[(i & 0x7)][0] * gStageTime) + gUnknown_080D5C62[(i & 0x7)][1]);
     }
 
     {
         u16 sinVal, value;
         u32 cosVal;
-        u32 scrollSpeed = (Q_24_8(80.5) - 1);
+        u32 scrollSpeed = (Q(80.5) - 1);
 
         for (i = 0; i < DISPLAY_HEIGHT / 2; i++) {
             sinVal = SIN_24_8(((gStageTime * 4) + i * 2) & ONE_CYCLE) >> 3;
@@ -291,8 +282,7 @@ NONMATCH("asm/non_matching/game/stage/background/Zone7BgUpdate_Outside.inc",
 
         for (; i < DISPLAY_HEIGHT - 1; i++) {
             sinVal = SIN_24_8(((gStageTime << 2) + i * 2) & ONE_CYCLE) >> 3;
-            cosVal = (COS_24_8((((DISPLAY_HEIGHT - i) * scrollSpeed) >> 5) & ONE_CYCLE)
-                      >> 4);
+            cosVal = (COS_24_8((((DISPLAY_HEIGHT - i) * scrollSpeed) >> 5) & ONE_CYCLE) >> 4);
             value = cosVal + sinVal;
             *lineShiftX++ = (value + sp[(i & 0x1F)]) & 0xFF;
         }

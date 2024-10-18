@@ -48,8 +48,7 @@ static const u16 gUnknown_080E1244[] = {
     TM_STORYFRAME_CREAM_CHEESE_VANILLA_HAPPY,
 };
 
-UNUSED static const u16 gUnknown_080E124E[]
-    = { 56, 0, 828, 0, 78, 0, 828, 1, 60, 0, 828, 2, 96, 0, 828, 3 };
+UNUSED static const u16 gUnknown_080E124E[] = { 56, 0, 828, 0, 78, 0, 828, 1, 60, 0, 828, 2, 96, 0, 828, 3 };
 
 void CreateCreditsCutScene(u8 creditsVariant, u8 b, u8 c)
 {
@@ -68,7 +67,7 @@ void CreateCreditsCutScene(u8 creditsVariant, u8 b, u8 c)
     gUnknown_03002280[0][2] = 0xff;
     gUnknown_03002280[0][3] = 0x20;
 
-    t = TaskCreate(sub_808EBC4, 0x58, 0x3100, 0, TaskDestroy_CreditsCutScene);
+    t = TaskCreate(sub_808EBC4, sizeof(struct CreditsCutScene), 0x3100, 0, TaskDestroy_CreditsCutScene);
 
     // BUG: assigning to null pointer
     scene->unk52 = 0;
@@ -85,11 +84,9 @@ void CreateCreditsCutScene(u8 creditsVariant, u8 b, u8 c)
         scene->unk50 = 0;
     }
 
-    if ((scene->variant == CREDITS_VARIANT_FINAL_ENDING
-         && gLoadedSaveGame->completedCharacters[CHARACTER_AMY])) {
+    if ((scene->variant == CREDITS_VARIANT_FINAL_ENDING && gLoadedSaveGame->completedCharacters[CHARACTER_AMY])) {
         scene->unk4D = 1;
-    } else if (scene->variant == CREDITS_VARIANT_EXTRA_ENDING
-               && gLoadedSaveGame->extraEndingCreditsPlayed) {
+    } else if (scene->variant == CREDITS_VARIANT_EXTRA_ENDING && gLoadedSaveGame->extraEndingCreditsPlayed) {
         scene->unk4D = 2;
     } else {
         scene->unk4D = 0;
@@ -132,7 +129,7 @@ static void sub_808EBC4(void)
     }
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_808EC64;
     }
 }
@@ -144,7 +141,7 @@ static void sub_808EC28(void)
     fade->flags = SCREEN_FADE_FLAG_LIGHTEN;
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_808ED04;
     }
 }
@@ -152,7 +149,6 @@ static void sub_808EC28(void)
 static void sub_808EC64(void)
 {
     struct CreditsCutScene *scene = TASK_DATA(gCurTask);
-    ScreenFade *fade = &scene->unk40;
 
     if (scene->unk4D != 0 && (gPressedKeys & START_BUTTON)) {
         gCurTask->main = sub_808ECB4;
@@ -173,7 +169,7 @@ static void sub_808ECB4(void)
     m4aMPlayFadeOutTemporarily(&gMPlayInfo_BGM, 24);
 
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         CreateCreditsEndCutScene(scene->variant);
         TaskDestroy(gCurTask);
     }

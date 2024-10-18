@@ -4,10 +4,8 @@
 #include "global.h"
 #include "game/entity.h"
 
-void CreateEntity_PipeInstrument_Entry(MapEntity *me, u16 spriteRegionX,
-                                       u16 spriteRegionY, u8 spriteY);
-void CreateEntity_FrenchHorn_Entry(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                   u8 spriteY);
+void CreateEntity_PipeInstrument_Entry(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY);
+void CreateEntity_FrenchHorn_Entry(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY);
 
 typedef struct {
     /* 0x00 */ s32 x0;
@@ -35,12 +33,21 @@ typedef union {
     s32 _32; // Q_24_8?
 } PipeData_Weirdness;
 
-typedef struct {
+typedef struct Pipe_Data {
     u16 unk0;
     u16 unk2;
 
     PipeData_Weirdness unk4;
 
 } Pipe_Data;
+
+extern const Pipe_Data gUnknown_080DFCF0[];
+extern const Pipe_Data gUnknown_080DFD40[];
+extern const Pipe_Data gUnknown_080DFD98[];
+extern const Pipe_Data gUnknown_080DFDD8[];
+extern const Pipe_Data gUnknown_080DFE30[];
+extern const Pipe_Data gUnknown_080DFEE4[];
+extern const Pipe_Data gUnknown_080DFF3C[];
+extern const Pipe_Data gUnknown_080DFF9C[];
 
 #endif // GUARD_INTERACTABLE_PIPE_HORN_H

@@ -11,6 +11,7 @@
 #include "lib/m4a.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -54,13 +55,11 @@ static void sub_807F784(Sprite_FlyingHandle *);
 
 #define FLYING_HANDLE_VRAM_TILES 25
 
-void CreateEntity_FlyingHandle(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                               u8 spriteY)
+void CreateEntity_FlyingHandle(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     u32 i;
     Sprite *s;
-    struct Task *t = TaskCreate(Task_FlyingHandle, sizeof(Sprite_FlyingHandle), 0x2010,
-                                0, TaskDestructor_FlyingHandle);
+    struct Task *t = TaskCreate(Task_FlyingHandle, sizeof(Sprite_FlyingHandle), 0x2010, 0, TaskDestructor_FlyingHandle);
     Sprite_FlyingHandle *flyingHandle = TASK_DATA(t);
     flyingHandle->unk68 = 0;
     flyingHandle->unk5C = 0;
@@ -73,9 +72,8 @@ void CreateEntity_FlyingHandle(MapEntity *me, u16 spriteRegionX, u16 spriteRegio
     flyingHandle->width = flyingHandle->offsetX + me->d.uData[2] * 8;
     flyingHandle->height = flyingHandle->offsetY + me->d.uData[3] * 8;
 
-    flyingHandle->unk44
-        = Q_24_8(((flyingHandle->offsetX + flyingHandle->width) >> 1) + flyingHandle->x);
-    flyingHandle->unk48 = Q_24_8(flyingHandle->y + flyingHandle->height);
+    flyingHandle->unk44 = Q(((flyingHandle->offsetX + flyingHandle->width) >> 1) + flyingHandle->x);
+    flyingHandle->unk48 = Q(flyingHandle->y + flyingHandle->height);
     flyingHandle->unk4C = 0;
     flyingHandle->unk50 = 0;
 
@@ -83,7 +81,7 @@ void CreateEntity_FlyingHandle(MapEntity *me, u16 spriteRegionX, u16 spriteRegio
     flyingHandle->base.regionY = spriteRegionY;
     flyingHandle->base.me = me;
     flyingHandle->base.spriteX = me->x;
-    flyingHandle->base.spriteY = spriteY;
+    flyingHandle->base.id = spriteY;
 
     for (i = 0; i < 3; i++) {
         flyingHandle->unk6C[i][0] = flyingHandle->unk44;
@@ -91,15 +89,15 @@ void CreateEntity_FlyingHandle(MapEntity *me, u16 spriteRegionX, u16 spriteRegio
     }
 
     s = &flyingHandle->s;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
     s->graphics.dest = VramMalloc(FLYING_HANDLE_VRAM_TILES);
     s->graphics.anim = SA2_ANIM_FLYING_HANDLE;
     s->variant = 0;
@@ -121,8 +119,8 @@ static void Task_ActiveMain(void)
     } else if (gPlayer.timerInvulnerability == 120) {
         sub_807F798(flyingHandle);
     } else if (flyingHandle->unk69 == 0) {
-        if (gPlayer.unk5E & gPlayerControls.jump) {
-            if (gPlayer.unk5C & 0x20) {
+        if (gPlayer.frameInput & gPlayerControls.jump) {
+            if (gPlayer.heldInput & 0x20) {
                 flyingHandle->unk64 = 1;
             } else {
                 flyingHandle->unk64 = 0;
@@ -143,7 +141,7 @@ static void Task_ActiveMain(void)
 static void ActivatePlayerGrab(Sprite_FlyingHandle *flyingHandle)
 {
     gPlayer.moveState |= MOVESTATE_400000;
-    gPlayer.unk64 = 55;
+    gPlayer.charState = CHARSTATE_HANGING;
     gPlayer.speedGroundX = 0;
     gPlayer.speedAirX = 0;
     gPlayer.speedAirY = 0;
@@ -163,13 +161,13 @@ static void ActivatePlayerGrab(Sprite_FlyingHandle *flyingHandle)
 static void sub_807F484(Sprite_FlyingHandle *flyingHandle)
 {
     gPlayer.moveState &= ~MOVESTATE_400000;
-    sub_80218E4(&gPlayer);
+    Player_TransitionCancelFlyingAndBoost(&gPlayer);
     sub_8023B5C(&gPlayer, 14);
 
-    gPlayer.unk16 = 6;
-    gPlayer.unk17 = 14;
+    gPlayer.spriteOffsetX = 6;
+    gPlayer.spriteOffsetY = 14;
     gPlayer.moveState &= ~MOVESTATE_4;
-    gPlayer.transition = PLTRANS_PT3;
+    gPlayer.transition = PLTRANS_INIT_JUMP;
     gPlayer.speedGroundX = 0;
     gPlayer.speedAirX = 0;
     gPlayer.speedAirY = 0;
@@ -181,8 +179,7 @@ static void sub_807F484(Sprite_FlyingHandle *flyingHandle)
 static void sub_807F4F0(Sprite_FlyingHandle *flyingHandle)
 {
     if (flyingHandle->unk60 != 0) {
-        if (flyingHandle->unk48 <= Q_24_8(flyingHandle->y + flyingHandle->offsetY)
-            && flyingHandle->unk5E > -1) {
+        if (flyingHandle->unk48 <= Q(flyingHandle->y + flyingHandle->offsetY) && flyingHandle->unk5E > -1) {
             flyingHandle->unk50 = SIN_24_8(flyingHandle->unk68 * 4) * 8;
             flyingHandle->unk68 += 4;
             flyingHandle->unk5E = 0;
@@ -190,14 +187,14 @@ static void sub_807F4F0(Sprite_FlyingHandle *flyingHandle)
             flyingHandle->unk5E += 16;
             flyingHandle->unk5E = MIN(flyingHandle->unk5E, 0x300);
             flyingHandle->unk48 -= flyingHandle->unk5E;
-            if (flyingHandle->unk48 <= Q_24_8(flyingHandle->y + flyingHandle->offsetY)) {
+            if (flyingHandle->unk48 <= Q(flyingHandle->y + flyingHandle->offsetY)) {
                 flyingHandle->unk5E = 0;
-                flyingHandle->unk48 = Q_24_8(flyingHandle->y + flyingHandle->offsetY);
+                flyingHandle->unk48 = Q(flyingHandle->y + flyingHandle->offsetY);
                 flyingHandle->unk68 = -128;
             }
         }
     } else {
-        flyingHandle->unk48 = Q_24_8(flyingHandle->y + flyingHandle->height);
+        flyingHandle->unk48 = Q(flyingHandle->y + flyingHandle->height);
         flyingHandle->unk50 = SIN_24_8(flyingHandle->unk68 * 4) * 8;
         flyingHandle->unk68 += 4;
     }
@@ -207,11 +204,11 @@ static void sub_807F5C0(Sprite_FlyingHandle *flyingHandle)
 {
     Sprite *s = &flyingHandle->s;
     if (IS_MULTI_PLAYER) {
-        s->x = Q_24_8_TO_INT(flyingHandle->unk6C[1][0]) - gCamera.x;
-        s->y = Q_24_8_TO_INT(flyingHandle->unk6C[1][1]) - gCamera.y;
+        s->x = I(flyingHandle->unk6C[1][0]) - gCamera.x;
+        s->y = I(flyingHandle->unk6C[1][1]) - gCamera.y;
     } else {
-        s->x = Q_24_8_TO_INT(flyingHandle->unk44 + flyingHandle->unk4C) - gCamera.x;
-        s->y = Q_24_8_TO_INT(flyingHandle->unk48 + flyingHandle->unk50) - gCamera.y;
+        s->x = I(flyingHandle->unk44 + flyingHandle->unk4C) - gCamera.x;
+        s->y = I(flyingHandle->unk48 + flyingHandle->unk50) - gCamera.y;
     }
 
     UpdateSpriteAnimation(s);
@@ -223,10 +220,10 @@ static bool32 IsPlayerTouching(Sprite_FlyingHandle *flyingHandle)
     if (!PLAYER_IS_ALIVE) {
         return FALSE;
     } else {
-        s16 x = Q_24_8_TO_INT(flyingHandle->unk44 + flyingHandle->unk4C) - gCamera.x;
-        s16 y = Q_24_8_TO_INT(flyingHandle->unk48 + flyingHandle->unk50) - gCamera.y;
-        s16 playerX = (Q_24_8_TO_INT(gPlayer.x) - gCamera.x);
-        s16 playerY = (Q_24_8_TO_INT(gPlayer.y) - gCamera.y);
+        s16 x = I(flyingHandle->unk44 + flyingHandle->unk4C) - gCamera.x;
+        s16 y = I(flyingHandle->unk48 + flyingHandle->unk50) - gCamera.y;
+        s16 playerX = (I(gPlayer.x) - gCamera.x);
+        s16 playerY = (I(gPlayer.y) - gCamera.y);
         s16 dX = x - playerX;
         s16 dY = y - playerY;
         if (dX * dX + dY * dY <= (16 * 16)) {
@@ -281,15 +278,9 @@ static void TaskDestructor_FlyingHandle(struct Task *t)
     VramFree(flyingHandle->s.graphics.dest);
 }
 
-static void sub_807F770(UNUSED Sprite_FlyingHandle *flyingHandle)
-{
-    gCurTask->main = Task_FlyingHandle;
-}
+static void sub_807F770(UNUSED Sprite_FlyingHandle *flyingHandle) { gCurTask->main = Task_FlyingHandle; }
 
-static void sub_807F784(UNUSED Sprite_FlyingHandle *flyingHandle)
-{
-    gCurTask->main = Task_FlyingHandle;
-}
+static void sub_807F784(UNUSED Sprite_FlyingHandle *flyingHandle) { gCurTask->main = Task_FlyingHandle; }
 
 static void sub_807F798(Sprite_FlyingHandle *flyingHandle)
 {
@@ -310,26 +301,23 @@ static void sub_807F7D0(Sprite_FlyingHandle *flyingHandle)
     u32 r1 = player->moveState & MOVESTATE_FACING_LEFT;
 #endif
     if (r1) {
-        player->x = (flyingHandle->unk44 + flyingHandle->unk4C) + Q_24_8(4.0);
-        player->y = (flyingHandle->unk48 + flyingHandle->unk50) + Q_24_8(20.0);
+        player->x = (flyingHandle->unk44 + flyingHandle->unk4C) + Q(4.0);
+        player->y = (flyingHandle->unk48 + flyingHandle->unk50) + Q(20.0);
     } else {
-        player->x = (flyingHandle->unk44 + flyingHandle->unk4C) - Q_24_8(4.0);
-        player->y = (flyingHandle->unk48 + flyingHandle->unk50) + Q_24_8(20.0);
+        player->x = (flyingHandle->unk44 + flyingHandle->unk4C) - Q(4.0);
+        player->y = (flyingHandle->unk48 + flyingHandle->unk50) + Q(20.0);
     }
 }
 
-static void sub_807F818(UNUSED Sprite_FlyingHandle *flyingHandle)
-{
-    m4aSongNumStartOrContinue(SE_291);
-}
+static void sub_807F818(UNUSED Sprite_FlyingHandle *flyingHandle) { m4aSongNumStartOrContinue(SE_291); }
 
 static bool32 ShouldDespawn(Sprite_FlyingHandle *flyingHandle)
 {
     s16 x = flyingHandle->x - gCamera.x;
     s16 y = flyingHandle->y - gCamera.y;
 
-    if (x + flyingHandle->width < -128 || x + flyingHandle->offsetX > 368
-        || y + flyingHandle->height < -128 || y + flyingHandle->offsetY > 288) {
+    if (x + flyingHandle->width < -128 || x + flyingHandle->offsetX > (DISPLAY_WIDTH + 128) || y + flyingHandle->height < -128
+        || y + flyingHandle->offsetY > (DISPLAY_HEIGHT + 128)) {
         return TRUE;
     }
 

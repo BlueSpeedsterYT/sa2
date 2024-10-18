@@ -1,10 +1,12 @@
+#include <string.h> // memset
+
 #include "core.h"
 #include "malloc_vram.h"
 #include "flags.h"
 #include "task.h"
 #include "lib/m4a.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/game_over.h"
 #include "game/time_attack/lobby.h"
@@ -26,15 +28,14 @@ void Task_FadeoutToOverScreen(void);
 
 void CreateGameOverScreen(LostLifeCause lostLifeCause)
 {
-    struct Task *t = TaskCreate(Task_FadeoutToOverScreen, sizeof(GameOverScreenFade),
-                                0x2220, 0, NULL);
+    struct Task *t = TaskCreate(Task_FadeoutToOverScreen, sizeof(GameOverScreenFade), 0x2220, 0, NULL);
     GameOverScreenFade *screen = TASK_DATA(t);
 
     ScreenFade *fade = &screen->unk0;
     fade->window = SCREEN_FADE_USE_WINDOW_1;
-    fade->brightness = Q_24_8(0);
+    fade->brightness = Q(0);
     fade->flags = SCREEN_FADE_FLAG_LIGHTEN;
-    fade->speed = Q_24_8(1. / 4.);
+    fade->speed = Q(1. / 4.);
     fade->bldCnt = (BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
     fade->bldAlpha = 0;
 
@@ -64,7 +65,7 @@ void Task_FadeoutToOverScreen(void)
         TasksDestroyAll();
         gUnknown_03002AE4 = gUnknown_0300287C;
         gUnknown_03005390 = 0;
-        gVramGraphicsCopyCursor = gVramGraphicsCopyQueueIndex;
+        PAUSE_GRAPHICS_QUEUE();
         InitOverScreen(lostLifeCause);
 
         if (lostLifeCause & OVER_CAUSE_ZERO_LIVES) {
@@ -108,11 +109,9 @@ static void InitOverScreen(LostLifeCause lostLifeCause)
     gFlags |= FLAGS_UPDATE_BACKGROUND_PALETTES;
 
     if (lostLifeCause & OVER_CAUSE_ZERO_LIVES) {
-        t = TaskCreate(Task_GameOverScreenMain, sizeof(GameOverScreen), 0x1000, 0,
-                       TaskDestructor_GameOverTimeOverScreen);
+        t = TaskCreate(Task_GameOverScreenMain, sizeof(GameOverScreen), 0x1000, 0, TaskDestructor_GameOverTimeOverScreen);
     } else {
-        t = TaskCreate(Task_TimeOverScreenMain, sizeof(GameOverScreen), 0x1000, 0,
-                       TaskDestructor_GameOverTimeOverScreen);
+        t = TaskCreate(Task_TimeOverScreenMain, sizeof(GameOverScreen), 0x1000, 0, TaskDestructor_GameOverTimeOverScreen);
     }
 
     screen = TASK_DATA(t);
@@ -135,12 +134,12 @@ static void InitOverScreen(LostLifeCause lostLifeCause)
     s->prevVariant = -1;
     s->x = 0;
     s->y = DISPLAY_HEIGHT / 2;
-    s->unk1A = SPRITE_OAM_ORDER(3);
+    s->oamFlags = SPRITE_OAM_ORDER(3);
     s->graphics.size = 0;
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
-    s->unk10 = 0;
+    s->frameFlags = 0;
     UpdateSpriteAnimation(s);
 
     s = &screen->sprOver;
@@ -151,18 +150,18 @@ static void InitOverScreen(LostLifeCause lostLifeCause)
     s->x = 0;
     s->y = DISPLAY_HEIGHT / 2;
     s->graphics.size = 0;
-    s->unk1A = SPRITE_OAM_ORDER(3);
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->oamFlags = SPRITE_OAM_ORDER(3);
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
-    s->unk10 = 0;
+    s->frameFlags = 0;
     UpdateSpriteAnimation(s);
 
     fade = &screen->unk0;
     fade->window = SCREEN_FADE_USE_WINDOW_1;
-    fade->brightness = Q_24_8(0);
+    fade->brightness = Q(0);
     fade->flags = (SCREEN_FADE_FLAG_2 | SCREEN_FADE_FLAG_DARKEN);
-    fade->speed = Q_24_8(2.0);
+    fade->speed = Q(2.0);
     fade->bldCnt = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_OBJ);
     fade->bldAlpha = 0;
 }
@@ -180,21 +179,19 @@ void Task_GameOverScreenMain(void)
 
     if (screen->framesUntilDone == 60) {
         screen->unk0.window = SCREEN_FADE_USE_WINDOW_1;
-        screen->unk0.brightness = Q_24_8(0);
+        screen->unk0.brightness = Q(0);
         screen->unk0.flags = SCREEN_FADE_FLAG_LIGHTEN;
-        screen->unk0.speed = Q_24_8(4.0);
-        screen->unk0.bldCnt
-            = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
+        screen->unk0.speed = Q(4.0);
+        screen->unk0.bldCnt = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
         screen->unk0.bldAlpha = 0;
     }
 
     if (screen->framesUntilDone == 50) {
         screen->unk0.window = SCREEN_FADE_USE_WINDOW_1;
-        screen->unk0.brightness = Q_24_8(0);
+        screen->unk0.brightness = Q(0);
         screen->unk0.flags = (SCREEN_FADE_FLAG_2 | SCREEN_FADE_FLAG_DARKEN);
-        screen->unk0.speed = Q_24_8(4.0);
-        screen->unk0.bldCnt
-            = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
+        screen->unk0.speed = Q(4.0);
+        screen->unk0.bldCnt = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
         screen->unk0.bldAlpha = 0;
     }
 
@@ -211,12 +208,11 @@ void Task_GameOverScreenMain(void)
 
     if (--screen->framesUntilDone == 0) {
         screen->unk0.window = SCREEN_FADE_USE_WINDOW_1;
-        screen->unk0.brightness = Q_24_8(0);
+        screen->unk0.brightness = Q(0);
         screen->unk0.flags = SCREEN_FADE_FLAG_LIGHTEN;
-        screen->unk0.speed = Q_24_8(1. / 4.);
-        screen->unk0.bldCnt
-            = (BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_BD | BLDCNT_TGT1_BG0 | BLDCNT_TGT1_BG1
-               | BLDCNT_TGT1_BG2 | BLDCNT_TGT1_BG3 | BLDCNT_TGT2_ALL);
+        screen->unk0.speed = Q(1. / 4.);
+        screen->unk0.bldCnt = (BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_BD | BLDCNT_TGT1_BG0 | BLDCNT_TGT1_BG1 | BLDCNT_TGT1_BG2
+                               | BLDCNT_TGT1_BG3 | BLDCNT_TGT2_ALL);
         screen->unk0.bldAlpha = 0;
 
         screen->framesUntilDone = 120;
@@ -235,13 +231,12 @@ void sub_80369D8(void)
 
     if (--screen->framesUntilDone == 0) {
         screen->unk0.window = SCREEN_FADE_USE_WINDOW_1;
-        screen->unk0.brightness = Q_24_8(0);
+        screen->unk0.brightness = Q(0);
         screen->unk0.flags = (SCREEN_FADE_FLAG_LIGHTEN);
-        screen->unk0.speed = Q_24_8(1.0);
-        screen->unk0.bldCnt
-            = (BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
+        screen->unk0.speed = Q(1.0);
+        screen->unk0.bldCnt = (BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
         screen->unk0.bldAlpha = 0;
-        memset(gBgPalette, RGB(31, 7, 0), sizeof(gBgPalette));
+        memset(gBgPalette, RGB16(31, 7, 0), sizeof(gBgPalette));
         gFlags |= 0x1;
         gCurTask->main = sub_8036B30;
     }
@@ -261,29 +256,27 @@ void Task_TimeOverScreenMain(void)
 
     if (screen->framesUntilDone == 150) {
         screen->unk0.window = SCREEN_FADE_USE_WINDOW_1;
-        screen->unk0.brightness = Q_24_8(0);
+        screen->unk0.brightness = Q(0);
         screen->unk0.flags = SCREEN_FADE_FLAG_LIGHTEN;
-        screen->unk0.speed = Q_24_8(4.0);
-        screen->unk0.bldCnt
-            = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
+        screen->unk0.speed = Q(4.0);
+        screen->unk0.bldCnt = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
         screen->unk0.bldAlpha = 0;
     }
 
     if (screen->framesUntilDone == 140) {
         screen->unk0.window = SCREEN_FADE_USE_WINDOW_1;
-        screen->unk0.brightness = Q_24_8(0);
+        screen->unk0.brightness = Q(0);
         screen->unk0.flags = (SCREEN_FADE_FLAG_2 | SCREEN_FADE_FLAG_DARKEN);
-        screen->unk0.speed = Q_24_8(2.0);
-        screen->unk0.bldCnt
-            = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
+        screen->unk0.speed = Q(2.0);
+        screen->unk0.bldCnt = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_OBJ);
         screen->unk0.bldAlpha = 0;
     }
 
     if (screen->framesUntilDone == 30) {
         screen->unk0.window = SCREEN_FADE_USE_WINDOW_1;
-        screen->unk0.brightness = Q_24_8(0);
+        screen->unk0.brightness = Q(0);
         screen->unk0.flags = SCREEN_FADE_FLAG_LIGHTEN;
-        screen->unk0.speed = Q_24_8(2.0);
+        screen->unk0.speed = Q(2.0);
         screen->unk0.bldCnt = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_OBJ);
         screen->unk0.bldAlpha = 0;
     }
@@ -294,7 +287,7 @@ void Task_TimeOverScreenMain(void)
         TasksDestroyAll();
         gUnknown_03002AE4 = gUnknown_0300287C;
         gUnknown_03005390 = 0;
-        gVramGraphicsCopyCursor = gVramGraphicsCopyQueueIndex;
+        PAUSE_GRAPHICS_QUEUE();
         gRingCount = 0;
 
         if (gGameMode == GAME_MODE_TIME_ATTACK) {
@@ -331,7 +324,7 @@ void sub_8036B70(void)
         TasksDestroyAll();
         gUnknown_03002AE4 = gUnknown_0300287C;
         gUnknown_03005390 = 0;
-        gVramGraphicsCopyCursor = gVramGraphicsCopyQueueIndex;
+        PAUSE_GRAPHICS_QUEUE();
         CreateTitleScreen();
     } else {
         DisplayOverScreenTextSprites(screen);

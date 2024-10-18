@@ -7,7 +7,7 @@
 #include "game/entity.h"
 #include "game/enemies/bell.h"
 
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "constants/animations.h"
 
@@ -27,8 +27,7 @@ static void sub_8054D20(void);
 
 void CreateEntity_Bell(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_BellMain, sizeof(Sprite_Bell), 0x4080, 0,
-                                TaskDestructor_80095E8);
+    struct Task *t = TaskCreate(Task_BellMain, sizeof(Sprite_Bell), 0x4080, 0, TaskDestructor_80095E8);
     Sprite_Bell *bell = TASK_DATA(t);
     Sprite *s = &bell->s;
     bell->unk4C = 120;
@@ -36,10 +35,10 @@ void CreateEntity_Bell(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 s
     bell->base.regionY = spriteRegionY;
     bell->base.me = me;
     bell->base.spriteX = me->x;
-    bell->base.spriteY = spriteY;
+    bell->base.id = spriteY;
 
-    bell->spawnX = Q_24_8(TO_WORLD_POS(me->x, spriteRegionX));
-    bell->spawnY = Q_24_8(TO_WORLD_POS(me->y, spriteRegionY));
+    bell->spawnX = Q(TO_WORLD_POS(me->x, spriteRegionX));
+    bell->spawnY = Q(TO_WORLD_POS(me->y, spriteRegionY));
 
     s->x = TO_WORLD_POS(me->x, spriteRegionX);
     s->y = TO_WORLD_POS(me->y, spriteRegionY);

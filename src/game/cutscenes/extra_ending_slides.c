@@ -37,7 +37,7 @@ void CreateExtraEndingSlidesCutScene(void)
     gUnknown_03002280[0][2] = 0xFF;
     gUnknown_03002280[0][3] = 0x20;
 
-    t = TaskCreate(sub_8091590, 0x50, 0x3100, 0, sub_8091680);
+    t = TaskCreate(sub_8091590, sizeof(struct ExtraEndingCutSceneSlides), 0x3100, 0, sub_8091680);
     scene = TASK_DATA(t);
 
     scene->unk4C = 0xF0;
@@ -45,8 +45,8 @@ void CreateExtraEndingSlidesCutScene(void)
     fade = &scene->unk40;
     fade->flags = SCREEN_FADE_FLAG_LIGHTEN;
     fade->window = SCREEN_FADE_USE_WINDOW_1;
-    fade->brightness = Q_24_8(0);
-    fade->speed = Q_24_8(0.5);
+    fade->brightness = Q(0);
+    fade->speed = Q(0.5);
     fade->bldCnt = (BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
     fade->bldAlpha = 0;
 
@@ -77,7 +77,7 @@ void sub_8091590(void)
 
     fade->flags = (SCREEN_FADE_FLAG_2 | SCREEN_FADE_FLAG_DARKEN);
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_8091608;
     }
 }
@@ -91,7 +91,7 @@ void sub_80915CC(void)
 
     fade->flags = SCREEN_FADE_FLAG_LIGHTEN;
     if (UpdateScreenFade(fade) == SCREEN_FADE_COMPLETE) {
-        fade->brightness = Q_24_8(0);
+        fade->brightness = Q(0);
         gCurTask->main = sub_8091638;
     }
 }

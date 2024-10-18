@@ -1,11 +1,15 @@
 #ifndef GUARD_STAGE_PLAYER_H
 #define GUARD_STAGE_PLAYER_H
 
-#include "sakit/player.h"
+#include "game/sa1_leftovers/player.h"
 
 // TODO: merge these
 #include "constants/characters.h"
 #include "game/parameters/characters.h"
+
+// In SA2 tricks stop all characters when the buttons are pressed.
+// Set this to TRUE to behave more like SA3.
+#define DISABLE_TRICK_AIR_WAIT !TRUE
 
 // Actual type of 'type8029A28' currently unknown, rename once it is
 typedef s32 type8029A28;
@@ -14,13 +18,13 @@ void Player_SetMovestate_IsInScriptedSequence(void);
 void Player_ClearMovestate_IsInScriptedSequence(void);
 
 void InitializePlayer(Player *p);
-void sub_80218E4(Player *);
-void sub_8023B5C(Player *, s8);
+void Player_TransitionCancelFlyingAndBoost(Player *p);
+void sub_8023B5C(Player *, s32);
 void sub_8023260(Player *);
 void sub_80232D0(Player *);
 void sub_8023610(Player *);
-void PlayerCB_8025318(Player *p);
-void PlayerCB_80261D8(Player *p);
+void Player_TouchGround(Player *p);
+void Player_80261D8(Player *p);
 void sub_8027EF0(Player *p);
 void sub_8028204(Player *p);
 void sub_80282EC(Player *p);
@@ -42,31 +46,33 @@ s32 sub_8029B0C(Player *player, u8 *p1, s32 *out);
 type8029A28 sub_8029A28(Player *player, u8 *p1, type8029A28 *out);
 type8029A28 sub_8029A74(Player *player, u8 *p1, type8029A28 *out);
 
-bool32 sub_8029E6C(Player *);
+bool32 Player_TryJump(Player *);
+bool32 Player_TryAttack(Player *);
 
-#define GET_CHARACTER_ANIM(player)                                                      \
-    (player->anim - gPlayerCharacterIdleAnims[player->character])
+#define GET_CHARACTER_ANIM(player) (player->anim - gPlayerCharacterIdleAnims[player->character])
 
 #define PLAYERFN_SET(proc)          gPlayer.callback = proc;
 #define PLAYERFN_CALL(proc, player) proc(player);
-#define PLAYERFN_SET_AND_CALL(proc, player)                                             \
-    {                                                                                   \
-        PLAYERFN_SET(proc);                                                             \
-        PLAYERFN_CALL(proc, player);                                                    \
+#define PLAYERFN_SET_AND_CALL(proc, player)                                                                                                \
+    {                                                                                                                                      \
+        PLAYERFN_SET(proc);                                                                                                                \
+        PLAYERFN_CALL(proc, player);                                                                                                       \
     }
 
-#define PLAYERFN_SET_SHIFT_OFFSETS(player, x, y)                                        \
-    {                                                                                   \
-        player->unk16 = x;                                                              \
-        player->unk17 = y;                                                              \
+#define PLAYERFN_SET_SHIFT_OFFSETS(player, x, y)                                                                                           \
+    {                                                                                                                                      \
+        player->spriteOffsetX = x;                                                                                                         \
+        player->spriteOffsetY = y;                                                                                                         \
     }
-#define PLAYERFN_CHANGE_SHIFT_OFFSETS(player, x, y)                                     \
-    {                                                                                   \
-        sub_8023B5C(player, y);                                                         \
-        PLAYERFN_SET_SHIFT_OFFSETS(player, x, y)                                        \
+#define PLAYERFN_CHANGE_SHIFT_OFFSETS(player, x, y)                                                                                        \
+    {                                                                                                                                      \
+        sub_8023B5C(player, y);                                                                                                            \
+        PLAYERFN_SET_SHIFT_OFFSETS(player, x, y)                                                                                           \
     }
 
-extern const u16 gUnknown_080D6736[][2];
+// TODO: This is unaligned in-ROM.
+//       Can we somehow change this to be using a struct instead?
+extern const u16 sCharStateAnimInfo[][2];
 extern const AnimId gPlayerCharacterIdleAnims[NUM_CHARACTERS];
 
 #endif // GUARD_STAGE_PLAYER_H

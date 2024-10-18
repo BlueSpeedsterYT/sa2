@@ -7,11 +7,12 @@
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "game/entity.h"
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 #include "sprite.h"
 #include "task.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 #include "constants/zones.h"
@@ -43,12 +44,10 @@ static const TileInfo gUnknown_080D94BC[3] = {
     { 24, SA2_ANIM_603, 3 },
 };
 
-void CreateEntity_BouncySpring(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                               u8 spriteY)
+void CreateEntity_BouncySpring(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     struct Task *t
-        = TaskCreate(Task_Interactable_BouncySpring, sizeof(Sprite_BouncySpring), 0x2010,
-                     0, TaskDestructor_Interactable_BouncySpring);
+        = TaskCreate(Task_Interactable_BouncySpring, sizeof(Sprite_BouncySpring), 0x2010, 0, TaskDestructor_Interactable_BouncySpring);
     Sprite_BouncySpring *spring = TASK_DATA(t);
     Sprite *s = &spring->s;
     u32 variant = 0;
@@ -57,7 +56,7 @@ void CreateEntity_BouncySpring(MapEntity *me, u16 spriteRegionX, u16 spriteRegio
     spring->base.regionY = spriteRegionY;
     spring->base.me = me;
     spring->base.spriteX = me->x;
-    spring->base.spriteY = spriteY;
+    spring->base.id = spriteY;
 
     s->x = TO_WORLD_POS(me->x, spriteRegionX);
     s->y = TO_WORLD_POS(me->y, spriteRegionY);
@@ -77,15 +76,15 @@ void CreateEntity_BouncySpring(MapEntity *me, u16 spriteRegionX, u16 spriteRegio
         s->variant = variant;
     }
 
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = FALSE;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
 }
 
 static void Task_Interactable_BouncySpring()
@@ -120,11 +119,11 @@ static void Task_Interactable_BouncySpring()
 
             gPlayer.unk36 = 3;
 
-            sub_80218E4(&gPlayer);
+            Player_TransitionCancelFlyingAndBoost(&gPlayer);
             sub_8023B5C(&gPlayer, 14);
 
-            gPlayer.unk16 = 6;
-            gPlayer.unk17 = 14;
+            gPlayer.spriteOffsetX = 6;
+            gPlayer.spriteOffsetY = 14;
 
             gPlayer.moveState = (gPlayer.moveState | MOVESTATE_IN_AIR) & ~MOVESTATE_100;
 
@@ -142,9 +141,9 @@ static void Task_Interactable_BouncySpring()
                 spring->s.prevVariant = -1;
             }
 
-            gPlayer.unk64 = 38;
+            gPlayer.charState = CHARSTATE_SPRING_B;
             gPlayer.transition = PLTRANS_PT7;
-            gPlayer.unk66 = -1;
+            gPlayer.prevCharState = CHARSTATE_INVALID;
 
             m4aSongNumStart(SE_SPRINGY_SPRING);
 

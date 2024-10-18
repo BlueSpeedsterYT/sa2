@@ -3,7 +3,7 @@
 #include "malloc_vram.h"
 #include "task.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -21,8 +21,7 @@ void TaskDestructor_SpindashDustEffect(struct Task *);
 
 struct Task *CreateSpindashDustEffect()
 {
-    struct Task *t = TaskCreate(Task_SpindashDustEffect, sizeof(DustEffect), 0x4001, 0,
-                                TaskDestructor_SpindashDustEffect);
+    struct Task *t = TaskCreate(Task_SpindashDustEffect, sizeof(DustEffect), 0x4001, 0, TaskDestructor_SpindashDustEffect);
 
     DustEffect *sde = TASK_DATA(t);
     Sprite *s = &sde->s;
@@ -31,11 +30,11 @@ struct Task *CreateSpindashDustEffect()
     s->graphics.anim = SA2_ANIM_SPINDASH_DUST_EFFECT;
     s->variant = 0;
     s->prevVariant = -1;
-    s->unk1A = SPRITE_OAM_ORDER(8);
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->oamFlags = SPRITE_OAM_ORDER(8);
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
-    s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
 
     return t;
 }
@@ -46,15 +45,14 @@ void Task_SpindashDustEffect(void)
     Player *p = &gPlayer;
     s32 offY;
 
-    if (p->spriteTask == NULL
-        || (p->moveState & (MOVESTATE_400 | MOVESTATE_DEAD)) != MOVESTATE_400) {
+    if (p->spriteTask == NULL || (p->moveState & (MOVESTATE_400 | MOVESTATE_DEAD)) != MOVESTATE_400) {
         TaskDestroy(gCurTask);
         return;
     } else {
         DustEffect *sde = TASK_DATA(gCurTask);
         Sprite *s = &sde->s;
 
-        if (p->spindashAccel > Q_24_8(2.0)) {
+        if (p->spindashAccel > Q(2.0)) {
             s->graphics.anim = SA2_ANIM_SPINDASH_DUST_EFFECT_BIG;
             s->variant = 0;
             s->prevVariant = -1;
@@ -62,7 +60,7 @@ void Task_SpindashDustEffect(void)
         }
 
         cam = &gCamera;
-        offY = p->unk17;
+        offY = p->spriteOffsetY;
 
         if (GRAVITY_IS_INVERTED) {
             offY = -offY;
@@ -71,23 +69,23 @@ void Task_SpindashDustEffect(void)
         if (IS_MULTI_PLAYER) {
             struct Task *t = gMultiplayerPlayerTasks[SIO_MULTI_CNT->id];
             MultiplayerPlayer *mpp = TASK_DATA(t);
-            s->x = (mpp->unk50 - cam->x);
-            s->y = ((mpp->unk52 + offY) - cam->y);
+            s->x = (mpp->pos.x - cam->x);
+            s->y = ((mpp->pos.y + offY) - cam->y);
         } else {
-            s->x = Q_24_8_TO_INT(p->x) - cam->x;
-            s->y = (Q_24_8_TO_INT(p->y) + offY) - cam->y;
+            s->x = I(p->x) - cam->x;
+            s->y = (I(p->y) + offY) - cam->y;
         }
 
         if (!(p->moveState & MOVESTATE_FACING_LEFT)) {
-            s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+            s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
         } else {
-            s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+            s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
         }
 
         if (GRAVITY_IS_INVERTED) {
-            s->unk10 |= SPRITE_FLAG_MASK_Y_FLIP;
+            s->frameFlags |= SPRITE_FLAG_MASK_Y_FLIP;
         } else {
-            s->unk10 &= ~SPRITE_FLAG_MASK_Y_FLIP;
+            s->frameFlags &= ~SPRITE_FLAG_MASK_Y_FLIP;
         }
 
         UpdateSpriteAnimation(s);
@@ -101,15 +99,14 @@ void Task_SpindashDustEffectBig(void)
     Player *p = &gPlayer;
     s32 offY;
 
-    if (p->spriteTask == NULL
-        || (p->moveState & (MOVESTATE_400 | MOVESTATE_DEAD)) != MOVESTATE_400) {
+    if (p->spriteTask == NULL || (p->moveState & (MOVESTATE_400 | MOVESTATE_DEAD)) != MOVESTATE_400) {
         TaskDestroy(gCurTask);
         return;
     } else {
         DustEffect *sde = TASK_DATA(gCurTask);
         Sprite *s = &sde->s;
 
-        if (p->spindashAccel <= Q_24_8(2.0)) {
+        if (p->spindashAccel <= Q(2.0)) {
             s->graphics.anim = SA2_ANIM_SPINDASH_DUST_EFFECT;
             s->variant = 0;
             s->prevVariant = -1;
@@ -117,7 +114,7 @@ void Task_SpindashDustEffectBig(void)
         }
 
         cam = &gCamera;
-        offY = p->unk17;
+        offY = p->spriteOffsetY;
 
         if (GRAVITY_IS_INVERTED) {
             offY = -offY;
@@ -126,23 +123,23 @@ void Task_SpindashDustEffectBig(void)
         if (IS_MULTI_PLAYER) {
             struct Task *t = gMultiplayerPlayerTasks[SIO_MULTI_CNT->id];
             MultiplayerPlayer *mpp = TASK_DATA(t);
-            s->x = (mpp->unk50 - cam->x);
-            s->y = ((mpp->unk52 + offY) - cam->y);
+            s->x = (mpp->pos.x - cam->x);
+            s->y = ((mpp->pos.y + offY) - cam->y);
         } else {
-            s->x = Q_24_8_TO_INT(p->x) - cam->x;
-            s->y = (Q_24_8_TO_INT(p->y) + offY) - cam->y;
+            s->x = I(p->x) - cam->x;
+            s->y = (I(p->y) + offY) - cam->y;
         }
 
         if (!(p->moveState & MOVESTATE_FACING_LEFT)) {
-            s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+            s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
         } else {
-            s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+            s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
         }
 
         if (GRAVITY_IS_INVERTED) {
-            s->unk10 |= SPRITE_FLAG_MASK_Y_FLIP;
+            s->frameFlags |= SPRITE_FLAG_MASK_Y_FLIP;
         } else {
-            s->unk10 &= ~SPRITE_FLAG_MASK_Y_FLIP;
+            s->frameFlags &= ~SPRITE_FLAG_MASK_Y_FLIP;
         }
 
         UpdateSpriteAnimation(s);

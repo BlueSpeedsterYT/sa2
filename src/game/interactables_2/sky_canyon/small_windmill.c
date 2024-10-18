@@ -1,3 +1,5 @@
+#include <stdlib.h> // abs
+
 #include "core.h"
 #include "sprite.h"
 #include "malloc_vram.h"
@@ -9,6 +11,7 @@
 #include "lib/m4a.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -37,12 +40,10 @@ static void RenderWindmill(Sprite_SmallWindmill *);
 static void Despawn(Sprite_SmallWindmill *);
 static void ResetWindmill(Sprite_SmallWindmill *);
 
-void CreateEntity_SmallWindmill(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                                u8 spriteY)
+void CreateEntity_SmallWindmill(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t
-        = TaskCreate(Task_SmallSpinnyWindmill, 0x48, 0x2010, 0,
-                     TaskDestructor_Interactable_SkyCanyon_SmallSpinnyWindmill);
+    struct Task *t = TaskCreate(Task_SmallSpinnyWindmill, sizeof(Sprite_SmallWindmill), 0x2010, 0,
+                                TaskDestructor_Interactable_SkyCanyon_SmallSpinnyWindmill);
     Sprite_SmallWindmill *windmill = TASK_DATA(t);
     Sprite *s;
     windmill->type = me->d.uData[0];
@@ -54,18 +55,18 @@ void CreateEntity_SmallWindmill(MapEntity *me, u16 spriteRegionX, u16 spriteRegi
     windmill->base.regionY = spriteRegionY;
     windmill->base.me = me;
     windmill->base.spriteX = me->x;
-    windmill->base.spriteY = spriteY;
+    windmill->base.id = spriteY;
 
     s = &windmill->s;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
     s->animSpeed = 16;
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
     s->graphics.dest = VramMalloc(WINDMILL_NUM_TILES);
     s->graphics.anim = SA2_ANIM_SMALL_WINDMILL;
     s->variant = 2;
@@ -80,7 +81,7 @@ static void StartSpinSequence(Sprite_SmallWindmill *windmill)
     s8 spriteX;
     Player_SetMovestate_IsInScriptedSequence();
     gPlayer.moveState |= MOVESTATE_400000;
-    gPlayer.unk64 = 4;
+    gPlayer.charState = CHARSTATE_SPIN_ATTACK;
     m4aSongNumStart(SE_SPIN_ATTACK);
     switch (windmill->initialTouchAngle) {
         case 1:
@@ -102,10 +103,8 @@ static void StartSpinSequence(Sprite_SmallWindmill *windmill)
     }
 
     windmill->rotation = windmill->rotationTarget;
-    gPlayer.x = COS_24_8(windmill->rotationTarget * 4) * PLAYER_SPIN_DIAMETER
-        + Q_24_8(windmill->x);
-    gPlayer.y = SIN_24_8(windmill->rotationTarget * 4) * PLAYER_SPIN_DIAMETER
-        + Q_24_8(windmill->y);
+    gPlayer.x = COS_24_8(windmill->rotationTarget * 4) * PLAYER_SPIN_DIAMETER + Q(windmill->x);
+    gPlayer.y = SIN_24_8(windmill->rotationTarget * 4) * PLAYER_SPIN_DIAMETER + Q(windmill->y);
 
     switch (windmill->initialTouchAngle) {
         case 1:
@@ -140,28 +139,28 @@ static void HandleRotationComplete(Sprite_SmallWindmill *windmill)
         switch (windmill->initialTouchAngle) {
             case 2:
                 gPlayer.moveState |= MOVESTATE_FACING_LEFT;
-                gPlayer.speedAirX = -Q_24_8(8);
+                gPlayer.speedAirX = -Q(8);
                 gPlayer.speedAirY = 0;
                 break;
             case 1:
             case 4:
                 gPlayer.speedAirX = 0;
-                gPlayer.speedAirY = -Q_24_8(8);
+                gPlayer.speedAirY = -Q(8);
                 break;
             case 5:
                 gPlayer.moveState |= MOVESTATE_FACING_LEFT;
-                gPlayer.speedAirX = -Q_24_8(8);
+                gPlayer.speedAirX = -Q(8);
                 gPlayer.speedAirY = 0;
                 break;
             case 6:
             case 7:
                 gPlayer.speedAirX = 0;
-                gPlayer.speedAirY = Q_24_8(8);
+                gPlayer.speedAirY = Q(8);
                 break;
             case 3:
             case 8:
                 gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
-                gPlayer.speedAirX = Q_24_8(8);
+                gPlayer.speedAirX = Q(8);
                 gPlayer.speedAirY = 0;
                 break;
         }
@@ -188,10 +187,8 @@ static bool32 RotateWindmill(Sprite_SmallWindmill *windmill)
     }
 
     if (PLAYER_IS_ALIVE) {
-        gPlayer.x = COS_24_8(windmill->rotation * 4) * PLAYER_SPIN_DIAMETER
-            + Q_24_8(windmill->x);
-        gPlayer.y = SIN_24_8(windmill->rotation * 4) * PLAYER_SPIN_DIAMETER
-            + Q_24_8(windmill->y);
+        gPlayer.x = COS_24_8(windmill->rotation * 4) * PLAYER_SPIN_DIAMETER + Q(windmill->x);
+        gPlayer.y = SIN_24_8(windmill->rotation * 4) * PLAYER_SPIN_DIAMETER + Q(windmill->y);
     }
 
     return windmill->rotation == windmill->rotationTarget;
@@ -202,8 +199,8 @@ static u32 GetPlayerTouchingAngle(Sprite_SmallWindmill *windmill)
     if (PLAYER_IS_ALIVE) {
         s16 x = windmill->x - gCamera.x;
         s16 y = windmill->y - gCamera.y;
-        s16 playerX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-        s16 playerY = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+        s16 playerX = I(gPlayer.x) - gCamera.x;
+        s16 playerY = I(gPlayer.y) - gCamera.y;
 
         s16 dX = (x - playerX);
         s16 dY = (y - playerY);
@@ -278,8 +275,8 @@ static void Task_RotateSequence(void)
         HandleRotationComplete(windmill);
     }
 
-    if (s->unk10 & 0x4000) {
-        s->unk10 &= ~0x4000;
+    if (s->frameFlags & 0x4000) {
+        s->frameFlags &= ~0x4000;
         s->prevAnim = -1;
         s->prevVariant = -1;
     }
@@ -291,8 +288,8 @@ static void SlowWindmillToStop(void)
     Sprite_SmallWindmill *windmill = TASK_DATA(gCurTask);
     Sprite *s = &windmill->s;
 
-    if (s->unk10 & 0x4000) {
-        s->unk10 &= ~0x4000;
+    if (s->frameFlags & 0x4000) {
+        s->frameFlags &= ~0x4000;
         s->prevAnim = -1;
         s->prevVariant = -1;
 
@@ -326,9 +323,9 @@ static void RenderWindmill(Sprite_SmallWindmill *windmill)
     UpdateSpriteAnimation(s);
     s->x = windmill->x - gCamera.x;
     s->y = windmill->y - gCamera.y;
-    s->unk10 &= ~0xC00;
+    s->frameFlags &= ~(SPRITE_FLAG(X_FLIP, 1) | SPRITE_FLAG(Y_FLIP, 1));
     DisplaySprite(s);
-    s->unk10 |= 0xC00;
+    s->frameFlags |= (SPRITE_FLAG(X_FLIP, 1) | SPRITE_FLAG(Y_FLIP, 1));
     DisplaySprite(s);
 }
 
@@ -336,7 +333,8 @@ static bool32 ShouldDespawn(Sprite_SmallWindmill *windmill)
 {
     s16 x = windmill->x - gCamera.x;
     s16 y = windmill->y - gCamera.y;
-    if (x < -160 || x > 400 || (y + 0x20) < -128 || (y - 0x20) > 288) {
+
+    if (((x + 32) < -128) || ((x - 32) > (DISPLAY_WIDTH + 128)) || ((y + 32) < -128) || ((y - 32) > (DISPLAY_HEIGHT + 128))) {
         return TRUE;
     }
 

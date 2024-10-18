@@ -1,3 +1,4 @@
+#include <stdlib.h> // abs()
 #include <string.h>
 
 #include "global.h"
@@ -67,37 +68,303 @@ typedef struct {
     s16 y;
 } Unknown;
 
+NONMATCH("asm/non_matching/engine/unused_sub_8005C54.inc", void sub_8005C54()) { }
+END_NONMATCH
+
+NONMATCH("asm/non_matching/engine/unused_sub_8005FB4.inc", void sub_8005FB4()) { }
+END_NONMATCH
+
+// Almost identical to sub_80064A8
+// (99%) https://decomp.me/scratch/78CWY
+NONMATCH("asm/non_matching/engine/sub_8006228.inc", void sub_8006228(u8 bg, u8 param1, u8 param2, u8 param3, u8 param4, u8 param5))
+{
+    int_vcount *cursor;
+    s16 r1, r2, r4, r5, r7, r8;
+
+    gFlags |= FLAGS_4;
+
+    if (bg >= 2) {
+        gUnknown_03002A80 = 4;
+
+        if (bg & 1) {
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[2];
+            gUnknown_03002878 = (void *)&REG_WIN0H;
+        } else {
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
+            gUnknown_03002878 = (void *)&REG_WIN0H;
+        }
+    } else {
+        gUnknown_03002A80 = 2;
+        cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
+
+        if (bg & 1) {
+            gUnknown_03002878 = (void *)&REG_WIN1H;
+        } else {
+            gUnknown_03002878 = (void *)&REG_WIN0H;
+        }
+    }
+
+    r1 = (param3 - param1);
+    r4 = (param4 - param2);
+    r5 = (param4 - param2);
+
+    r2 = r1;
+    r8 = ABS(r2) * 2;
+
+    // _080062EA
+    r4 = ABS(r4);
+    r7 = (r4 * 2);
+    cursor += (gUnknown_03002A80 * param2);
+
+    // _08006302
+
+    if (ABS(r2) > ABS(r1)) {
+        // _0800630A+8
+        r4 = -r2;
+
+        if (r2 > 0) {
+            cursor[1] = param5;
+
+            for (r2 = 0; r2 < ABS(r1); r2++) {
+                param1++;
+                r4 += r7;
+
+                if (r4 >= 0) {
+                    r4 = ((r4 << 16) >> 16) - r8;
+                    cursor[0] = param1;
+                    cursor += gUnknown_03002A80;
+                    cursor[1] = param5;
+                }
+            }
+            cursor[0] = param1;
+        } else {
+            cursor[0] = param1;
+            cursor++;
+
+            for (r2 = 0; r2 < ABS(r1); r2++) {
+                param1--;
+                r4 += r7;
+
+                if (r4 >= 0) {
+                    r4 -= r8;
+                    *cursor = param5;
+                    cursor = (cursor + gUnknown_03002A80) - 1;
+                    *cursor = param1;
+#ifndef NON_MATCHING
+                    asm("" : "=r"(cursor));
+#endif
+                    cursor++;
+                }
+            }
+            *cursor = param5;
+        }
+
+    } else {
+        r4 = -r1;
+        // _080063DC
+        if (r2 > 0) {
+            for (r2 = 0; r2 < ABS(r5); r2++) {
+                // _080063F6
+                *cursor = param1 + 1;
+                cursor++;
+                *cursor = param5;
+                cursor = (cursor + gUnknown_03002A80) - 1;
+
+                r4 += r8;
+
+                if (r4 >= 0) {
+                    param1++;
+                    r4 -= r7;
+                }
+            }
+        } else {
+            // _08006450
+            for (r2 = 0; r2 < ABS(r5); r2++) {
+                *cursor = param1 + 1;
+                cursor++;
+                *cursor = param5;
+
+                cursor = (cursor + gUnknown_03002A80) - 1;
+
+                r4 += r8;
+
+                if (r4 >= 0) {
+                    param1--;
+                    r4 -= r7;
+                }
+            }
+        }
+    }
+}
+END_NONMATCH
+
+// Almost identical to sub_8006228
+// (99.04%) https://decomp.me/scratch/oriiw
+NONMATCH("asm/non_matching/engine/sub_80064A8.inc", void sub_80064A8(u8 bg, u8 param1, u8 param2, u8 param3, u8 param4, u8 param5))
+{
+    int_vcount *cursor;
+    s16 r1, r2, r4, r5, r7, r8;
+
+    gFlags |= FLAGS_4;
+
+    if (bg >= 2) {
+        gUnknown_03002A80 = 4;
+
+        if (bg & 1) {
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[2];
+            gUnknown_03002878 = (void *)&REG_WIN0H;
+        } else {
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
+            gUnknown_03002878 = (void *)&REG_WIN0H;
+        }
+    } else {
+        gUnknown_03002A80 = 2;
+        cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
+
+        if (bg & 1) {
+            gUnknown_03002878 = (void *)&REG_WIN1H;
+        } else {
+            gUnknown_03002878 = (void *)&REG_WIN0H;
+        }
+    }
+
+    r1 = (param3 - param1);
+    r4 = (param4 - param2);
+    r5 = (param4 - param2);
+
+    r2 = r1;
+    r8 = ABS(r2) * 2;
+
+    r4 = ABS(r4);
+    r7 = (r4 * 2);
+    cursor += (gUnknown_03002A80 * param2);
+
+    if (ABS(r2) > ABS(r1)) {
+        r4 = -r2;
+
+        if (r2 > 0) {
+            cursor[1] = param1;
+
+            for (r2 = 0; r2 < ABS(r1); r2++) {
+                param1++;
+                r4 += r7;
+
+                if (r4 >= 0) {
+                    r4 = ((r4 << 16) >> 16) - r8;
+                    cursor[0] = param5;
+                    cursor += gUnknown_03002A80;
+                    cursor[1] = param1;
+                }
+            }
+            cursor[0] = param5;
+        } else {
+            cursor[0] = param5;
+            cursor++;
+
+            for (r2 = 0; r2 < ABS(r1); r2++) {
+                param1--;
+                r4 += r7;
+
+                if (r4 >= 0) {
+                    r4 -= r8;
+                    *cursor = param1;
+                    cursor = (cursor + gUnknown_03002A80) - 1;
+                    *cursor = param5;
+#ifndef NON_MATCHING
+                    asm("" : "=r"(cursor));
+#endif
+                    cursor++;
+                }
+            }
+            *cursor = param1;
+        }
+
+    } else {
+        r4 = -r1;
+        if (r2 > 0) {
+            for (r2 = 0; r2 < ABS(r5); r2++) {
+                *cursor = param5;
+                cursor++;
+                *cursor = param1;
+                cursor = (cursor + gUnknown_03002A80) - 1;
+
+                r4 += r8;
+
+                if (r4 >= 0) {
+                    param1++;
+                    r4 -= r7;
+                }
+            }
+        } else {
+            for (r2 = 0; r2 < ABS(r5); r2++) {
+                *cursor = param5;
+                cursor++;
+                *cursor = param1;
+
+                cursor = (cursor + gUnknown_03002A80) - 1;
+
+                r4 += r8;
+
+                if (r4 >= 0) {
+                    param1--;
+                    r4 -= r7;
+                }
+            }
+        }
+    }
+}
+END_NONMATCH
+
+NONMATCH("asm/non_matching/engine/unused_sub_800672C.inc", void sub_800672C()) { }
+END_NONMATCH
+
+NONMATCH("asm/non_matching/engine/unused_sub_8006DB4.inc", void sub_8006DB4()) { }
+END_NONMATCH
+
 // When this function is called, the background layer that is
 // "lightened" by spot lights is fully lit.
 // This function filters out all non-lit parts to display them normally.
 // TODO: validate type of param1!
 // (80.10%) https://decomp.me/scratch/8wQzE
-NONMATCH("asm/non_matching/engine/sub_800724C.inc",
-         void sub_800724C(u8 bg, TriParam1 *param1))
+NONMATCH("asm/non_matching/engine/sub_800724C.inc", void sub_800724C(u8 bg, TriParam1 *param1))
 {
     Unknown *u;
     Unknown sp00[5];
     Unknown *pSp0;
-    u8 *cursor, *cursor2;
+    int_vcount *cursor, *cursor2;
+#ifndef NON_MATCHING
     register u32 r0 asm("r0");
     register u32 r1 asm("r1");
     register u32 r2 asm("r2");
     register u16 sb asm("sb");
     register u16 r4 asm("r4");
     register u32 r7 asm("r7");
+#else
+    u32 r0;
+    u32 r1;
+    u32 r2;
+    u16 sb;
+    u16 r4;
+    u32 r7;
+#endif
     int_vcount sp14[2]; // TODO: type might be inaccurate? Find out whether this is
                         // display resolutions
     u32 sp18;
     u8 a, b;
     s32 temp;
     s16 *sp;
+
+#ifndef NON_MATCHING
     register Unknown *ip asm("ip");
+#else
+    Unknown *ip;
+#endif
 
     pSp0 = &sp00[1];
     memcpy(pSp0, &gUnknown_080984F4, sizeof(sp00[1]));
-    cursor = (u8 *)&sp00[3];
+    cursor = (int_vcount *)&sp00[3];
     memset(cursor, 0, sizeof(sp00[3]));
-    cursor2 = (u8 *)&sp00[4];
+    cursor2 = (int_vcount *)&sp00[4];
     memset(cursor2, 0, sizeof(sp00[4]));
 
     gFlags |= FLAGS_4;
@@ -106,15 +373,15 @@ NONMATCH("asm/non_matching/engine/sub_800724C.inc",
         gUnknown_03002A80 = 4;
 
         if (bg & 1) {
-            cursor = &((u8 *)gBgOffsetsHBlank)[2];
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[2];
             gUnknown_03002878 = (void *)&REG_WIN0H;
         } else {
-            cursor = &((u8 *)gBgOffsetsHBlank)[0];
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
             gUnknown_03002878 = (void *)&REG_WIN0H;
         }
     } else {
         gUnknown_03002A80 = 2;
-        cursor = &((u8 *)gBgOffsetsHBlank)[0];
+        cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
 
         if (bg & 1) {
             gUnknown_03002878 = (void *)&REG_WIN1H;
@@ -243,7 +510,11 @@ NONMATCH("asm/non_matching/engine/sub_800724C.inc",
         Unknown *sp2;
         Unknown *sp3;
         Unknown *sp4;
+#ifndef NON_MATCHING
         register Unknown *r6 asm("r6");
+#else
+        Unknown *r6;
+#endif
         // _080074E0
         cursor[0] = sp14[1];
         cursor[1] = sp14[0];
@@ -300,6 +571,7 @@ NONMATCH("asm/non_matching/engine/sub_800724C.inc",
 }
 END_NONMATCH
 
+// TODO: param2 might be horizontal
 void sub_80075D0(u8 bg, u8 param1, u8 param2, s16 param3, u16 param4, u16 param5)
 {
     int_vcount *cursor;
@@ -312,15 +584,15 @@ void sub_80075D0(u8 bg, u8 param1, u8 param2, s16 param3, u16 param4, u16 param5
         gUnknown_03002A80 = 4;
 
         if (bg & 1) {
-            cursor = &((u8 *)gBgOffsetsHBlank)[2];
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[2];
             gUnknown_03002878 = (void *)&REG_WIN0H;
         } else {
-            cursor = &((u8 *)gBgOffsetsHBlank)[0];
+            cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
             gUnknown_03002878 = (void *)&REG_WIN0H;
         }
     } else {
         gUnknown_03002A80 = 2;
-        cursor = &((u8 *)gBgOffsetsHBlank)[0];
+        cursor = &((int_vcount *)gBgOffsetsHBlank)[0];
 
         if (bg & 1) {
             gUnknown_03002878 = (void *)&REG_WIN1H;
@@ -376,8 +648,8 @@ void sub_80075D0(u8 bg, u8 param1, u8 param2, s16 param3, u16 param4, u16 param5
     }
 }
 
-void sub_8007738(u8 bg, int_vcount minY, int_vcount maxY, u16 param3, u8 param4,
-                 u8 param5, u16 param6, u8 param7, u8 param8, s16 param9, s16 param10)
+void sub_8007738(u8 bg, int_vcount minY, int_vcount maxY, u16 param3, u8 param4, u8 param5, u16 param6, u8 param7, u8 param8, s16 param9,
+                 s16 param10)
 {
     u16 *cursor;
 
@@ -427,8 +699,6 @@ void sub_8007858(u8 param0, int_vcount minY, int_vcount maxY, u16 param3, u16 pa
 
 void sub_80078D4(u8 bg, int_vcount minY, int_vcount maxY, u16 offsetEven, u16 offsetOdd)
 {
-    u16 *cursor;
-    u32 fillSize;
     s32 fillVal;
 
     gFlags |= FLAGS_4;
@@ -443,8 +713,7 @@ void sub_80078D4(u8 bg, int_vcount minY, int_vcount maxY, u16 offsetEven, u16 of
     }
 }
 
-void sub_8007958(u8 bg, int_vcount minY, int_vcount maxY, s16 param3, s8 param4,
-                 u16 param5, u16 param6)
+void sub_8007958(u8 bg, int_vcount minY, int_vcount maxY, s16 param3, s8 param4, u16 param5, u16 param6)
 {
     u16 *cursor;
 
@@ -459,7 +728,7 @@ void sub_8007958(u8 bg, int_vcount minY, int_vcount maxY, s16 param3, s8 param4,
         *cursor = (param3 + param5) & 0x1FF;
         cursor++;
         *cursor = param6;
-        *cursor++;
+        cursor++;
 
         param3 = -(param3 + param4);
         param4 = -param4;
@@ -544,11 +813,10 @@ void sub_8007AC0(u8 affineBg, int_vcount minY, int_vcount maxY)
     cursor = &((u16 *)gBgOffsetsHBlank)[minY];
 
 #ifdef NON_MATCHING
-    assert(affineBg < NUM_AFFINE_BACKGROUNDS)
+    // assert(affineBg < NUM_AFFINE_BACKGROUNDS);
 #endif
 
-        affine
-        = gBgAffineRegs[affineBg].pa;
+    affine = gBgAffineRegs[affineBg].pa;
 
     while (minY < maxY) {
         *cursor = affine + ((maxY - minY) * 4);

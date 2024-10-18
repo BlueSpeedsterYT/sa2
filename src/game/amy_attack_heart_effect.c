@@ -3,13 +3,14 @@
 #include "malloc_vram.h"
 #include "task.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "game/amy_attack_heart_effect.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 
 typedef struct {
     /* 0x00 */ s32 x;
@@ -20,8 +21,8 @@ typedef struct {
 } AmyHeartParams; /* size: 0x10 */
 
 typedef struct {
-    /* 0x000 */ Sprite sprHearts[AMY_ATTACK_HEART_COUNT];
-    /* 0x0C0 */ AmyHeartParams params[AMY_ATTACK_HEART_COUNT];
+    /* 0x000 */ Sprite sprHearts[AMY_ATTACK_HEART_SPRITE_COUNT];
+    /* 0x0C0 */ AmyHeartParams params[AMY_ATTACK_HEART_SPRITE_COUNT];
     /* 0x100 */ u16 unk100;
     /* 0x102 */ u16 unk102;
     /* 0x104 */ u16 kind;
@@ -35,8 +36,8 @@ void sub_8015E28(u16);
 void TaskDestructor_8015FF0(struct Task *);
 
 ALIGNED(4)
-const s16 sHeartOffsets[4][8][3] = {
-    [AMY_ATTACK_EFFECT_KIND_A] = {
+const s16 sHeartOffsets[AMY_HEART_PATTERN_COUNT][8][3] = {
+    [AMY_HEART_PATTERN_HAMMER_ATTACK] = {
         { 10, 0, -27 },
         { 12, 13, -22 },
         { 14, 23, -13 },
@@ -46,7 +47,7 @@ const s16 sHeartOffsets[4][8][3] = {
         { 0, 0, 0 },
         { 0, 0, 0 },
     },
-    [AMY_ATTACK_EFFECT_KIND_B] = {
+    [AMY_HEART_PATTERN_B] = {
         { 10, 7, -27 },
         { 12, 20, -22 },
         { 14, 30, -13 },
@@ -56,7 +57,7 @@ const s16 sHeartOffsets[4][8][3] = {
         { 0, 0, 0 },
         { 0, 0, 0 },
     },
-    [AMY_ATTACK_EFFECT_KIND_C] = {
+    [AMY_HEART_PATTERN_C] = {
         { 0, -10, -26 },
         { 4, 8, -27 },
         { 8, 22, -17 },
@@ -66,7 +67,7 @@ const s16 sHeartOffsets[4][8][3] = {
         { -1, 0, 0 },
         { 0, 0, 0 },
     },
-    [AMY_ATTACK_EFFECT_KIND_D] = {
+    [AMY_HEART_PATTERN_STOP_N_SLAM] = {
         { 2, 0, 4 },
         { 6, 19, 6 },
         { 10, 28, 2 },
@@ -90,17 +91,15 @@ void CreateAmyAttackHeartEffect(u16 kind)
         return;
     }
 
-    if ((gPlayer.unk64 == SA2_CHAR_ANIM_15)
-        || (gPlayer.unk64 == SA2_CHAR_ANIM_INSTA_SHIELD_2)
-        || (gPlayer.unk64 == SA2_CHAR_ANIM_36)) {
-        struct Task *t = TaskCreate(Task_8015CE4, sizeof(AmyAtkHearts), 0x3001, 0,
-                                    TaskDestructor_8015FF0);
+    if ((gPlayer.charState == CHARSTATE_BOOSTLESS_ATTACK) || (gPlayer.charState == CHARSTATE_SOME_ATTACK)
+        || (gPlayer.charState == CHARSTATE_TRICK_DOWN)) {
+        struct Task *t = TaskCreate(Task_8015CE4, sizeof(AmyAtkHearts), 0x3001, 0, TaskDestructor_8015FF0);
         AmyAtkHearts *hearts = TASK_DATA(t);
 
-        hearts->unk100 = gUnknown_080D6736[gPlayer.unk64][0];
-        hearts->unk102 = gUnknown_080D6736[gPlayer.unk64][1];
+        hearts->unk100 = sCharStateAnimInfo[gPlayer.charState][0];
+        hearts->unk102 = sCharStateAnimInfo[gPlayer.charState][1];
 
-        if (gPlayer.unk64 < 80) {
+        if (gPlayer.charState < 80) {
             hearts->unk100 += gPlayerCharacterIdleAnims[gPlayer.character];
         }
 
@@ -128,9 +127,7 @@ void Task_8015CE4(void)
     u8 i;
 
     // TODO: Fix horrible cast!
-    if ((!PLAYER_IS_ALIVE)
-        || ((*(u32 *)&hearts->unk100 != *(u32 *)&gPlayer.anim)
-            && (*(u32 *)&gPlayer.anim != 0x0001019F))) {
+    if ((!PLAYER_IS_ALIVE) || ((*(u32 *)&hearts->unk100 != *(u32 *)&gPlayer.anim) && (*(u32 *)&gPlayer.anim != 0x0001019F))) {
         TaskDestroy(t);
         return;
     } else {
@@ -143,7 +140,7 @@ void Task_8015CE4(void)
                 Sprite *s = &hearts->sprHearts[i];
 #endif
 
-                if (s->unk10 & SPRITE_FLAG_MASK_ANIM_OVER) {
+                if (s->frameFlags & SPRITE_FLAG_MASK_ANIM_OVER) {
                     hearts->params[i].count = 0;
                     VramFree(s->graphics.dest);
                 }
@@ -184,8 +181,8 @@ void Task_8015CE4(void)
 #else
                     s = &hearts->sprHearts[i];
 #endif
-                    x = Q_24_8(hearts->params[i].x);
-                    y = Q_24_8(hearts->params[i].y);
+                    x = Q(hearts->params[i].x);
+                    y = Q(hearts->params[i].y);
 
                     camX = gCamera.x;
                     s->x = (x >> 16) - camX;
@@ -233,16 +230,16 @@ void sub_8015E28(u16 p0)
         hearts->params[i].unkA = 0;
 
         s->graphics.dest = VramMalloc(4);
-        s->unk1A = 0x400;
+        s->oamFlags = SPRITE_OAM_ORDER(16);
         s->graphics.size = 0;
         s->graphics.anim = SA2_ANIM_HEART;
         s->variant = 0;
         s->animCursor = 0;
-        s->timeUntilNextFrame = 0;
+        s->qAnimDelay = 0;
         s->prevVariant = -1;
         s->animSpeed = gPlayer.unk90->s.animSpeed;
         s->palId = 0;
-        s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+        s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
 
         if (GRAVITY_IS_INVERTED) {
             SPRITE_FLAG_SET(s, Y_FLIP);

@@ -1,5 +1,4 @@
 #include "core.h"
-#include "sakit/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -13,6 +12,7 @@
 
 #include "lib/m4a.h"
 
+#include "constants/char_states.h"
 #include "constants/songs.h"
 
 void sub_8018E00(union MultiSioData *recv, u8 i);
@@ -20,9 +20,7 @@ void sub_8018AD8(union MultiSioData *recv, u8 i);
 typedef void (*UnknownFunction)(union MultiSioData *recv, u8 i);
 
 const UnknownFunction gUnknown_080D5744[] = {
-    sub_8019240, sub_80192A8, sub_80192FC, sub_8019350,
-    sub_8019368, sub_8018AD8, sub_8018E00, VoidReturnSIOControl32,
-    NULL,
+    sub_8019240, sub_80192A8, sub_80192FC, sub_8019350, sub_8019368, sub_8018AD8, sub_8018E00, VoidReturnSIOControl32, NULL,
 };
 
 void Task_80188FC(void)
@@ -39,8 +37,7 @@ void Task_80188FC(void)
             return;
         } else {
             recv = &gMultiSioRecv[i].pat0;
-            if (0x5000 == recv->unk0
-                && something == 0 != (!(recv->unk8[0] & (0x1000 << id)))) {
+            if (0x5000 == recv->unk0 && (something == 0) != (!(recv->unk8[0] & (0x1000 << id)))) {
                 return;
             }
         }
@@ -49,8 +46,7 @@ void Task_80188FC(void)
     if (gUnknown_03005438 == gUnknown_03005420) {
         DmaFill16(3, 0, &gMultiSioSend.pat0.unk8[3], sizeof(struct UNK_3005510) - 1);
     } else {
-        DmaCopy16(3, &gUnknown_03005510[gUnknown_03005420], &gMultiSioSend.pat0.unk8[3],
-                  sizeof(struct UNK_3005510) - 1);
+        DmaCopy16(3, &gUnknown_03005510[gUnknown_03005420], &gMultiSioSend.pat0.unk8[3], sizeof(struct UNK_3005510) - 1);
         gUnknown_03005420 = (gUnknown_03005420 + 1) & 0xF;
         send->unk8[0] ^= (0x1000 << id);
     }
@@ -77,8 +73,7 @@ void Task_8018A28(void)
         }
 
         recv = &gMultiSioRecv[i];
-        if (recv->pat0.unk0 == 0x5000
-            && (recv->pat0.unk8[0] & (0x1000 << i)) != (send->unk8[0] & (0x1000 << i))) {
+        if (recv->pat0.unk0 == 0x5000 && (recv->pat0.unk8[0] & (0x1000 << i)) != (send->unk8[0] & (0x1000 << i))) {
             if ((u8)(recv->pat0.unkE - 1) < 8) {
 
                 gUnknown_080D5744[recv->pat0.unkE - 1](recv, i);
@@ -93,46 +88,41 @@ void sub_8018AD8(union MultiSioData *recv, u8 i)
     MultiplayerPlayer *mpp = TASK_DATA(gMultiplayerPlayerTasks[i]);
     MultiplayerPlayer *us = TASK_DATA(gMultiplayerPlayerTasks[SIO_MULTI_CNT->id]);
 
-    if (!(us->unk5C & 1) && PLAYER_IS_ALIVE
-        && gUnknown_030054B4[SIO_MULTI_CNT->id] == -1) {
+    if (!(us->unk5C & 1) && PLAYER_IS_ALIVE && gUnknown_030054B4[SIO_MULTI_CNT->id] == -1) {
         switch (recv->pat0.unkF) {
             case 0: {
                 if (gGameMode != GAME_MODE_TEAM_PLAY
                     || ((gMultiplayerConnections & (0x10 << (i))) >> ((i + 4))
-                        != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id)))
-                            >> (SIO_MULTI_CNT->id + 4))) {
-                    gPlayer.itemEffect |= PLAYER_ITEM_EFFECT__40;
+                        != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id))) >> (SIO_MULTI_CNT->id + 4))) {
+                    gPlayer.itemEffect |= PLAYER_ITEM_EFFECT__CONFUSION;
                     gPlayer.unk32 = 600;
                     CreateItemTask_Confusion(gPlayer.character);
-                    m4aSongNumStart(217);
+                    m4aSongNumStart(SE_ITEM_CONFUSION);
                 }
                 break;
             }
             case 1: {
-                if ((u8)recv->pat0.unk10 == SIO_MULTI_CNT->id
-                    && !(gPlayer.itemEffect & PLAYER_ITEM_EFFECT__80)) {
-                    u32 prevMoveState = gPlayer.moveState
-                        & (MOVESTATE_IN_SCRIPTED | MOVESTATE_IGNORE_INPUT
-                           | MOVESTATE_400000);
+                if ((u8)recv->pat0.unk10 == SIO_MULTI_CNT->id && !(gPlayer.itemEffect & PLAYER_ITEM_EFFECT__TELEPORT)) {
+                    u32 prevMoveState = gPlayer.moveState & (MOVESTATE_IN_SCRIPTED | MOVESTATE_IGNORE_INPUT | MOVESTATE_400000);
                     if (!(prevMoveState)) {
                         InitializePlayer(&gPlayer);
-                        gPlayer.x = Q_24_8_NEW(mpp->unk50);
-                        gPlayer.y = Q_24_8_NEW(mpp->unk52 - (s8)mpp->unk58[0]);
+                        gPlayer.x = QS(mpp->pos.x);
+                        gPlayer.y = QS(mpp->pos.y - (s8)mpp->unk58[0]);
                         m4aMPlayTempoControl(&gMPlayInfo_BGM, 256);
                         gPlayer.moveState = prevMoveState;
-                        gPlayer.unk90->s.unk10 &= ~0x3000;
-                        gPlayer.unk90->s.unk10 |= 0x2000;
+                        gPlayer.unk90->s.frameFlags &= ~0x3000;
+                        gPlayer.unk90->s.frameFlags |= 0x2000;
 
-                        gPlayer.unk94->s.unk10 &= ~0x3000;
-                        gPlayer.unk94->s.unk10 |= 0x2000;
+                        gPlayer.unk94->s.frameFlags &= ~0x3000;
+                        gPlayer.unk94->s.frameFlags |= 0x2000;
 
                         gCamera.unk50 &= ~3;
-                        gPlayer.unk38 = (mpp->unk54 >> 7) & 1;
+                        gPlayer.layer = (mpp->unk54 >> 7) & 1;
                         gPlayer.moveState |= MOVESTATE_IN_AIR;
                         mpp->unk60 = 30;
                         gPlayer.timerInvulnerability = 120;
-                        gCamera.x = (Q_24_8_TO_INT(gPlayer.x) + gCamera.shiftX) - 0x78;
-                        gCamera.y = (Q_24_8_TO_INT(gPlayer.y) + gCamera.shiftY) - 0x50;
+                        gCamera.x = (I(gPlayer.x) + gCamera.shiftX) - (DISPLAY_WIDTH / 2);
+                        gCamera.y = (I(gPlayer.y) + gCamera.shiftY) - (DISPLAY_HEIGHT / 2);
                         m4aSongNumStart(SE_218);
                     }
                 }
@@ -142,12 +132,11 @@ void sub_8018AD8(union MultiSioData *recv, u8 i)
                 if (!(gPlayer.moveState & MOVESTATE_IN_SCRIPTED)
                     && (gGameMode != GAME_MODE_TEAM_PLAY
                         || ((gMultiplayerConnections & (0x10 << (i))) >> ((i + 4))
-                            != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id)))
-                                >> (SIO_MULTI_CNT->id + 4)))) {
-                    gPlayer.itemEffect |= 0x10;
+                            != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id))) >> (SIO_MULTI_CNT->id + 4)))) {
+                    gPlayer.itemEffect |= PLAYER_ITEM_EFFECT__10;
 
                     gPlayer.timerSpeedup = 600;
-                    gPlayer.itemEffect &= ~0x4;
+                    gPlayer.itemEffect &= ~PLAYER_ITEM_EFFECT__SPEED_UP;
                     CreateItemTask_Confusion(gPlayer.character);
                     m4aSongNumStart(SE_ITEM_CONFUSION);
                     m4aMPlayTempoControl(&gMPlayInfo_BGM, 128);
@@ -157,8 +146,7 @@ void sub_8018AD8(union MultiSioData *recv, u8 i)
             case 3: {
                 if (gGameMode != GAME_MODE_TEAM_PLAY
                     || ((gMultiplayerConnections & (0x10 << (i))) >> ((i + 4))
-                        != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id)))
-                            >> (SIO_MULTI_CNT->id + 4))) {
+                        != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id))) >> (SIO_MULTI_CNT->id + 4))) {
                     gUnknown_03005B7C = 1;
                     m4aSongNumStart(SE_219);
                 }
@@ -167,8 +155,7 @@ void sub_8018AD8(union MultiSioData *recv, u8 i)
             case 4: {
                 if (gGameMode != GAME_MODE_TEAM_PLAY
                     || ((gMultiplayerConnections & (0x10 << (i))) >> ((i + 4))
-                        != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id)))
-                            >> (SIO_MULTI_CNT->id + 4))) {
+                        != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id))) >> (SIO_MULTI_CNT->id + 4))) {
                     gUnknown_0300583C = 1;
                     m4aSongNumStart(SE_216);
                 }
@@ -205,8 +192,7 @@ void sub_8018E00(union MultiSioData *recv, u8 i)
             }
         } else {
             if ((gMultiplayerConnections & (0x10 << (j))) >> ((j + 4))
-                    != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id)))
-                        >> (SIO_MULTI_CNT->id + 4)
+                    != (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id))) >> (SIO_MULTI_CNT->id + 4)
                 && (s8)gUnknown_030054B4[j] == 0) {
                 count2 = 1;
             }
@@ -222,11 +208,10 @@ void sub_8018E00(union MultiSioData *recv, u8 i)
     if (gGameMode == GAME_MODE_TEAM_PLAY) {
         for (j = 0; j < 4 && gMultiplayerPlayerTasks[j] != NULL; j++) {
             if (j != i && gUnknown_030054B4[j] == -1
-                && (gMultiplayerConnections & (0x10 << (j))) >> ((j + 4))
-                    == (gMultiplayerConnections & (0x10 << (i))) >> (i + 4)) {
+                && (gMultiplayerConnections & (0x10 << (j))) >> ((j + 4)) == (gMultiplayerConnections & (0x10 << (i))) >> (i + 4)) {
                 sub_8019CCC(j, count2);
                 if (j == SIO_MULTI_CNT->id) {
-                    sub_80218E4(&gPlayer);
+                    Player_TransitionCancelFlyingAndBoost(&gPlayer);
                     gPlayer.moveState &= ~MOVESTATE_8;
                     gPlayer.moveState &= ~MOVESTATE_20;
                     gPlayer.moveState &= ~MOVESTATE_4;
@@ -234,18 +219,18 @@ void sub_8018E00(union MultiSioData *recv, u8 i)
                     gPlayer.moveState |= MOVESTATE_IN_AIR;
                     gPlayer.moveState &= ~MOVESTATE_400;
                     gPlayer.moveState &= ~MOVESTATE_100;
-                    gPlayer.unk64 = 0x14;
+                    gPlayer.charState = CHARSTATE_HIT_AIR;
                     sub_8023B5C(&gPlayer, 0xe);
-                    gPlayer.unk16 = 6;
-                    gPlayer.unk17 = 0xE;
+                    gPlayer.spriteOffsetX = 6;
+                    gPlayer.spriteOffsetY = 0xE;
                     gPlayer.unk61 = 0;
                     gPlayer.unk62 = 0;
                     gPlayer.speedGroundX = 0;
                     gPlayer.speedAirX = 0;
                     gPlayer.moveState |= MOVESTATE_IGNORE_INPUT;
-                    gPlayer.unk5C = 0;
+                    gPlayer.heldInput = 0;
                     gPlayer.moveState |= MOVESTATE_FACING_LEFT;
-                    gPlayer.unk64 = 0x1C;
+                    gPlayer.charState = CHARSTATE_ACT_CLEAR_A;
                     gPlayer.moveState |= MOVESTATE_800000;
                 }
             }
@@ -254,8 +239,8 @@ void sub_8018E00(union MultiSioData *recv, u8 i)
 
     mpp->unk5C |= 1;
 
-    if (count2 == 0 && !(gUnknown_03005424 & 1)) {
-        gUnknown_03005424 |= 4;
+    if (count2 == 0 && !(gStageFlags & 1)) {
+        gStageFlags |= 4;
         gCourseTime = 3600; // max?
     };
 
@@ -277,7 +262,7 @@ void sub_8018E00(union MultiSioData *recv, u8 i)
                     sub_8019CCC(j, count - 1);
                     mpp2->unk5C |= 1;
                     gPlayer.moveState |= MOVESTATE_IGNORE_INPUT;
-                    gPlayer.unk5C = 0;
+                    gPlayer.heldInput = 0;
                     temp = gUnknown_03005438;
                     unk10 = &gUnknown_03005510[temp];
                     gUnknown_03005438++;
@@ -294,7 +279,6 @@ void sub_8018E00(union MultiSioData *recv, u8 i)
     }
 }
 
-void Task_80188FC(void);
 struct Task *sub_8019120(void)
 {
     struct Task *t = TaskCreate(Task_80188FC, 0, -2, 0, NULL);
@@ -305,7 +289,6 @@ struct Task *sub_8019120(void)
     return t;
 }
 
-void Task_8018A28(void);
 struct Task *sub_80191A4(void)
 {
     struct Task *t = TaskCreate(Task_8018A28, 0, 1, 0, NULL);

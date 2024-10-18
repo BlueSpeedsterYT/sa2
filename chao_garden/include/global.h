@@ -16,7 +16,7 @@
 #if NON_MATCHING
 #define ASM_FUNC(path, decl)
 #else
-#define ASM_FUNC(path, decl)                                                            \
+#define ASM_FUNC(path, decl)                                                                                                               \
     NAKED decl { asm(".include " #path); }
 #endif
 
@@ -24,22 +24,22 @@
 #define NONMATCH(path, decl) decl
 #define END_NONMATCH
 #else
-#define NONMATCH(path, decl)                                                            \
-    NAKED decl                                                                          \
-    {                                                                                   \
-        asm(".include " #path);                                                         \
+#define NONMATCH(path, decl)                                                                                                               \
+    NAKED decl                                                                                                                             \
+    {                                                                                                                                      \
+        asm(".include " #path);                                                                                                            \
         if (0)
 #define END_NONMATCH }
 #endif
 
 /// IDE support
-#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__INTELLISENSE__)
+#if defined(__CYGWIN__) || defined(__INTELLISENSE__)
 // We define these when using certain IDEs to fool preproc
 #define _(x)  (x)
 #define __(x) (x)
-#define INCBIN(...)                                                                     \
-    {                                                                                   \
-        0                                                                               \
+#define INCBIN(...)                                                                                                                        \
+    {                                                                                                                                      \
+        0                                                                                                                                  \
     }
 #define INCBIN_U8  INCBIN
 #define INCBIN_U16 INCBIN

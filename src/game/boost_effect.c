@@ -3,7 +3,7 @@
 #include "flags.h"
 #include "malloc_vram.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "data/sprite_data.h"
 
@@ -27,11 +27,9 @@ typedef struct {
 
 #define BE_BUFFER_SIZE 16
 
-#define BE_RING_INDEX(_bufferName, _num)                                                \
-    ((_bufferName##Index + (_num)) % (unsigned)ARRAY_COUNT(_bufferName))
+#define BE_RING_INDEX(_bufferName, _num) ((_bufferName##Index + (_num)) % (unsigned)ARRAY_COUNT(_bufferName))
 
-#define ADD_BE_INDEX(_bufferName, _num)                                                 \
-    _bufferName##Index = BE_RING_INDEX(_bufferName, (_num))
+#define ADD_BE_INDEX(_bufferName, _num) _bufferName##Index = BE_RING_INDEX(_bufferName, (_num))
 
 #define INC_BE_INDEX(_bufferName) ADD_BE_INDEX(_bufferName, 1)
 
@@ -43,13 +41,11 @@ static Vec2_32 sPlayerPosBuffer[BE_BUFFER_SIZE] = { 0 };
 static u8 ALIGNED(4) sPlayerStateBufferIndex = 0;
 static u8 ALIGNED(4) sPlayerPosBufferIndex = 0;
 
-const u8 gUnknown_080D5674[4] = { 2, 4, 6, 0 };
+const u8 gUnknown_080D5674[3] = { 2, 4, 6 };
 
 const AnimId sCharacterPalettesBoostEffect[NUM_CHARACTERS] = {
-    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_SONIC),
-    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_CREAM),
-    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_TAILS),
-    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_KNUCKLES),
+    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_SONIC), SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_CREAM),
+    SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_TAILS), SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_KNUCKLES),
     SA2_ANIM_CHAR(SA2_CHAR_ANIM_BOOST_PALETTE, CHARACTER_AMY),
 };
 
@@ -61,7 +57,7 @@ void sub_801561C(void)
     u32 oldPlayerMovestate = gPlayer.moveState;
     PlayerSpriteInfo *unk5A70 = gPlayer.unk90;
     u32 oldPlayerAnimSpeed = unk5A70->s.animSpeed;
-    u32 oldPlayerUnk10 = unk5A70->s.unk10;
+    u32 oldPlayerUnk10 = unk5A70->s.frameFlags;
     u16 r6 = unk5A70->transform.rotation;
 
     oldPlayerMovestate &= ~MOVESTATE_80000000;
@@ -101,7 +97,7 @@ void sub_80156D0(void)
     sPlayerStateBuffer[i].variant = p->variant;
     sPlayerStateBuffer[i].moveState = oldMovestate;
     sPlayerStateBuffer[i].animSpeed = p->unk90->s.animSpeed;
-    sPlayerStateBuffer[i].flags = p->unk90->s.unk10;
+    sPlayerStateBuffer[i].flags = p->unk90->s.frameFlags;
     sPlayerStateBuffer[i].unkC = p->unk90->transform.rotation;
 }
 
@@ -164,17 +160,20 @@ static inline void sub_8015B64_inline(AnimId anim, u16 palId)
 {
     const s32 *pAnim = (const s32 *)*gAnimations[anim];
 
-    if (*pAnim++ == ANIM_CMD__GET_PALETTE) {
+    if (*pAnim++ == ANIM_CMD__PALETTE) {
         u32 animPalId;
         u16 numColors, insertOffset;
 
         animPalId = *pAnim++;
         insertOffset = (*pAnim >> 16);
+#ifndef BUG_FIX
+        // This only works on GBA because it's specifically using a 32bit DMA below and for that, addresses are aligned to the last word.
+        // We can assume that this was supposed to be 'insertOffset += (palId * 16)', but that is taken care of by the animation data.
         insertOffset += palId;
+#endif
         numColors = *pAnim % 256u;
 
-        DmaCopy32(3, &gUnknown_03002794->palettes[animPalId * 16],
-                  &gObjPalette[insertOffset], numColors * sizeof(u16));
+        DmaCopy32(3, &gRefSpriteTables->palettes[animPalId * 16], &gObjPalette[insertOffset], numColors * sizeof(u16));
 
         gFlags |= FLAGS_UPDATE_SPRITE_PALETTES;
     }
@@ -188,9 +187,8 @@ void sub_801583C(void)
     if (IS_SINGLE_PLAYER && !gUnknown_030055BC && !IS_BOSS_STAGE(gCurrentLevel)) {
         gUnknown_030055BC = TRUE;
 
-        for (i = 0; i < 3; i++) {
-            struct Task *t = TaskCreate(Task_80159C8, sizeof(PlayerActions), 0x4000, 0,
-                                        TaskDestructor_8015B50);
+        for (i = 0; i < ARRAY_COUNT(gUnknown_080D5674); i++) {
+            struct Task *t = TaskCreate(Task_80159C8, sizeof(PlayerActions), 0x4000, 0, TaskDestructor_8015B50);
             PlayerActions *actions = TASK_DATA(t);
 
             actions->unk5C = i;
@@ -198,26 +196,25 @@ void sub_801583C(void)
 
             s = &actions->s;
             s->graphics.dest = VramMalloc(64);
-            s->unk1A = SPRITE_OAM_ORDER(16);
+            s->oamFlags = SPRITE_OAM_ORDER(16);
             s->graphics.size = 0;
             s->animCursor = 0;
-            s->timeUntilNextFrame = 0;
+            s->qAnimDelay = 0;
             s->prevVariant = -1;
             s->animSpeed = SPRITE_ANIM_SPEED(1.0);
             s->hitboxes[0].index = -1;
-            s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+            s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
             s->palId = 1;
             s->graphics.anim = 0;
             s->variant = 0;
             s->x = 0;
             s->y = 0;
 
-            actions->transform.height = 0x100;
+            actions->transform.height = +Q(1);
         }
 
         if (s->palId != 0) {
-            sub_8015B64_inline(sCharacterPalettesBoostEffect[gPlayer.character],
-                               s->palId);
+            sub_8015B64_inline(sCharacterPalettesBoostEffect[gPlayer.character], s->palId);
         }
     }
 }
@@ -235,7 +232,7 @@ void Task_80159C8(void)
 #endif
 
     if (!(gPlayer.moveState & MOVESTATE_4000000)) {
-        if (gPlayer.moveState & MOVESTATE_8000000) {
+        if (gPlayer.moveState & MOVESTATE_GOAL_REACHED) {
             TaskDestroy(gCurTask);
             gUnknown_030055BC = FALSE;
             return;
@@ -243,7 +240,7 @@ void Task_80159C8(void)
     }
 
     if (PLAYER_IS_ALIVE) {
-        if (gPlayer.unk5A || (gPlayer.moveState & MOVESTATE_BOOST_EFFECT_ON)) {
+        if (gPlayer.isBoosting || (gPlayer.moveState & MOVESTATE_BOOST_EFFECT_ON)) {
 #ifndef NON_MATCHING
             register PlayerState *pls asm("r0") = &actions->plState;
 #else
@@ -254,39 +251,36 @@ void Task_80159C8(void)
             s->graphics.anim = actions->plState.anim;
             s->variant = actions->plState.variant;
             s->animSpeed = actions->plState.animSpeed;
-            s->unk10 = actions->plState.flags;
+            s->frameFlags = actions->plState.flags;
 
             transform->rotation = actions->plState.unkC;
-            s->unk10 |= SPRITE_FLAG(18, 1);
+            s->frameFlags |= SPRITE_FLAG(18, 1);
 
             GetPreviousPlayerPos(&actions->pos, r8);
-            s->x = Q_24_8_TO_INT(actions->pos.x) - gCamera.x;
-            s->y = Q_24_8_TO_INT(actions->pos.y) - gCamera.y;
+            s->x = I(actions->pos.x) - gCamera.x;
+            s->y = I(actions->pos.y) - gCamera.y;
 
             transform->x = s->x;
             transform->y = s->y;
             UpdateSpriteAnimation(s);
 
             if (SPRITE_FLAG_GET(s, ROT_SCALE_ENABLE)) {
-                u32 moveState;
-
                 SPRITE_FLAG_CLEAR(s, ROT_SCALE);
-                s->unk10 |= (gUnknown_030054B8++) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
+                s->frameFlags |= (gUnknown_030054B8++) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
 
                 if (actions->plState.moveState & MOVESTATE_FACING_LEFT) {
-                    transform->width = 0x100;
+                    transform->width = +Q(1);
                 } else {
-                    transform->width = 0xFF00;
+                    transform->width = -Q(1);
                 }
 
-                moveState = actions->plState.moveState & MOVESTATE_80000000;
-                actions->plState.moveState = moveState;
+                actions->plState.moveState &= MOVESTATE_80000000;
 
-                if (moveState) {
+                if (actions->plState.moveState) {
                     transform->width = -transform->width;
                 }
 
-                sub_8004860(s, transform);
+                TransformSprite(s, transform);
             } else {
                 SPRITE_FLAG_CLEAR(s, ROT_SCALE_ENABLE);
             }

@@ -7,10 +7,11 @@
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "lib/m4a.h"
-#include "sakit/collision.h"
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_leftovers/entities_manager.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -23,8 +24,8 @@ typedef struct {
     /* 0x40 */ s16 unk40;
 } BouncyBar;
 
-void sub_806160C(void);
-void sub_80617A4(void);
+void Task_BouncyBarIdle(void);
+void Task_BouncyBarLaunch(void);
 
 const u16 gUnknown_080D94E8[] = { 9, 9, 9 };
 
@@ -32,11 +33,10 @@ const s8 gUnknown_080D94EE[] = { -16, -18, -20 };
 
 const s16 gUnknown_080D94F2[] = { -384, -384, -384 };
 
-void CreateEntity_BouncyBar(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                            u8 spriteY)
+void CreateEntity_BouncyBar(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     Sprite *s;
-    struct Task *t = TaskCreate(sub_806160C, 0x44, 0x2010, 0, TaskDestructor_80095E8);
+    struct Task *t = TaskCreate(Task_BouncyBarIdle, sizeof(BouncyBar), 0x2010, 0, TaskDestructor_80095E8);
     BouncyBar *bar = TASK_DATA(t);
 
     s = &bar->s;
@@ -45,7 +45,7 @@ void CreateEntity_BouncyBar(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     bar->base.regionY = spriteRegionY;
     bar->base.me = me;
     bar->base.spriteX = me->x;
-    bar->base.spriteY = spriteY;
+    bar->base.id = spriteY;
 
     bar->unk3C = 0;
     bar->unk3D = 0;
@@ -60,22 +60,22 @@ void CreateEntity_BouncyBar(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     s->graphics.anim = SA2_ANIM_BOUNCY_BAR;
     s->variant = 0;
 
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
 
     if (me->d.sData[0] != 0) {
         SPRITE_FLAG_SET(s, X_FLIP);
     }
 }
 
-void sub_806160C(void)
+void Task_BouncyBarIdle(void)
 {
     BouncyBar *bar = TASK_DATA(gCurTask);
     Sprite *s = &bar->s;
@@ -88,10 +88,9 @@ void sub_806160C(void)
     s->x = screenX - gCamera.x;
     s->y = screenY - gCamera.y;
 
-    if (!(gPlayer.moveState & MOVESTATE_DEAD)
-        && (sub_800C204(s, screenX, screenY, 0, &gPlayer, 0) == 1)
-        && (gPlayer.speedAirY > 0) && (Q_24_8_TO_INT(gPlayer.y) + 4) < screenY) {
-        gPlayer.unk64 = 0x32;
+    if (!(gPlayer.moveState & MOVESTATE_DEAD) && (sub_800C204(s, screenX, screenY, 0, &gPlayer, 0) == 1) && (gPlayer.speedAirY > 0)
+        && (I(gPlayer.y) + 4) < screenY) {
+        gPlayer.charState = CHARSTATE_CURLED_IN_AIR;
         gPlayer.transition = PLTRANS_PT5;
 
         bar->unk3C = gPlayer.speedAirY >> 0xA;
@@ -102,11 +101,9 @@ void sub_806160C(void)
         bar->unk3D = (bar->unk3C * 5) + 10;
         bar->unk3E = gUnknown_080D94E8[bar->unk3C];
 
-        bar->unk40 = screenX - Q_24_8_TO_INT(gPlayer.x) >= 0
-            ? screenX - Q_24_8_TO_INT(gPlayer.x)
-            : Q_24_8_TO_INT(gPlayer.x) - screenX;
+        bar->unk40 = screenX - I(gPlayer.x) >= 0 ? screenX - I(gPlayer.x) : I(gPlayer.x) - screenX;
 
-        gCurTask->main = sub_80617A4;
+        gCurTask->main = Task_BouncyBarLaunch;
         gPlayer.moveState |= MOVESTATE_400000;
 
         bar->unk3C = 2 - bar->unk3C;
@@ -125,7 +122,7 @@ void sub_806160C(void)
     DisplaySprite(s);
 }
 
-void sub_80617A4(void)
+void Task_BouncyBarLaunch(void)
 {
     BouncyBar *bar = TASK_DATA(gCurTask);
     Sprite *s = &bar->s;
@@ -152,8 +149,7 @@ void sub_80617A4(void)
             }
 
             gPlayer.speedAirY = gUnknown_080D94F2[bar->unk3C];
-            gPlayer.speedAirY
-                += ((temp * bar->unk3E) * gUnknown_080D94EE[bar->unk3C]) >> 1;
+            gPlayer.speedAirY += ((temp * bar->unk3E) * gUnknown_080D94EE[bar->unk3C]) >> 1;
             gPlayer.moveState &= ~MOVESTATE_400000;
             gPlayer.moveState &= ~MOVESTATE_100;
         }
@@ -166,10 +162,10 @@ void sub_80617A4(void)
     }
 
     if (UpdateSpriteAnimation(s) == 0) {
-        s->graphics.anim = 538;
+        s->graphics.anim = SA2_ANIM_BOUNCY_BAR;
         s->variant = 0;
         s->prevVariant = -1;
-        gCurTask->main = sub_806160C;
+        gCurTask->main = Task_BouncyBarIdle;
     }
     DisplaySprite(s);
 }

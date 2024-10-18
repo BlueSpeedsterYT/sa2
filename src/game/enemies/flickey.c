@@ -1,8 +1,8 @@
 #include "global.h"
 #include "malloc_vram.h"
 #include "game/entity.h"
-#include "sakit/collision.h"
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_leftovers/entities_manager.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "task.h"
@@ -40,35 +40,33 @@ static void sub_8058EDC(void);
 static void Flickey_RenderIronBalls(Sprite_Flickey *flickey);
 static void TaskDestructor_Flickey(struct Task *);
 
-void CreateEntity_Flickey(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                          u8 spriteY)
+void CreateEntity_Flickey(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     u8 i;
     s32 x, y;
-    Vec2_32 pos;
+
     if (DIFFICULTY_LEVEL_IS_NOT_EASY) {
-        struct Task *t = TaskCreate(Task_FlickeyMain, sizeof(Sprite_Flickey), 0x4040, 0,
-                                    TaskDestructor_Flickey);
+        struct Task *t = TaskCreate(Task_FlickeyMain, sizeof(Sprite_Flickey), 0x4040, 0, TaskDestructor_Flickey);
         Sprite_Flickey *flickey = TASK_DATA(t);
         Sprite *s = &flickey->s;
         flickey->base.regionX = spriteRegionX;
         flickey->base.regionY = spriteRegionY;
         flickey->base.me = me;
         flickey->base.spriteX = me->x;
-        flickey->base.spriteY = spriteY;
+        flickey->base.id = spriteY;
 
         ENEMY_SET_SPAWN_POS_FLYING(flickey, me);
 
-        flickey->unk9C = -Q_24_8(1.5);
-        flickey->unk9E = -Q_24_8(4.0);
+        flickey->unk9C = -Q(1.5);
+        flickey->unk9E = -Q(4.0);
         flickey->unk2A4 = 0;
 
-        x = Q_24_8(flickey->spawnX);
-        y = Q_24_8(flickey->spawnY);
+        x = Q(flickey->spawnX);
+        y = Q(flickey->spawnY);
 
         for (i = 0; i < ARRAY_COUNT(flickey->positions); i++) {
-            flickey->positions[i].x = Q_24_8_TO_INT(x >> 8);
-            flickey->positions[i].y = Q_24_8_TO_INT(y >> 8);
+            flickey->positions[i].x = I(x >> 8);
+            flickey->positions[i].y = I(y >> 8);
         }
 
         s->x = 0;
@@ -99,8 +97,8 @@ static void Task_FlickeyMain(void)
     flickey->offsetX += flickey->unk9C;
     flickey->offsetY += flickey->unk9E;
 
-    pos.x = Q_24_8_TO_INT(flickey->spawnX + flickey->offsetX);
-    pos.y = Q_24_8_TO_INT(flickey->spawnY + flickey->offsetY);
+    pos.x = I(flickey->spawnX + flickey->offsetX);
+    pos.y = I(flickey->spawnY + flickey->offsetY);
     someVal = sub_801F07C(pos.y, pos.x, 1, 8, 0, sub_801EE64);
     s->x = pos.x - gCamera.x;
     s->y = pos.y - gCamera.y;
@@ -130,19 +128,18 @@ static void Task_FlickeyMain(void)
 
             positions[i][0] = flickey->positions[index].x;
             positions[i][1] = flickey->positions[index].y;
-            positions[i][2]
-                = flickey->positions[index].y - flickey->positions[(index - 1) & 0x3F].y;
+            positions[i][2] = flickey->positions[index].y - flickey->positions[(index - 1) & 0x3F].y;
 
             DisplaySprite(s);
         }
 
         for (i = 0; i < 3; i++) {
             u32 temp;
-            flickey->positions[i].x = Q_24_8_NEW(positions[i][0]);
-            flickey->positions[i].y = Q_24_8_NEW(positions[i][1]);
+            flickey->positions[i].x = QS(positions[i][0]);
+            flickey->positions[i].y = QS(positions[i][1]);
             temp = Div(flickey->unk9C, i + 1);
             flickey->positions[i + 3].x = temp;
-            flickey->positions[i + 3].y = Q_24_8_NEW(positions[i][2]);
+            flickey->positions[i + 3].y = QS(positions[i][2]);
         }
 
         gCurTask->main = sub_80591FC;
@@ -151,7 +148,7 @@ static void Task_FlickeyMain(void)
 
     if (someVal < 0) {
         s->y += someVal;
-        flickey->offsetY += Q_24_8(someVal);
+        flickey->offsetY += Q(someVal);
 
         flickey->unk9E = -0x400;
         s->graphics.anim = SA2_ANIM_FLICKEY;
@@ -224,27 +221,26 @@ static void sub_8058EDC(void)
 
             positions[i][0] = flickey->positions[index].x;
             positions[i][1] = flickey->positions[index].y;
-            positions[i][2]
-                = flickey->positions[index].y - flickey->positions[(index - 1) & 0x3F].y;
+            positions[i][2] = flickey->positions[index].y - flickey->positions[(index - 1) & 0x3F].y;
 
             DisplaySprite(s);
         }
 
         for (i = 0; i < 3; i++) {
             u32 temp;
-            flickey->positions[i].x = Q_24_8_NEW(positions[i][0]);
-            flickey->positions[i].y = Q_24_8_NEW(positions[i][1]);
+            flickey->positions[i].x = QS(positions[i][0]);
+            flickey->positions[i].y = QS(positions[i][1]);
             temp = Div(flickey->unk9C, i + 1);
             flickey->positions[i + 3].x = temp;
-            flickey->positions[i + 3].y = Q_24_8_NEW(positions[i][2]);
+            flickey->positions[i + 3].y = QS(positions[i][2]);
         }
         return;
     }
 
     ENEMY_DESTROY_IF_OFFSCREEN(flickey, me, s);
-    Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+    Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
     if (UpdateSpriteAnimation(s) == 0) {
-        if (s->unk10 & SPRITE_FLAG_MASK_X_FLIP) {
+        if (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP) {
             SPRITE_FLAG_CLEAR(s, X_FLIP);
             flickey->unk9C = -0x180;
         } else {
@@ -281,21 +277,19 @@ static void sub_80591FC(void)
         flickey->positions[i + 3].y += 0x30;
         flickey->positions[i].x += flickey->positions[i + 3].x;
         flickey->positions[i].y += flickey->positions[i + 3].y;
-        someVal
-            = sub_801F07C(Q_24_8_TO_INT(flickey->positions[i].y),
-                          Q_24_8_TO_INT(flickey->positions[i].x), 1, 8, 0, sub_801EE64);
+        someVal = sub_801F07C(I(flickey->positions[i].y), I(flickey->positions[i].x), 1, 8, 0, sub_801EE64);
 
         if (someVal < 0) {
-            flickey->positions[i].y += Q_24_8_NEW(someVal);
+            flickey->positions[i].y += QS(someVal);
             flickey->positions[i + 3].y = -flickey->positions[i + 3].y;
         }
 
         if (flickey->unkA0 > 0x2D || (gStageTime & 2 && flickey->unkA0 < 0x2D)) {
-            s->x = Q_24_8_TO_INT(flickey->positions[i].x) - gCamera.x;
-            s->y = Q_24_8_TO_INT(flickey->positions[i].y) - gCamera.y;
+            s->x = I(flickey->positions[i].x) - gCamera.x;
+            s->y = I(flickey->positions[i].y) - gCamera.y;
 
             DisplaySprite(s);
-            s->unk10 ^= 0x400;
+            s->frameFlags ^= 0x400;
             DisplaySprite(s);
         }
     }

@@ -1,6 +1,6 @@
 #include "global.h"
 
-#include "sakit/collision.h"
+#include "game/sa1_leftovers/collision.h"
 
 #include "game/entity.h"
 #include "game/enemies/geji_geji.h"
@@ -36,12 +36,10 @@ static const TileInfo gUnknown_080D8F50[4] = {
     { .numTiles = 12, .anim = SA2_ANIM_GEJIGEJI, .variant = 0 },
 };
 
-void CreateEntity_GejiGeji(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                           u8 spriteY)
+void CreateEntity_GejiGeji(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     u8 i;
-    struct Task *t
-        = TaskCreate(sub_8057F80, sizeof(Sprite_GejiGeji), 0x4040, 0, sub_8058480);
+    struct Task *t = TaskCreate(sub_8057F80, sizeof(Sprite_GejiGeji), 0x4040, 0, sub_8058480);
     Sprite_GejiGeji *gg = TASK_DATA(t);
 
     Sprite *s = &gg->s;
@@ -49,10 +47,10 @@ void CreateEntity_GejiGeji(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     gg->base.regionY = spriteRegionY;
     gg->base.me = me;
     gg->base.spriteX = me->x;
-    gg->base.spriteY = spriteY;
+    gg->base.id = spriteY;
 
-    gg->spawnX = Q_24_8(TO_WORLD_POS(me->x, spriteRegionX));
-    gg->spawnY = Q_24_8(TO_WORLD_POS(me->y, spriteRegionY));
+    gg->spawnX = Q(TO_WORLD_POS(me->x, spriteRegionX));
+    gg->spawnY = Q(TO_WORLD_POS(me->y, spriteRegionY));
     gg->offsetX = 0;
     gg->offsetY = 0;
 
@@ -66,23 +64,21 @@ void CreateEntity_GejiGeji(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     gg->unk27E = 0;
 
     for (i = 0; i < 64; i++) {
-        gg->positions[0][i] = Q_24_8_TO_INT(gg->spawnX);
-        gg->positions[1][i] = Q_24_8_TO_INT(gg->spawnY);
+        gg->positions[0][i] = I(gg->spawnX);
+        gg->positions[1][i] = I(gg->spawnY);
     }
 
     s->x = TO_WORLD_POS(me->x, spriteRegionX);
     s->y = TO_WORLD_POS(me->y, spriteRegionY);
     SET_MAP_ENTITY_INITIALIZED(me);
 
-    SPRITE_INIT(s, gUnknown_080D8F50[gg->unk27C].numTiles,
-                gUnknown_080D8F50[gg->unk27C].anim,
-                gUnknown_080D8F50[gg->unk27C].variant, 18, 2);
+    SPRITE_INIT(s, gUnknown_080D8F50[gg->unk27C].numTiles, gUnknown_080D8F50[gg->unk27C].anim, gUnknown_080D8F50[gg->unk27C].variant, 18,
+                2);
 
     s = &gg->s2;
     s->x = 0;
     s->y = 0;
-    SPRITE_INIT(s, gUnknown_080D8F50[gg->unk27C + 2].numTiles,
-                gUnknown_080D8F50[gg->unk27C + 2].anim,
+    SPRITE_INIT(s, gUnknown_080D8F50[gg->unk27C + 2].numTiles, gUnknown_080D8F50[gg->unk27C + 2].anim,
                 gUnknown_080D8F50[gg->unk27C + 2].variant, 20, 2);
 }
 
@@ -99,13 +95,13 @@ static void sub_8057F80(void)
     me = gg->base.me;
 
     if (gg->unk27C) {
-        if (s->unk10 & SPRITE_FLAG_MASK_Y_FLIP) {
+        if (s->frameFlags & SPRITE_FLAG_MASK_Y_FLIP) {
             gg->offsetY += 0x180;
         } else {
             gg->offsetY -= 0x180;
         }
     } else {
-        if (s->unk10 & SPRITE_FLAG_MASK_X_FLIP) {
+        if (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP) {
             gg->offsetX += 0x180;
         } else {
             gg->offsetX -= 0x180;
@@ -126,26 +122,24 @@ static void sub_8057F80(void)
     ENEMY_DESTROY_IF_OFFSCREEN(gg, me, s);
 
     if (gg->unk27C) {
-        if (ENEMY_CROSSED_TOP_BORDER(gg, me) && !(s->unk10 & SPRITE_FLAG_MASK_Y_FLIP)) {
+        if (ENEMY_CROSSED_TOP_BORDER(gg, me) && !(s->frameFlags & SPRITE_FLAG_MASK_Y_FLIP)) {
             gg->unk27D = 0x3C;
             gCurTask->main = sub_8058264;
-        } else if (ENEMY_CROSSED_BOTTOM_BORDER(gg, me)
-                   && (s->unk10 & SPRITE_FLAG_MASK_Y_FLIP)) {
+        } else if (ENEMY_CROSSED_BOTTOM_BORDER(gg, me) && (s->frameFlags & SPRITE_FLAG_MASK_Y_FLIP)) {
             gg->unk27D = 0x3C;
             gCurTask->main = sub_8058264;
         }
     } else {
-        if (ENEMY_CROSSED_LEFT_BORDER(gg, me) && !(s->unk10 & SPRITE_FLAG_MASK_X_FLIP)) {
+        if (ENEMY_CROSSED_LEFT_BORDER(gg, me) && !(s->frameFlags & SPRITE_FLAG_MASK_X_FLIP)) {
             gg->unk27D = 0x3C;
             gCurTask->main = sub_8058264;
-        } else if ((ENEMY_CROSSED_RIGHT_BORDER(gg, me)
-                    && s->unk10 & SPRITE_FLAG_MASK_X_FLIP)) {
+        } else if ((ENEMY_CROSSED_RIGHT_BORDER(gg, me) && s->frameFlags & SPRITE_FLAG_MASK_X_FLIP)) {
             gg->unk27D = 0x3C;
             gCurTask->main = sub_8058264;
         }
     }
 
-    Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+    Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
 
     UpdateSpriteAnimation(s);
     DisplaySprite(s);
@@ -173,31 +167,31 @@ static void sub_8058264(void)
 
     Vec2_32 pos;
 
-    pos.x = Q_24_8_TO_INT(gg->spawnX + gg->offsetX);
-    pos.y = Q_24_8_TO_INT(gg->spawnY + gg->offsetY);
+    pos.x = I(gg->spawnX + gg->offsetX);
+    pos.y = I(gg->spawnY + gg->offsetY);
     s->x = gg->positions[0][gg->unk27E] - gCamera.x;
     s->y = gg->positions[1][gg->unk27E] - gCamera.y;
 
     ENEMY_DESTROY_IF_PLAYER_HIT_2(s, pos);
     ENEMY_DESTROY_IF_OFFSCREEN(gg, me, s);
 
-    Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+    Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
 
     if (--gg->unk27D == 0) {
         if (gg->unk27C) {
-            if (s->unk10 & SPRITE_FLAG_MASK_Y_FLIP) {
-                s->unk10 &= ~SPRITE_FLAG_MASK_Y_FLIP;
+            if (s->frameFlags & SPRITE_FLAG_MASK_Y_FLIP) {
+                s->frameFlags &= ~SPRITE_FLAG_MASK_Y_FLIP;
                 gCurTask->main = sub_8057F80;
             } else {
-                s->unk10 |= SPRITE_FLAG_MASK_Y_FLIP;
+                s->frameFlags |= SPRITE_FLAG_MASK_Y_FLIP;
                 gCurTask->main = sub_8057F80;
             }
         } else {
-            if (s->unk10 & SPRITE_FLAG_MASK_X_FLIP) {
-                s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+            if (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP) {
+                s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
                 gCurTask->main = sub_8057F80;
             } else {
-                s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+                s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
                 gCurTask->main = sub_8057F80;
             }
         }

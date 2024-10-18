@@ -2,7 +2,7 @@
 #include "malloc_vram.h"
 #include "game/enemies/balloon.h"
 #include "game/entity.h"
-#include "sakit/entities_manager.h"
+#include "game/sa1_leftovers/entities_manager.h"
 #include "game/enemies/projectiles.h"
 #include "task.h"
 #include "trig.h"
@@ -26,24 +26,22 @@ typedef struct {
 
 void Task_BalloonMain(void);
 
-void CreateEntity_Balloon(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                          u8 spriteY)
+void CreateEntity_Balloon(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     if (DIFFICULTY_LEVEL_IS_NOT_EASY) {
-        struct Task *t = TaskCreate(Task_BalloonMain, sizeof(Sprite_Balloon), 0x4040, 0,
-                                    TaskDestructor_80095E8);
+        struct Task *t = TaskCreate(Task_BalloonMain, sizeof(Sprite_Balloon), 0x4040, 0, TaskDestructor_80095E8);
         Sprite_Balloon *balloon = TASK_DATA(t);
         Sprite *s = &balloon->s;
         balloon->base.regionX = spriteRegionX;
         balloon->base.regionY = spriteRegionY;
         balloon->base.me = me;
         balloon->base.spriteX = me->x;
-        balloon->base.spriteY = spriteY;
+        balloon->base.id = spriteY;
 
         ENEMY_SET_SPAWN_POS_FLYING(balloon, me);
 
-        balloon->unk54 = Q_24_8(0.5);
-        balloon->unk58 = Q_24_8(0.0);
+        balloon->unk54 = Q(0.5);
+        balloon->unk58 = Q(0.0);
         balloon->unk5E = 120;
         balloon->unk5C = me->d.uData[2] * 4;
         balloon->unk5D = me->d.uData[3] * 4;
@@ -90,7 +88,7 @@ void Task_BalloonMain(void)
     }
 
     ENEMY_UPDATE(s, pos.x, pos.y);
-    s->unk10 ^= 0x400;
+    s->frameFlags ^= 0x400;
     DisplaySprite(s);
 }
 
@@ -120,14 +118,14 @@ void sub_805879C(void)
         proj.numTiles = 3;
         proj.anim = SA2_ANIM_BALLOON_PROJ;
         proj.variant = 0;
-        proj.x = Q_24_8_NEW(pos.x + 1);
-        proj.y = Q_24_8_NEW(pos.y + 20);
+        proj.x = QS(pos.x + 1);
+        proj.y = QS(pos.y + 20);
         proj.rot = (u8)-1;
         proj.speed = 512;
         CreateProjectile(&proj);
     }
 
-    Player_UpdateHomingPosition(Q_24_8_NEW(pos.x), Q_24_8_NEW(pos.y));
+    Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
     if (UpdateSpriteAnimation(s) == 0) {
         balloon->unk5E = 120;
         s->graphics.anim = SA2_ANIM_BALLOON;
@@ -140,6 +138,6 @@ void sub_805879C(void)
         gCurTask->main = Task_BalloonMain;
     }
     DisplaySprite(s);
-    s->unk10 ^= 0x400;
+    s->frameFlags ^= 0x400;
     DisplaySprite(s);
 }

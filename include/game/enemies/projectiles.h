@@ -1,7 +1,10 @@
 #ifndef GUARD_ENEMY_PROJECTILE_H
 #define GUARD_ENEMY_PROJECTILE_H
 
-/* TODO: move to projectile file */
+#include "sprite.h"
+
+#define NUM_PROJECTILES_MAX 4
+
 typedef struct {
     /* 0x00 */ u16 numTiles;
     /* 0x02 */ AnimId anim;

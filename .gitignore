@@ -67,6 +67,7 @@ tools/agbcc
 /ctx.c
 reports
 .vscode/*.log
+.vs/
 *.gbapal
 *.lz
 *.rl
@@ -74,7 +75,12 @@ reports
 ./maps
 *.4bpp
 *.8bpp
-
+libagbsyscall/*.s
 
 !data/maps/*/*/tilemaps/*/*.bin
 *.exe
+*.dll
+*.sdl
+
+# third party deps
+/ext

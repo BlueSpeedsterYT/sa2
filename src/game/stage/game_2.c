@@ -4,7 +4,7 @@
 #include "task.h"
 #include "trig.h"
 
-#include "sakit/globals.h"
+#include "game/sa1_leftovers/globals.h"
 
 #include "game/stage/game_2.h"
 #include "game/stage/player.h"
@@ -16,8 +16,12 @@
 
 #include "constants/animations.h"
 
-struct Task *sub_801F15C(s16 x, s16 y, u8 param2, s8 param3, TaskMain main,
-                         TaskDestructor dtor)
+const u16 sAnimData_StageGoalScoreBonus[][3] = {
+    { 36, SA2_ANIM_STAGE_GOAL_SCORE_BONUS, 1 }, { 36, SA2_ANIM_STAGE_GOAL_SCORE_BONUS, 2 }, { 36, SA2_ANIM_STAGE_GOAL_SCORE_BONUS, 3 },
+    { 36, SA2_ANIM_STAGE_GOAL_SCORE_BONUS, 4 }, { 36, SA2_ANIM_STAGE_GOAL_SCORE_BONUS, 5 },
+};
+
+struct Task *sub_801F15C(s16 x, s16 y, u8 param2, s8 param3, TaskMain main, TaskDestructor dtor)
 {
     struct Task *t = TaskCreate(main, sizeof(TaskStrc_801F15C), 0x4001, 0, dtor);
 
@@ -36,11 +40,11 @@ struct Task *sub_801F15C(s16 x, s16 y, u8 param2, s8 param3, TaskMain main,
     s->graphics.anim = 0;
     s->variant = 0;
     s->prevVariant = -1;
-    s->unk1A = 0;
-    s->timeUntilNextFrame = 0;
-    s->animSpeed = 0x10;
+    s->oamFlags = SPRITE_OAM_ORDER(0);
+    s->qAnimDelay = 0;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
-    s->unk10 = 0;
+    s->frameFlags = 0;
 
     return t;
 }
@@ -54,13 +58,11 @@ void Task_801F214(void)
         TaskDestroy(gCurTask);
         return;
     }
-    if ((ts->unk14 & 0x8)
-        && ((ts->playerAnim != gPlayer.anim)
-            || (ts->playerVariant != gPlayer.variant))) {
+    if ((ts->unk14 & 0x8) && ((ts->playerAnim != gPlayer.anim) || (ts->playerVariant != gPlayer.variant))) {
         TaskDestroy(gCurTask);
         return;
     } else {
-        if (s->unk10 & SPRITE_FLAG_MASK_ANIM_OVER) {
+        if (s->frameFlags & SPRITE_FLAG_MASK_ANIM_OVER) {
             TaskDestroy(gCurTask);
             return;
         }
@@ -73,11 +75,11 @@ void Task_801F214(void)
                             s8 id = SIO_MULTI_CNT->id;
                             struct Task *tmpp = gMultiplayerPlayerTasks[id];
                             MultiplayerPlayer *mpp = TASK_DATA(tmpp);
-                            ts->x = mpp->unk50;
-                            ts->y = mpp->unk52;
+                            ts->x = mpp->pos.x;
+                            ts->y = mpp->pos.y;
                         } else {
-                            ts->x = Q_24_8_TO_INT(gPlayer.x);
-                            ts->y = Q_24_8_TO_INT(gPlayer.y);
+                            ts->x = I(gPlayer.x);
+                            ts->y = I(gPlayer.y);
                         }
                     } break;
 
@@ -107,17 +109,17 @@ void Task_801F214(void)
 
         if (ts->unk14 & 0x40) {
             if (!(gPlayer.moveState & MOVESTATE_FACING_LEFT)) {
-                s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+                s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
             } else {
-                s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+                s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
             }
         }
 
         if (ts->unk14 & 0x80) {
             if (GRAVITY_IS_INVERTED) {
-                s->unk10 |= SPRITE_FLAG_MASK_Y_FLIP;
+                s->frameFlags |= SPRITE_FLAG_MASK_Y_FLIP;
             } else {
-                s->unk10 &= ~SPRITE_FLAG_MASK_Y_FLIP;
+                s->frameFlags &= ~SPRITE_FLAG_MASK_Y_FLIP;
             }
         }
 
@@ -128,8 +130,7 @@ void Task_801F214(void)
 
 struct Task *CreateStageGoalBonusPointsAnim(s32 x, s32 y, u16 score)
 {
-    if ((score != 100) && (score != 200) && (score != 300) && (score != 500)
-        && (score != 800)) {
+    if ((score != 100) && (score != 200) && (score != 300) && (score != 500) && (score != 800)) {
         return NULL;
     } else {
         struct Task *t;
@@ -164,8 +165,8 @@ struct Task *CreateStageGoalBonusPointsAnim(s32 x, s32 y, u16 score)
         s->graphics.dest = VramMalloc(sAnimData_StageGoalScoreBonus[score][0]);
         s->graphics.anim = sAnimData_StageGoalScoreBonus[score][1];
         s->variant = sAnimData_StageGoalScoreBonus[score][2];
-        s->unk1A = SPRITE_OAM_ORDER(8);
-        s->unk10 = SPRITE_FLAG(PRIORITY, 2);
+        s->oamFlags = SPRITE_OAM_ORDER(8);
+        s->frameFlags = SPRITE_FLAG(PRIORITY, 2);
         return t;
     }
 }
@@ -180,17 +181,17 @@ void sub_801F488(void)
         s32 x, y;
         s32 x2, y2;
 
-        s32 yInverted = p->unk17;
+        s32 yInverted = p->spriteOffsetY;
 
         if (GRAVITY_IS_INVERTED) {
             yInverted = -yInverted;
         }
 
-        x = Q_24_8_TO_INT(yInverted * SIN_24_8(p->rotation * 4));
-        y = Q_24_8_TO_INT(yInverted * COS_24_8(p->rotation * 4));
+        x = I(yInverted * SIN_24_8(p->rotation * 4));
+        y = I(yInverted * COS_24_8(p->rotation * 4));
 
-        x2 = Q_24_8_TO_INT(p->x);
-        y2 = Q_24_8_TO_INT(p->y);
+        x2 = I(p->x);
+        y2 = I(p->y);
 
         x2 -= x;
         y2 += y;
@@ -202,8 +203,8 @@ void sub_801F488(void)
         s->graphics.dest = VramMalloc(20);
         s->graphics.anim = SA2_ANIM_SPARK_EFFECT;
         s->variant = 0;
-        s->unk1A = SPRITE_OAM_ORDER(8);
-        s->unk10 = SPRITE_FLAG(PRIORITY, 1);
+        s->oamFlags = SPRITE_OAM_ORDER(8);
+        s->frameFlags = SPRITE_FLAG(PRIORITY, 1);
     }
 }
 
@@ -224,8 +225,8 @@ struct Task *sub_801F568(s16 x, s16 y)
     s->graphics.dest = VramMalloc(20);
     s->graphics.anim = SA2_ANIM_SPARK_EFFECT;
     s->variant = 0;
-    s->unk1A = SPRITE_OAM_ORDER(8);
-    s->unk10 = SPRITE_FLAG(PRIORITY, 1);
+    s->oamFlags = SPRITE_OAM_ORDER(8);
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 1);
 
     return t;
 }

@@ -1,7 +1,22 @@
 #ifndef GUARD_GBA_TYPES_H
 #define GUARD_GBA_TYPES_H
 
+#include "gba/defines.h"
 #include <stdint.h>
+
+#if defined(_MSC_VER)
+#define PACKED(name, struct_body)                                                       \
+    __pragma(pack(push, 1)) typedef struct struct_body name;                            \
+    __pragma(pack(pop))
+#else
+// NOTE: Please make sure NOT to add a ; to the end
+//       of the structs you enclose with this macro.
+//       PACKED(struct test { char a; int b; }); - good
+//       PACKED(struct test { char a; int b; };); - bad
+#define PACKED(name, struct_body)                                                       \
+    typedef struct __attribute__((packed)) name struct_body name;
+#endif
+
 
 typedef uint8_t   u8;
 typedef uint16_t u16;
@@ -15,7 +30,12 @@ typedef int64_t  s64;
 // If the DISPLAY_HEIGHT was >255, scanline effects would break,
 // so we have to make this variable bigger.
 // (u16 should be plenty for screen coordinates, right?)
-#if (DISPLAY_HEIGHT > 255)
+#if !defined(DISPLAY_HEIGHT)
+#error DISPLAY_HEIGHT not defined.
+#endif
+/// TODO: Technically this should only be #if (DISPLAY_HEIGHT > 255),
+//        we should probably replace uses of int_vcount with a different type where a high DISPLAY_WIDTH necessitates u16.
+#if ((DISPLAY_WIDTH > 255) || (DISPLAY_HEIGHT > 255))
 typedef u16 int_vcount;
 #else
 typedef u8 int_vcount;
@@ -64,7 +84,11 @@ struct PlttData
 //       usually generated during runtime, anyway.
 //       That's what this variation of 'OamData' is for,
 //       as well using this to determine the size for some DMAs to gOamBuffer.
-typedef struct PACKED {
+// TODO: Somehow this does not work by #include-ing main.h and using PACKED();
+// TODO: EXTENDED_OAM is not yet functional
+#define EXTENDED_OAM FALSE
+#if !EXTENDED_OAM
+PACKED(OamDataShort, {
     /*0x00*/
     u32 y : 8;
 
@@ -84,8 +108,29 @@ typedef struct PACKED {
     u16 tileNum : 10; // 0x3FF
     u16 priority : 2; // 0x400, 0x800 -> 0xC00
     u16 paletteNum : 4;
-} OamDataShort; /* size: 0x6 (important to not be 0x8, see comment above struct!) */
+}); /* size: 0x6 (important to not be 0x8, see comment above struct!) */
+#else
+PACKED(OamDataShort, {
+    /* 0x00 */ s16 x;
+    /* 0x02 */ s16 y;
 
+    /* 0x04 */ u32 affineMode:2;  // 0x1, 0x2 -> 0x4
+             u32 objMode:2;     // 0x4, 0x8 -> 0xC
+             u32 mosaic:1;      // 0x10
+             u32 bpp:1;         // 0x20
+             u32 shape:2;       // 0x40, 0x80 -> 0xC0
+
+    /* 0x06 */ u32 padding:9;
+             u32 matrixNum:5;   // bits 3/4 are h-flip/v-flip if not in affine mode
+             u32 size:2;        // 0x4000, 0x8000 -> 0xC000
+
+    /* 0x08 */ u16 tileNum:10;    // 0x3FF
+             u16 priority:2;    // 0x400, 0x800 -> 0xC00
+             u16 paletteNum:4;
+}); /* size: 0x6 (important to not be 0x8, see comment above struct!) */
+#endif
+
+#if !EXTENDED_OAM
 typedef union {
     struct {
     /*0x00*/ u32 y:8;
@@ -117,6 +162,43 @@ typedef union {
 
     u16 raw[4];
 } OamData;
+#else
+typedef union {
+    struct {
+    /* 0x00 */ s16 x;
+    /* 0x02 */ s16 y;
+
+    /* 0x04 */ u32 affineMode:2;  // 0x1, 0x2 -> 0x4
+             u32 objMode:2;     // 0x4, 0x8 -> 0xC
+             u32 mosaic:1;      // 0x10
+             u32 bpp:1;         // 0x20
+             u32 shape:2;       // 0x40, 0x80 -> 0xC0
+
+    /* 0x06 */ u32 padding:9;
+             u32 matrixNum:5;   // bits 3/4 are h-flip/v-flip if not in affine mode
+             u32 size:2;        // 0x4000, 0x8000 -> 0xC000
+
+    /* 0x08 */ u16 tileNum:10;    // 0x3FF
+             u16 priority:2;    // 0x400, 0x800 -> 0xC00
+             u16 paletteNum:4;
+
+    /* 0x0A */ u16 fractional:8;
+             u16 integer:7;
+             u16 sign:1;
+    } split;
+
+    struct {
+        s16 x;
+        s16 y;
+        u16 attr0;
+        u16 attr1;
+        u16 attr2;
+        u16 affineParam;
+    } all;
+
+    u16 raw[4];
+} OamData;
+#endif
 
 #define ST_OAM_HFLIP     0x08
 #define ST_OAM_VFLIP     0x10

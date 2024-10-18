@@ -11,6 +11,7 @@
 #include "game/interactables_2/music_plant/guitar_string.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -38,11 +39,9 @@ extern void sub_80762BC(Sprite_GuitarString *);
 extern void sub_80762E0(Sprite_GuitarString *);
 extern bool32 sub_8076320(Sprite_GuitarString *);
 
-void CreateEntity_GuitarString(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                               u8 spriteY)
+void CreateEntity_GuitarString(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_GuitarString, sizeof(Sprite_GuitarString), 0x2010,
-                                0, TaskDestructor_GuitarString);
+    struct Task *t = TaskCreate(Task_GuitarString, sizeof(Sprite_GuitarString), 0x2010, 0, TaskDestructor_GuitarString);
     Sprite_GuitarString *gs = TASK_DATA(t);
     Sprite *s = &gs->s1;
     u16 i;
@@ -51,17 +50,17 @@ void CreateEntity_GuitarString(MapEntity *me, u16 spriteRegionX, u16 spriteRegio
     gs->base.regionY = spriteRegionY;
     gs->base.me = me;
     gs->base.spriteX = me->x;
-    gs->base.spriteY = spriteY;
+    gs->base.id = spriteY;
 
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
     s->graphics.dest = (void *)(OBJ_VRAM0 + 0x3700);
     s->graphics.anim = SA2_ANIM_NOTE_BLOCK;
     s->variant = SA2_ANIM_VARIANT_NOTE_BLOCK_GUITAR;
@@ -196,7 +195,7 @@ void sub_807608C(Sprite_GuitarString *gs)
         Player_SetMovestate_IsInScriptedSequence();
         gPlayer.moveState |= MOVESTATE_400000;
 
-        gPlayer.unk64 = 4;
+        gPlayer.charState = CHARSTATE_SPIN_ATTACK;
         gPlayer.speedAirX = 0;
         gPlayer.speedAirY = (s32)(gPlayer.speedAirY * 3) >> 1;
 
@@ -227,12 +226,12 @@ void sub_8076114(Sprite_GuitarString *gs)
 
         r2 = gs->posX;
         r2 += 4;
-        r2 += (s16)Q_24_8_TO_INT(elem[0] + (s16)elY);
+        r2 += (s16)I(elem[0] + (s16)elY);
         r2 -= gCamera.x;
         s->x = r2;
 
         r1 = gs->posY;
-        r1 += (s8)Q_24_8_TO_INT((u16)elem[1]);
+        r1 += (s8)I((u16)elem[1]);
         r1 -= gCamera.y;
         s->y = r1;
 
@@ -245,11 +244,11 @@ bool32 sub_807618C(Sprite_GuitarString *gs)
     if (PLAYER_IS_ALIVE && gPlayer.speedAirY > 0) {
         s16 screenX = gs->posX - gCamera.x;
         s16 screenY = gs->posY - gCamera.y;
-        s16 playerX = Q_24_8_TO_INT(gPlayer.x) - gCamera.x;
-        s16 playerY = Q_24_8_TO_INT(gPlayer.y) - gCamera.y;
+        s16 playerX = I(gPlayer.x) - gCamera.x;
+        s16 playerY = I(gPlayer.y) - gCamera.y;
 
-        if ((screenX <= playerX) && ((screenX + GUITARSTR_WIDTH_PX) >= playerX)
-            && ((screenY - 9) <= playerY) && ((screenY + 9) >= playerY)) {
+        if ((screenX <= playerX) && ((screenX + GUITARSTR_WIDTH_PX) >= playerX) && ((screenY - 9) <= playerY)
+            && ((screenY + 9) >= playerY)) {
             return TRUE;
         }
     }
@@ -301,19 +300,19 @@ void sub_80762BC(Sprite_GuitarString *gs)
 }
 
 // Because assigning it to a variable doesn't match...
-#define LOCAL_GUITARSTR_MARGIN (Q_24_8(gs->posX + (GUITARSTR_WIDTH_PX / 2)))
+#define LOCAL_GUITARSTR_MARGIN (Q(gs->posX + (GUITARSTR_WIDTH_PX / 2)))
 
 void sub_80762E0(Sprite_GuitarString *gs)
 {
     if (PLAYER_IS_ALIVE) {
         if (gPlayer.x != LOCAL_GUITARSTR_MARGIN) {
             if (gPlayer.x > LOCAL_GUITARSTR_MARGIN) {
-                gPlayer.x -= Q_24_8(0.5);
+                gPlayer.x -= Q(0.5);
 
                 if (gPlayer.x < LOCAL_GUITARSTR_MARGIN)
                     gPlayer.x = LOCAL_GUITARSTR_MARGIN;
             } else {
-                gPlayer.x += Q_24_8(0.5);
+                gPlayer.x += Q(0.5);
 
                 if (gPlayer.x > LOCAL_GUITARSTR_MARGIN)
                     gPlayer.x = LOCAL_GUITARSTR_MARGIN;
@@ -338,9 +337,7 @@ bool32 sub_8076320(Sprite_GuitarString *gs)
     otherY = screenY;
     otherX = screenX;
 
-    if (IS_OUT_OF_RANGE_2(otherX, otherY,
-                          (CAM_REGION_WIDTH + (GUITARSTR_WIDTH_PX / 2)) / 2,
-                          CAM_REGION_WIDTH / 2)) {
+    if (IS_OUT_OF_RANGE_2(otherX, otherY, (CAM_REGION_WIDTH + (GUITARSTR_WIDTH_PX / 2)) / 2, CAM_REGION_WIDTH / 2)) {
         return TRUE;
     }
 

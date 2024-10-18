@@ -6,6 +6,7 @@
 #include "lib/m4a.h"
 
 #include "constants/animations.h"
+#include "constants/char_states.h"
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 
@@ -46,11 +47,9 @@ static const u16 sTecBasBlockSfx[] = {
     SE_TECHNO_BASE_COMMON,
 };
 
-void CreateEntity_NoteBlock(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
-                            u8 spriteY)
+void CreateEntity_NoteBlock(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_NoteBlock, sizeof(Sprite_TecBaseNoteBlock), 0x2010,
-                                0, TaskDestructor_NoteBlock);
+    struct Task *t = TaskCreate(Task_NoteBlock, sizeof(Sprite_TecBaseNoteBlock), 0x2010, 0, TaskDestructor_NoteBlock);
     Sprite_TecBaseNoteBlock *noteBlock = TASK_DATA(t);
     Sprite *s = &noteBlock->s;
     noteBlock->unk44 = 0;
@@ -61,18 +60,18 @@ void CreateEntity_NoteBlock(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     noteBlock->base.regionY = spriteRegionY;
     noteBlock->base.me = me;
     noteBlock->base.spriteX = me->x;
-    noteBlock->base.spriteY = spriteY;
+    noteBlock->base.id = spriteY;
 
     s = &noteBlock->s;
-    s->unk1A = SPRITE_OAM_ORDER(18);
+    s->oamFlags = SPRITE_OAM_ORDER(18);
     s->graphics.size = 0;
     s->animCursor = 0;
-    s->timeUntilNextFrame = 0;
+    s->qAnimDelay = 0;
     s->prevVariant = -1;
-    s->animSpeed = 0x10;
+    s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->unk10 = 0x2000;
+    s->frameFlags = 0x2000;
     s->graphics.dest = (void *)OBJ_VRAM0 + sNoteBlockAssets[noteBlock->unk4C][2] * 0x20;
     s->graphics.anim = sNoteBlockAssets[noteBlock->unk4C][0];
     s->variant = sNoteBlockAssets[noteBlock->unk4C][1];
@@ -114,11 +113,11 @@ static bool32 sub_8079AC4(Sprite_TecBaseNoteBlock *noteBlock)
     u16 temp3, temp4;
 
     if (!(gPlayer.moveState & MOVESTATE_DEAD)) {
-        temp1 = Q_24_8_TO_INT(gPlayer.x);
+        temp1 = I(gPlayer.x);
         temp1 += 24;
         temp1 -= noteBlock->unk3C;
 
-        temp2 = Q_24_8_TO_INT(gPlayer.y);
+        temp2 = I(gPlayer.y);
         temp2 += 16;
         temp2 -= noteBlock->unk40;
 
@@ -128,8 +127,7 @@ static bool32 sub_8079AC4(Sprite_TecBaseNoteBlock *noteBlock)
         if (temp3 < 49 && temp4 < 33) {
             s16 speedGround = gPlayer.speedGroundX;
 
-            temp = sub_800CDBC(&noteBlock->s, noteBlock->unk3C, noteBlock->unk40,
-                               &gPlayer);
+            temp = sub_800CDBC(&noteBlock->s, noteBlock->unk3C, noteBlock->unk40, &gPlayer);
             if (temp == 0) {
                 return 0;
             }
@@ -137,25 +135,25 @@ static bool32 sub_8079AC4(Sprite_TecBaseNoteBlock *noteBlock)
             if (temp & 0x10000) {
                 gPlayer.y += Q_8_8(temp);
                 gPlayer.speedAirY = gUnknown_080E001A[noteBlock->unk4C][1];
-                gPlayer.unk64 = 4;
+                gPlayer.charState = CHARSTATE_SPIN_ATTACK;
                 gPlayer.transition = PLTRANS_PT5;
                 noteBlock->unk4D = 0xC0;
             } else if (temp & 0x40000) {
                 gPlayer.x += (s16)(temp & 0xFF00);
                 gPlayer.speedAirX = gUnknown_080E001A[noteBlock->unk4C][0];
-                gPlayer.unk64 = 4;
+                gPlayer.charState = CHARSTATE_SPIN_ATTACK;
                 gPlayer.transition = PLTRANS_PT5;
                 noteBlock->unk4D = 0x80;
             } else if (temp & 0x80000) {
                 gPlayer.x += (s16)(temp & 0xFF00);
                 gPlayer.speedAirX = gUnknown_080E001A[noteBlock->unk4C][2];
-                gPlayer.unk64 = 4;
+                gPlayer.charState = CHARSTATE_SPIN_ATTACK;
                 gPlayer.transition = PLTRANS_PT5;
                 noteBlock->unk4D = 0;
             } else {
                 gPlayer.y += Q_8_8(temp);
                 gPlayer.speedAirY = gUnknown_080E001A[noteBlock->unk4C][3];
-                gPlayer.unk64 = 4;
+                gPlayer.charState = CHARSTATE_SPIN_ATTACK;
                 gPlayer.transition = PLTRANS_PT5;
                 noteBlock->unk4D = 0x40;
             }
@@ -164,7 +162,7 @@ static bool32 sub_8079AC4(Sprite_TecBaseNoteBlock *noteBlock)
                 gPlayer.moveState &= ~MOVESTATE_100;
             } else {
                 gPlayer.speedGroundX = speedGround;
-                gPlayer.unk64 = 4;
+                gPlayer.charState = CHARSTATE_SPIN_ATTACK;
                 gPlayer.transition = PLTRANS_PT5;
             }
 
@@ -211,21 +209,22 @@ static void sub_8079D00(Sprite_TecBaseNoteBlock *noteBlock)
 {
     Sprite *s = &noteBlock->s;
 
-    s->x = noteBlock->unk3C - gCamera.x + Q_24_8_TO_INT(noteBlock->unk44);
-    s->y = noteBlock->unk40 - gCamera.y + Q_24_8_TO_INT(noteBlock->unk48);
+    s->x = noteBlock->unk3C - gCamera.x + I(noteBlock->unk44);
+    s->y = noteBlock->unk40 - gCamera.y + I(noteBlock->unk48);
 }
 
 static void sub_8079D30(Sprite_TecBaseNoteBlock *noteBlock)
 {
     Sprite *s = &noteBlock->s;
 
-    s->unk10 |= SPRITE_FLAG_MASK_X_FLIP;
+    s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
     DisplaySprite(s);
 
-    s->unk10 &= ~SPRITE_FLAG_MASK_X_FLIP;
+    s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
     DisplaySprite(s);
 }
 
+// TODO: Weird comparison nonmatch
 static bool32 sub_8079D60(Sprite_TecBaseNoteBlock *noteBlock)
 {
     s32 temp, temp2;
@@ -242,7 +241,7 @@ static bool32 sub_8079D60(Sprite_TecBaseNoteBlock *noteBlock)
     temp4 = temp2;
     temp3 = temp;
 
-    if (temp3 > 496 || temp4 > 416) {
+    if (temp3 > (128 + (DISPLAY_WIDTH + 128)) || temp4 > (128 + (DISPLAY_HEIGHT + 128))) {
         return TRUE;
     }
     return FALSE;
