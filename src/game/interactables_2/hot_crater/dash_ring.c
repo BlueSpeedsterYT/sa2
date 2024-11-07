@@ -1,6 +1,6 @@
 #include "global.h"
 #include "malloc_vram.h"
-#include "lib/m4a.h"
+#include "lib/m4a/m4a.h"
 #include "trig.h"
 
 #include "game/stage/player.h"
@@ -25,7 +25,7 @@ static void Task_Interactable_DashRing(void);
 static void Task_Interactable_DashRing_AfterAcceleration(void);
 static void TaskDestructor_Interactable_DashRing(struct Task *);
 static void DashRing_UpdateScreenPos(Sprite_DashRing *);
-static bool32 DashRing_ShouldDespawn(Sprite_DashRing *);
+bool32 DashRing_ShouldDespawn(Sprite_DashRing *);
 static void DashRing_Despawn(Sprite_DashRing *);
 
 // type: UnkDashRingStruct
@@ -265,6 +265,13 @@ static bool32 DashRing_PlayerIsColliding(Sprite_DashRing *ring)
 
         if ((ringScreenX2 <= playerScreenX) && ((ringScreenX2 + 24) >= playerScreenX) && (ringScreenY2 <= playerScreenY)
             && (ringScreenY2 + 24) >= playerScreenY) {
+#if TAS_TESTING && TAS_TESTING_WIDESCREEN_HACK && DISPLAY_WIDTH > 240
+            // The TAS is designed to "skip" the dashring by being so far off screen
+            // that the play does no trigger it
+            if (gCurrentLevel == LEVEL_INDEX(ZONE_2, ACT_1)) {
+                return FALSE;
+            }
+#endif
             return TRUE;
         }
     }
@@ -318,14 +325,15 @@ static void DashRing_UpdateScreenPos(Sprite_DashRing *ring)
     ring->s2.y = ring->posY - gCamera.y;
 }
 
-static bool32 DashRing_ShouldDespawn(Sprite_DashRing *ring)
+bool32 DashRing_ShouldDespawn(Sprite_DashRing *ring)
 {
     s16 screenX, screenY;
 
     screenX = ring->posX - gCamera.x;
     screenY = ring->posY - gCamera.y;
 
-    if (((u16)(screenX + 140) > 520) || ((screenY + 12) < -128) || ((screenY - 12) > 288)) {
+    if ((screenX + 12) < -(CAM_REGION_WIDTH / 2) || (screenX - 12) > DISPLAY_WIDTH + (CAM_REGION_WIDTH / 2)
+        || (screenY + 12) < -(CAM_REGION_WIDTH / 2) || ((screenY - 12) > DISPLAY_HEIGHT + (CAM_REGION_WIDTH / 2))) {
         return TRUE;
     }
 

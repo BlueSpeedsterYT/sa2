@@ -40,9 +40,10 @@
 #define DISPLAY_WIDTH  240
 #define DISPLAY_HEIGHT 160
 
-#include "gba/types.h"
-#define OAM_SIZE (OAM_ENTRY_COUNT*sizeof(OamData))
-extern struct SoundInfo *SOUND_INFO_PTR;
+//#include "gba/types.h"
+// TODO: Fix #define OAM_SIZE (OAM_ENTRY_COUNT*sizeof(OamData))
+#define OAM_SIZE (OAM_ENTRY_COUNT*8)
+extern struct SoundMixerState *SOUND_INFO_PTR;
 extern uint16_t INTR_CHECK;
 extern void (*INTR_VECTOR)(void);
 
@@ -80,7 +81,7 @@ extern uint8_t VRAM[VRAM_SIZE];
 // NOTE(Jace): I tried replacing these altogether,
 //             but that resulted in a nonmatching ROM
 //             (see notes above)
-#define SOUND_INFO_PTR (*(struct SoundInfo **)0x3007FF0)
+#define SOUND_INFO_PTR (*(struct SoundMixerState **)0x3007FF0)
 #define INTR_CHECK     (*(u16 *)0x3007FF8)
 #define INTR_VECTOR    (*(void **)0x3007FFC)
 
@@ -112,13 +113,17 @@ extern uint8_t VRAM[VRAM_SIZE];
 #endif
 
 #if WIDESCREEN_HACK
+#define WIN_REG_SIZE 4
 #define WIN_RANGE(a, b) (((a) << 16) | (b))
 #define WIN_GET_LOWER(win_reg)  (((win_reg) & 0xFFFF0000) >> 16)
 #define WIN_GET_HIGHER(win_reg) (((win_reg) & 0x0000FFFF) >> 0)
+typedef uint32_t winreg_t;
 #else
+#define WIN_REG_SIZE 2
 #define WIN_RANGE(a, b) (((a) << 8) | (b))
 #define WIN_GET_LOWER(win_reg)  (((win_reg) & 0xFF00) >> 8)
 #define WIN_GET_HIGHER(win_reg) (((win_reg) & 0x00FF) >> 0)
+typedef uint16_t winreg_t;
 #endif
 
 #define TILE_SIZE_4BPP 32

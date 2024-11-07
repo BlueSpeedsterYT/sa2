@@ -1,5 +1,5 @@
 #include "global.h"
-#include "lib/m4a.h"
+#include "lib/m4a/m4a.h"
 #include "gba/syscall.h"
 
 #include "malloc_vram.h"
@@ -165,6 +165,9 @@ static void Task_StageGoalToggleMain(void)
 #if TAS_TESTING && TAS_TESTING_WIDESCREEN_HACK && DISPLAY_WIDTH > 240
         if (gCurrentLevel == LEVEL_INDEX(ZONE_3, ACT_1)) {
             gPlayer.speedGroundX = 0;
+            gInputRecorder.playbackHead += 1;
+        } else if (gCurrentLevel == LEVEL_INDEX(ZONE_6, ACT_2)) {
+            gPlayer.speedAirX = 0;
             gInputRecorder.playbackHead += 1;
         }
 #endif

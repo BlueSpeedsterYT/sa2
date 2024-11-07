@@ -4,7 +4,7 @@
 #include "sprite.h"
 #include "task.h"
 #include "trig.h"
-#include "lib/m4a.h"
+#include "lib/m4a/m4a.h"
 
 #include "game/sa1_leftovers/collision.h"
 #include "game/sa1_leftovers/dust_cloud.h"
@@ -246,15 +246,18 @@ void ApplyItemboxEffect(Entity_ItemBox *itembox)
         case ITEM__RINGS_RANDOM: {
             s32 rnd = gUnknown_080D51FC[(u32)PseudoRandom32() % 5];
 #if TAS_TESTING && TAS_TESTING_WIDESCREEN_HACK && DISPLAY_WIDTH > 240
-            // There is a point in the level where the TAS depends on the RNG
-            // giving 50. Because widescreen runs different code to the native
-            // resolution the RNG end up being different here
+            // There are points in the game where the TAS depends on the RNG
+            // giving specific values. Because widescreen runs different code
+            // to the native resolution the RNG end up being different here
+            // so we force the values we expect
             if (gCurrentLevel == LEVEL_INDEX(ZONE_3, ACT_2)) {
                 if (itembox->base.regionX == 65) {
                     rnd = 50;
                 } else {
                     rnd = 1;
                 }
+            } else if (gCurrentLevel == LEVEL_INDEX(ZONE_5, ACT_2)) {
+                rnd = 10;
             }
 #endif
             rings = &gRingCount;

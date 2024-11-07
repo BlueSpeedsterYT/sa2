@@ -1,5 +1,5 @@
 #include "core.h"
-#include "lib/m4a.h"
+#include "lib/m4a/m4a.h"
 #include "game/save.h"
 #include "game/special_stage/main.h"
 #include "game/special_stage/player.h"
@@ -64,11 +64,6 @@ static const struct UNK_80DF670 sChaosEmeraldUnlockedSprites[] = {
     { SA2_ANIM_CHAOS_EMERALDS_UNLOCKED, SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_PURPLE, 9, 0, 0 },
     { SA2_ANIM_CHAOS_EMERALDS_UNLOCKED, SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_EMPTY, 9, 0, 0 },
     { SA2_ANIM_CHAOS_EMERALDS_UNLOCKED, SA2_ANIM_VARIANT_CHAOS_EMERALDS_UNLOCKED_SHINE, 9, 0, 0 },
-};
-
-static const u16 sPauseMenuVariants[][3] = {
-    { 40, SA2_ANIM_PAUSE_MENU_JP, 0 }, { 40, SA2_ANIM_PAUSE_MENU_EN, 0 }, { 40, SA2_ANIM_PAUSE_MENU_DE, 0 },
-    { 40, SA2_ANIM_PAUSE_MENU_FR, 0 }, { 40, SA2_ANIM_PAUSE_MENU_ES, 0 }, { 40, SA2_ANIM_PAUSE_MENU_IT, 0 },
 };
 
 void sub_806FB04(void)
@@ -315,14 +310,16 @@ static void HandlePaused(struct SpecialStageUI *ui)
     Sprite *s = &ui->pauseMenu;
     s16 lang = LanguageIndex(gLoadedSaveGame->language);
 
-    const u16 pauseMenuSprites[6][3];
-    memcpy((void *)&pauseMenuSprites, sPauseMenuVariants, 0x24);
+    const u16 pauseMenuVariants[][3] = {
+        { 40, SA2_ANIM_PAUSE_MENU_JP, 0 }, { 40, SA2_ANIM_PAUSE_MENU_EN, 0 }, { 40, SA2_ANIM_PAUSE_MENU_DE, 0 },
+        { 40, SA2_ANIM_PAUSE_MENU_FR, 0 }, { 40, SA2_ANIM_PAUSE_MENU_ES, 0 }, { 40, SA2_ANIM_PAUSE_MENU_IT, 0 },
+    };
 
-    sub_806CA88(s, 1, pauseMenuSprites[lang][0], pauseMenuSprites[lang][1], 0x1000, (DISPLAY_WIDTH / 2), (DISPLAY_HEIGHT / 2), 0,
-                pauseMenuSprites[lang][2], 0);
+    sub_806CA88(s, 1, pauseMenuVariants[lang][0], pauseMenuVariants[lang][1], 0x1000, (DISPLAY_WIDTH / 2), (DISPLAY_HEIGHT / 2), 0,
+                pauseMenuVariants[lang][2], 0);
 
-    DmaCopy16(3, &gObjPalette[249], ui->pauseMenuPalette1, 6);
-    DmaCopy16(3, &gObjPalette[252], ui->pauseMenuPalette2, 6);
+    DmaCopy16(3, &gObjPalette[249], ui->pauseMenuPalette1, sizeof(ui->pauseMenuPalette1));
+    DmaCopy16(3, &gObjPalette[252], ui->pauseMenuPalette2, sizeof(ui->pauseMenuPalette2));
     ui->wasPaused = TRUE;
     m4aMPlayAllStop();
     m4aSongNumStart(SE_PAUSE_SCREEN);
@@ -777,8 +774,8 @@ static void RenderPauseMenu(struct SpecialStageUI *ui)
         a = (void *)OBJ_PLTT + 0x1F8;
     }
 
-    DmaCopy16(3, ui->pauseMenuPalette2, b, 6);
-    DmaCopy16(3, ui->pauseMenuPalette1, a, 6);
+    DmaCopy16(3, ui->pauseMenuPalette2, b, sizeof(ui->pauseMenuPalette2));
+    DmaCopy16(3, ui->pauseMenuPalette1, a, sizeof(ui->pauseMenuPalette1));
     DisplaySprite(s);
 }
 

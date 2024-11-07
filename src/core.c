@@ -1,14 +1,14 @@
 #include "core.h"
 #include "global.h"
-#include "lib/m4a.h"
 #include "malloc_ewram.h"
+#include "malloc_vram.h"
 #include "multi_sio.h"
 #include "sprite.h"
 #include "task.h"
-#include "lib/agb_flash.h"
 #include "flags.h"
 #include "input_recorder.h"
-#include "malloc_vram.h"
+#include "lib/m4a/m4a.h"
+#include "lib/agb_flash/agb_flash.h"
 
 // TODO: the order of these vars has
 // been shuffled due to compilation losses.
@@ -335,7 +335,7 @@ void GameInit(void)
     }
 
     // Setup interrupt vector
-#if !PORTABLE
+#if PLATFORM_GBA
     // On GBA the function gets pushed into IWRAM because executing it there is very,
     // very fast
     DmaCopy32(3, IntrMain, gIntrMainBuf, sizeof(gIntrMainBuf));
@@ -366,11 +366,7 @@ void GameLoop(void)
             m4aSoundMain();
         }
 
-#if !PORTABLE
-        // TEMP: remove #if when all sVblankFuncs match
-        if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE)
-#endif
-        {
+        if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE) {
             GetInput();
 
             if (gMultiSioEnabled) {
@@ -412,7 +408,7 @@ static void UpdateScreenDma(void)
 {
     u8 i, j = 0;
     REG_DISPCNT = gDispCnt;
-    DmaCopy32(3, gBgCntRegs, (void *)REG_ADDR_BG0CNT, 8);
+    DmaCopy32(3, gBgCntRegs, (void *)REG_ADDR_BG0CNT, sizeof(gBgCntRegs));
 
     if (gFlags & FLAGS_UPDATE_BACKGROUND_PALETTES) {
         DmaCopy32(3, gBgPalette, (void *)BG_PLTT, BG_PLTT_SIZE);
@@ -453,11 +449,7 @@ static void UpdateScreenDma(void)
         DmaCopy16(3, gBgOffsetsHBlank, gUnknown_03002878, gUnknown_03002A80);
     }
 
-#if !PORTABLE
-    // TEMP: remove #if when all sVblankFuncs match
-    if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE)
-#endif
-    {
+    if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE) {
         CopyOamBufferToOam();
         DmaCopy16(3, gOamBuffer + 0x00, (void *)OAM + 0x000, 0x100);
         DmaCopy16(3, gOamBuffer + 0x20, (void *)OAM + 0x100, 0x100);
@@ -571,11 +563,7 @@ static void UpdateScreenCpuSet(void)
         gNumHBlankIntrs = 0;
     }
 
-#if !PORTABLE
-    // TEMP: remove #if when all sVblankFuncs match
-    if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE)
-#endif
-    {
+    if (sLastCalledVblankFuncId == VBLANK_FUNC_ID_NONE) {
         CopyOamBufferToOam();
         CpuFastCopy(gOamBuffer, (void *)OAM, OAM_SIZE);
     }

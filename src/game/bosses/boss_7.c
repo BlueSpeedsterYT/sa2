@@ -18,7 +18,7 @@
 
 #include "game/math.h"
 
-#include "lib/m4a.h"
+#include "lib/m4a/m4a.h"
 
 #include "constants/animations.h"
 #include "constants/songs.h"
@@ -78,7 +78,7 @@ static void sub_8048408(EggFrog *);
 static void sub_80492B8(EggFrog *);
 static void sub_8048858(EggFrog *);
 static void sub_8048E64(EggFrog *);
-static void sub_80480E8(EggFrog *);
+static void Render(EggFrog *);
 static void sub_804931C(EggFrog *);
 
 static void sub_8047F0C(void);
@@ -363,7 +363,7 @@ static void sub_8047E28(void)
     sub_80492B8(boss);
     sub_8048858(boss);
     sub_8048E64(boss);
-    sub_80480E8(boss);
+    Render(boss);
     sub_804931C(boss);
 
     if (boss->unk14 == 0) {
@@ -393,7 +393,7 @@ static void sub_8047F0C(void)
     gStageFlags &= ~STAGE_FLAG__GRAVITY_INVERTED;
     sub_8048654(boss);
     sub_8048E64(boss);
-    sub_80480E8(boss);
+    Render(boss);
     sub_804931C(boss);
 
     if (Mod(gStageTime, 13) == 0) {
@@ -434,7 +434,7 @@ static void sub_8047F0C(void)
     }
 }
 
-static void sub_80480E8(EggFrog *boss)
+static void Render(EggFrog *boss)
 {
 
     s32 sin, cos;
@@ -444,18 +444,18 @@ static void sub_80480E8(EggFrog *boss)
     u8 i, j;
     u8 temp;
 
-    s->x = 0x20;
-    s->y = 0x28;
+    s->x = 32;
+    s->y = 40;
     UpdateSpriteAnimation(s);
     sub_8003914(s);
     gBgScrollRegs[0][0] = 32 - (I(boss->x) - gCamera.x);
     gBgScrollRegs[0][1] = 40 - (I(boss->y) - gCamera.y);
 
     pos.x = I(boss->x) - gCamera.x;
-    if ((u32)(pos.x + 0x32) >= 351) {
-        gDispCnt &= ~0x100;
+    if (pos.x < -50 || pos.x > (DISPLAY_WIDTH + 60)) {
+        gDispCnt &= ~DISPCNT_BG0_ON;
     } else {
-        gDispCnt |= 0x100;
+        gDispCnt |= DISPCNT_BG0_ON;
     }
 
     for (i = 0; i < 2; i++) {
@@ -841,29 +841,35 @@ static void sub_8048BF0(EggFrog *boss)
 }
 
 // https://decomp.me/scratch/aDy46
-// 81% though looks functionally matching
+// 98.5%, some register hacks get it very close. All instructions match
 NONMATCH("asm/non_matching/game/bosses/boss_7__sub_8048C7C.inc", static bool8 sub_8048C7C(EggFrog *boss))
 {
-    const u16 *const *unk60 = boss->unk60;
+    const u16 **unk60 = (void *)boss->unk60;
     s16 *unk28 = boss->unk28;
-    s16 *unk28_2;
-    s16 *unk1C = (s16 *)boss->unk1C[0];
+#ifndef NON_MATCHING
+    register u16 *r2 asm("r2") = (u16 *)boss->unk1C;
+    register u32 r8 asm("r8");
+#else
+    u16 *r2 = (u16 *)boss->unk1C;
     u32 r8;
+#endif
 
     u16 val = gUnknown_080D8710[boss->unk1B].unk0;
     u8 i;
     u8 result = 0;
-    u8 temp = (boss->unk5C >> 0xC) + 1;
+    u8 r6 = (boss->unk5C >> 0xC) + 1;
     u32 unk5C;
-    if ((temp) > 7) {
+
+    if ((r6) > 7) {
         result = 1;
     }
 
     r8 = 7;
 
-    temp &= 7;
+    r6 &= 7;
     unk5C = boss->unk5C & 0xFFF;
     if (((boss->unk5C >> 0xC) & r8) != (((boss->unk5C - boss->unk58) >> 0xC) & r8)) {
+
         for (i = 0; i < 6; i++) {
             unk28[0] = unk28[1];
             unk28++;
@@ -871,15 +877,28 @@ NONMATCH("asm/non_matching/game/bosses/boss_7__sub_8048C7C.inc", static bool8 su
             unk28++;
             unk28[0] = unk28[1];
             unk28++;
-            unk28[0] = (*unk60++)[temp];
+            unk28[0] = (*unk60++)[r6];
             unk28++;
         }
+        unk28 = boss->unk28;
     }
-    unk28 = boss->unk28;
+
     for (i = 0; i < 6; i++) {
-        unk28 = &boss->unk28[i * 4];
-        *unk1C = sub_80859F4(unk28, unk5C);
-        unk1C++;
+#ifndef NON_MATCHING
+        u16 *sp4[2];
+        u16 r0;
+        s16 *p1;
+        u32 p2;
+        p1 = &unk28[i * 4];
+        p2 = unk5C;
+        sp4[0] = r2;
+        r0 = sub_80859F4(p1, p2);
+        r2 = sp4[0];
+        *r2 = r0;
+        r2++;
+#else
+        *r2++ = sub_80859F4(&unk28[i * 4], unk5C);
+#endif
     }
 
     boss->unk58 = (((boss->unk58 - val) * 230) >> 8) + val;
@@ -957,7 +976,7 @@ static void Task_EggFrogMain(void)
     sub_80492B8(boss);
     sub_804920C(boss);
     sub_8048E64(boss);
-    sub_80480E8(boss);
+    Render(boss);
     boss->unk16 = 1;
     sub_804931C(boss);
 

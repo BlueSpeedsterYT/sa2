@@ -4,7 +4,8 @@
 #include "core.h"
 
 typedef struct {
-    u16 pal[16 * 16];
+    // TODO: this is a 2D array
+    u16 pal[32][16];
 } WaterData;
 
 // Seems to be belonging to water effect
@@ -25,8 +26,8 @@ typedef struct {
 
 extern Water gWater;
 
-extern void sub_8011328(void);
-extern void CreateRunOnWaterEffect(void);
-extern struct Task *CreateWaterfallSurfaceHitEffect(s32 x, s32 y);
+void InitWaterPalettes(void);
+void CreateRunOnWaterEffect(void);
+struct Task *CreateWaterfallSurfaceHitEffect(s32 x, s32 y);
 
 #endif // GUARD_WATER_EFFECT_H

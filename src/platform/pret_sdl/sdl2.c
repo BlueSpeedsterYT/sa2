@@ -14,14 +14,14 @@
 #include "global.h"
 #include "core.h"
 #include "gba/defines.h"
-#include "gba/flash_internal.h"
 #include "gba/io_reg.h"
 #include "gba/types.h"
-#include "gba/m4a_internal.h"
+#include "lib/agb_flash/flash_internal.h"
 #define DMA_DEST_MASK 0x0060
 #define DMA_SRC_MASK  0x0180
+
 #if ENABLE_AUDIO
-#include "cgb_audio.h"
+#include "platform/shared/audio/cgb_audio.h"
 #endif
 
 #ifndef TILE_WIDTH
@@ -235,10 +235,10 @@ int main(int argc, char **argv)
     SDL_AudioSpec want;
 
     SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
-    want.freq = 42048;
+    want.freq = 48000;
     want.format = AUDIO_F32;
     want.channels = 2;
-    want.samples = 1024;
+    want.samples = (want.freq / 60);
     cgb_audio_init(want.freq);
 
     if (SDL_OpenAudio(&want, 0) < 0)
@@ -254,6 +254,9 @@ int main(int argc, char **argv)
 #if ENABLE_VRAM_VIEW
     VramDraw(vramTexture);
 #endif
+    // Prevent the multiplayer screen from being drawn ( see core.c:GameInit() )
+    REG_RCNT = 0x8000;
+
     mainLoopThread = SDL_CreateThread(DoMain, "AgbMain", NULL);
 
     double accumulator = 0.0;
@@ -264,8 +267,6 @@ int main(int argc, char **argv)
     UpdateInternalClock();
 #endif
 
-    // Prevent the multiplayer screen from being drawn ( see core.c:GameInit() )
-    REG_RCNT = 0x8000;
     REG_KEYINPUT = 0x3FF;
 
     while (isRunning) {
@@ -386,8 +387,8 @@ static void CloseSaveFile()
 #define KEY_B_BUTTON      SDLK_x
 #define KEY_START_BUTTON  SDLK_RETURN
 #define KEY_SELECT_BUTTON SDLK_BACKSLASH
-#define KEY_L_BUTTON      SDLK_d
-#define KEY_R_BUTTON      SDLK_f
+#define KEY_L_BUTTON      SDLK_s
+#define KEY_R_BUTTON      SDLK_d
 #define KEY_DPAD_UP       SDLK_UP
 #define KEY_DPAD_DOWN     SDLK_DOWN
 #define KEY_DPAD_LEFT     SDLK_LEFT
@@ -407,6 +408,19 @@ static u16 keys;
 
 u32 fullScreenFlags = 0;
 static SDL_DisplayMode sdlDispMode = { 0 };
+
+void Platform_QueueAudio(const void *data, uint32_t bytesCount)
+{
+    // Reset the audio buffer if we are 3 frames out of sync
+    // If this happens it suggests there was some OS level lag
+    // in playing audio. The queue length should remain stable at < 3 otherwise
+    if (SDL_GetQueuedAudioSize(1) > (bytesCount * 3)) {
+        SDL_ClearQueuedAudio(1);
+    }
+
+    SDL_QueueAudio(1, data, bytesCount);
+    // printf("Queueing %d\n, QueueSize %d\n", bytesCount, SDL_GetQueuedAudioSize(1));
+}
 
 void ProcessSDLEvents(void)
 {

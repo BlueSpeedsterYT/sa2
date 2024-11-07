@@ -3,7 +3,7 @@
 #include "sprite.h"
 #include "task.h"
 #include "animation_commands_bg.h"
-#include "lib/m4a.h"
+#include "lib/m4a/m4a.h"
 #include "game/cutscenes/credits.h"
 #include "game/cutscenes/credits_end.h"
 #include "game/cutscenes/missing_emeralds.h"
@@ -90,9 +90,9 @@ void CreateCreditsEndCutScene(u8 creditsVariant)
     gBgCntRegs[2] = 0x1504;
 
 #ifndef NON_MATCHING
-    DmaFill32(3, 0, BG_CHAR_ADDR((++r6, --r6)), 0x4000);
+    DmaFill32(3, 0, BG_CHAR_ADDR((++r6, --r6)), sizeof(Background) * 256);
 #else
-    DmaFill32(3, 0, BG_CHAR_ADDR(r6), 0x4000);
+    DmaFill32(3, 0, BG_CHAR_ADDR(r6), sizeof(Background) * 256);
 #endif
 
     gUnknown_03004D80[2] = 0x5a;

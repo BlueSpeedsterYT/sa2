@@ -2,7 +2,7 @@
 #include "core.h"
 #include "trig.h"
 #include "malloc_vram.h"
-#include "lib/m4a.h"
+#include "lib/m4a/m4a.h"
 
 #include "game/sa1_leftovers/music_manager.h"
 #include "game/sa1_leftovers/input_buffer.h"
@@ -2773,8 +2773,8 @@ void sub_80232D0(Player *p)
         }
 
         if (IS_BOSS_STAGE(gCurrentLevel)) {
-            r2 = gBossCameraClampX;
-            r3 = gBossCameraClampY;
+            r2 = gBossCameraClampYLower;
+            r3 = gBossCameraClampYUpper;
         } else {
             r2 = cam->minY;
             r3 = cam->maxY;
@@ -4528,7 +4528,7 @@ void Player_Spindash(Player *p)
         }
 
         if (p->frameInput & gPlayerControls.jump) {
-            struct MusicPlayerInfo *mPlayerInfo;
+            struct MP2KPlayerState *mPlayerInfo;
             m4aSongNumStart(SE_SPIN_ATTACK);
 
             mPlayerInfo = gMPlayTable[gSongTable[SE_SPIN_ATTACK].ms].info;
