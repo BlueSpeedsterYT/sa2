@@ -6,7 +6,7 @@
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "game/entity.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 
 #include "constants/animations.h"
 
@@ -87,19 +87,19 @@ static void Task_Hammerhead(void)
         s->y = (posY - gCamera.y) + I(prevUnk48);
     }
 
-    if ((p->moveState & MOVESTATE_8) && (p->unk3C == s)) {
-        p->y += 0x100;
-        p->y += ip;
+    if ((p->moveState & MOVESTATE_STOOD_ON_OBJ) && (p->stoodObj == s)) {
+        p->qWorldY += 0x100;
+        p->qWorldY += ip;
     }
-    if (!(p->moveState & MOVESTATE_400000)) {
-        s32 flags = sub_800CCB8(s, posX, posY + I(hammerhead->unk48), p);
+    if (!(p->moveState & MOVESTATE_IA_OVERRIDE)) {
+        s32 flags = Coll_Player_Platform(s, posX, posY + I(hammerhead->unk48), p);
 
         if (flags & 0x10000) {
-            p->y += (flags << 24) >> 16;
+            p->qWorldY += (flags << 24) >> 16;
         }
     }
 
-    if (sub_800C4FC(s, posX, posY + I(hammerhead->unk48), 1) == TRUE) {
+    if (Coll_Player_Enemy_Attack(s, posX, posY + I(hammerhead->unk48), 1) == TRUE) {
         TaskDestroy(gCurTask);
     } else {
         posX -= gCamera.x;
@@ -130,8 +130,8 @@ static void TaskDestructor_Hammerhead(struct Task *t)
     Sprite *s = &hammerhead->s;
     VramFree(s->graphics.dest);
 
-    if ((gPlayer.moveState & MOVESTATE_8) && (gPlayer.unk3C == s)) {
-        gPlayer.moveState &= ~MOVESTATE_8;
-        gPlayer.unk3C = NULL;
+    if ((gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ) && (gPlayer.stoodObj == s)) {
+        gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
+        gPlayer.stoodObj = NULL;
     }
 }

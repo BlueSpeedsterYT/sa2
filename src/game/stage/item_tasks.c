@@ -4,7 +4,7 @@
 #include "task.h"
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -150,14 +150,14 @@ void Task_Item_Shield_Normal(void)
         bool32 b;
         s32 screenX, screenY;
 
-        screenX = I(gPlayer.x) - cam->x;
+        screenX = I(gPlayer.qWorldX) - cam->x;
         item->s.x = screenX + gPlayer.unk7C;
 
-        screenY = I(gPlayer.y) - cam->y;
+        screenY = I(gPlayer.qWorldY) - cam->y;
         item->s.y = screenY;
 
         item->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-        item->s.frameFlags |= gPlayer.unk90->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY;
+        item->s.frameFlags |= gPlayer.spriteInfoBody->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY;
 
         UpdateSpriteAnimation(&item->s);
 
@@ -198,14 +198,14 @@ void Task_Item_Shield_Magnetic(void)
         if (!(gPlayer.itemEffect & PLAYER_ITEM_EFFECT__INVINCIBILITY)) {
             s32 screenX, screenY;
 
-            screenX = I(gPlayer.x) - cam->x;
+            screenX = I(gPlayer.qWorldX) - cam->x;
             item->s.x = screenX + gPlayer.unk7C;
 
-            screenY = I(gPlayer.y) - cam->y;
+            screenY = I(gPlayer.qWorldY) - cam->y;
             item->s.y = screenY;
 
             item->s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-            item->s.frameFlags |= gPlayer.unk90->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY;
+            item->s.frameFlags |= gPlayer.spriteInfoBody->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY;
         } else {
             return;
         }
@@ -241,11 +241,11 @@ void Task_802ABC8(void)
         u32 r2 = 0;
 
         if (IS_SINGLE_PLAYER) {
-            screenX = I(gPlayer.x) + gPlayer.unk7C;
+            screenX = I(gPlayer.qWorldX) + gPlayer.unk7C;
 
-            screenY = I(gPlayer.y);
+            screenY = I(gPlayer.qWorldY);
 
-            r2 = gPlayer.unk90->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY;
+            r2 = gPlayer.spriteInfoBody->s.frameFlags & SPRITE_FLAG_MASK_PRIORITY;
         }
 
         s->x = screenX - cam->x;
@@ -286,9 +286,9 @@ void Task_Item_Invincibility(void)
         return;
     } else {
         // _0802ACE4
-        x = I(gPlayer.x) + gPlayer.unk7C;
-        y = I(gPlayer.y);
-        priority = gPlayer.unk90->s.frameFlags;
+        x = I(gPlayer.qWorldX) + gPlayer.unk7C;
+        y = I(gPlayer.qWorldY);
+        priority = gPlayer.spriteInfoBody->s.frameFlags;
     }
     // _0802AD02
     priority &= SPRITE_FLAG_MASK_PRIORITY;

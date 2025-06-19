@@ -22,8 +22,8 @@ struct SpecialStagePlayer {
     u8 unkA6;
 
     // x and y may be flipped
-    s32 x;
-    s32 y;
+    s32 q16WorldX;
+    s32 q16WorldY;
 
     s16 unkB0;
     s16 bearing;
@@ -45,8 +45,8 @@ struct SpecialStagePlayer {
 
     s32 speed;
     u32 rotateSpeed;
-    u32 unkD0;
-    u32 unkD4;
+    u32 q16SpeedX;
+    u32 q16SpeedY;
     u32 acceleration;
 
     s32 coastResistence;

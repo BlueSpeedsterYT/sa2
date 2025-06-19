@@ -30,11 +30,13 @@ static void sub_8079D9C(Sprite_TecBaseNoteBlock *);
 static void sub_8079D00(Sprite_TecBaseNoteBlock *);
 static void sub_8079D30(Sprite_TecBaseNoteBlock *);
 
+ALIGNED(4)
 static const u16 sNoteBlockAssets[][3] = {
     { SA2_ANIM_NOTE_BLOCK_TEC_BASE, 0, 0x14C },
     { SA2_ANIM_NOTE_BLOCK_TEC_BASE, 1, 0x154 },
     { SA2_ANIM_NOTE_BLOCK_TEC_BASE, 2, 0x15C },
 };
+
 static const u16 gUnknown_080E001A[][4] = {
     { Q_8_8(6), Q_8_8(250), Q_8_8(250), Q_8_8(6) },
     { Q_8_8(7), Q_8_8(249), Q_8_8(249), Q_8_8(7) },
@@ -47,7 +49,7 @@ static const u16 sTecBasBlockSfx[] = {
     SE_TECHNO_BASE_COMMON,
 };
 
-void CreateEntity_NoteBlock(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
+void CreateEntity_BounceBlock(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
     struct Task *t = TaskCreate(Task_NoteBlock, sizeof(Sprite_TecBaseNoteBlock), 0x2010, 0, TaskDestructor_NoteBlock);
     Sprite_TecBaseNoteBlock *noteBlock = TASK_DATA(t);
@@ -113,11 +115,11 @@ static bool32 sub_8079AC4(Sprite_TecBaseNoteBlock *noteBlock)
     u16 temp3, temp4;
 
     if (!(gPlayer.moveState & MOVESTATE_DEAD)) {
-        temp1 = I(gPlayer.x);
+        temp1 = I(gPlayer.qWorldX);
         temp1 += 24;
         temp1 -= noteBlock->unk3C;
 
-        temp2 = I(gPlayer.y);
+        temp2 = I(gPlayer.qWorldY);
         temp2 += 16;
         temp2 -= noteBlock->unk40;
 
@@ -125,50 +127,50 @@ static bool32 sub_8079AC4(Sprite_TecBaseNoteBlock *noteBlock)
         temp3 = temp1;
 
         if (temp3 < 49 && temp4 < 33) {
-            s16 speedGround = gPlayer.speedGroundX;
+            s16 speedGround = gPlayer.qSpeedGround;
 
-            temp = sub_800CDBC(&noteBlock->s, noteBlock->unk3C, noteBlock->unk40, &gPlayer);
+            temp = Coll_Player_Interactable(&noteBlock->s, noteBlock->unk3C, noteBlock->unk40, &gPlayer);
             if (temp == 0) {
                 return 0;
             }
 
             if (temp & 0x10000) {
-                gPlayer.y += Q_8_8(temp);
-                gPlayer.speedAirY = gUnknown_080E001A[noteBlock->unk4C][1];
+                gPlayer.qWorldY += Q_8_8(temp);
+                gPlayer.qSpeedAirY = gUnknown_080E001A[noteBlock->unk4C][1];
                 gPlayer.charState = CHARSTATE_SPIN_ATTACK;
-                gPlayer.transition = PLTRANS_PT5;
+                gPlayer.transition = PLTRANS_UNCURL;
                 noteBlock->unk4D = 0xC0;
             } else if (temp & 0x40000) {
-                gPlayer.x += (s16)(temp & 0xFF00);
-                gPlayer.speedAirX = gUnknown_080E001A[noteBlock->unk4C][0];
+                gPlayer.qWorldX += (s16)(temp & 0xFF00);
+                gPlayer.qSpeedAirX = gUnknown_080E001A[noteBlock->unk4C][0];
                 gPlayer.charState = CHARSTATE_SPIN_ATTACK;
-                gPlayer.transition = PLTRANS_PT5;
+                gPlayer.transition = PLTRANS_UNCURL;
                 noteBlock->unk4D = 0x80;
             } else if (temp & 0x80000) {
-                gPlayer.x += (s16)(temp & 0xFF00);
-                gPlayer.speedAirX = gUnknown_080E001A[noteBlock->unk4C][2];
+                gPlayer.qWorldX += (s16)(temp & 0xFF00);
+                gPlayer.qSpeedAirX = gUnknown_080E001A[noteBlock->unk4C][2];
                 gPlayer.charState = CHARSTATE_SPIN_ATTACK;
-                gPlayer.transition = PLTRANS_PT5;
+                gPlayer.transition = PLTRANS_UNCURL;
                 noteBlock->unk4D = 0;
             } else {
-                gPlayer.y += Q_8_8(temp);
-                gPlayer.speedAirY = gUnknown_080E001A[noteBlock->unk4C][3];
+                gPlayer.qWorldY += Q_8_8(temp);
+                gPlayer.qSpeedAirY = gUnknown_080E001A[noteBlock->unk4C][3];
                 gPlayer.charState = CHARSTATE_SPIN_ATTACK;
-                gPlayer.transition = PLTRANS_PT5;
+                gPlayer.transition = PLTRANS_UNCURL;
                 noteBlock->unk4D = 0x40;
             }
 
             if (gPlayer.moveState & MOVESTATE_IN_AIR) {
                 gPlayer.moveState &= ~MOVESTATE_100;
             } else {
-                gPlayer.speedGroundX = speedGround;
+                gPlayer.qSpeedGround = speedGround;
                 gPlayer.charState = CHARSTATE_SPIN_ATTACK;
-                gPlayer.transition = PLTRANS_PT5;
+                gPlayer.transition = PLTRANS_UNCURL;
             }
 
-            if (gPlayer.unk3C == &noteBlock->s) {
-                gPlayer.unk3C = NULL;
-                gPlayer.moveState &= ~MOVESTATE_8;
+            if (gPlayer.stoodObj == &noteBlock->s) {
+                gPlayer.stoodObj = NULL;
+                gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             }
 
             return TRUE;

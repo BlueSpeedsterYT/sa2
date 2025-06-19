@@ -3,7 +3,7 @@
 #include "flags.h"
 #include "malloc_vram.h"
 
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 
 #include "data/sprite_data.h"
 
@@ -55,7 +55,7 @@ void sub_801561C(void)
     AnimId oldPlayerAnim = gPlayer.anim;
     u16 oldPlayerVariant = gPlayer.variant;
     u32 oldPlayerMovestate = gPlayer.moveState;
-    PlayerSpriteInfo *unk5A70 = gPlayer.unk90;
+    PlayerSpriteInfo *unk5A70 = gPlayer.spriteInfoBody;
     u32 oldPlayerAnimSpeed = unk5A70->s.animSpeed;
     u32 oldPlayerUnk10 = unk5A70->s.frameFlags;
     u16 r6 = unk5A70->transform.rotation;
@@ -78,7 +78,7 @@ void sub_801561C(void)
     sPlayerStateBufferIndex = 0;
 }
 
-void sub_80156D0(void)
+void BoostEffect_StorePlayerState(void)
 {
     Player *p = &gPlayer;
     u32 oldMovestate = p->moveState;
@@ -96,15 +96,15 @@ void sub_80156D0(void)
     sPlayerStateBuffer[i].anim = p->anim;
     sPlayerStateBuffer[i].variant = p->variant;
     sPlayerStateBuffer[i].moveState = oldMovestate;
-    sPlayerStateBuffer[i].animSpeed = p->unk90->s.animSpeed;
-    sPlayerStateBuffer[i].flags = p->unk90->s.frameFlags;
-    sPlayerStateBuffer[i].unkC = p->unk90->transform.rotation;
+    sPlayerStateBuffer[i].animSpeed = p->spriteInfoBody->s.animSpeed;
+    sPlayerStateBuffer[i].flags = p->spriteInfoBody->s.frameFlags;
+    sPlayerStateBuffer[i].unkC = p->spriteInfoBody->transform.rotation;
 }
 
 void sub_8015750(void)
 {
-    s32 playerX = gPlayer.x;
-    s32 playerY = gPlayer.y;
+    s32 playerX = gPlayer.qWorldX;
+    s32 playerY = gPlayer.qWorldY;
     s16 i;
 
     for (i = 0; i < (s32)ARRAY_COUNT(sPlayerPosBuffer); i++) {
@@ -115,14 +115,14 @@ void sub_8015750(void)
     sPlayerPosBufferIndex = 0;
 }
 
-void sub_8015790(void)
+void BoostEffect_StorePlayerPos(void)
 {
     u32 index;
 
     INC_BE_INDEX(sPlayerPosBuffer);
     index = sPlayerPosBufferIndex;
-    sPlayerPosBuffer[index].x = gPlayer.x;
-    sPlayerPosBuffer[index].y = gPlayer.y;
+    sPlayerPosBuffer[index].x = gPlayer.qWorldX;
+    sPlayerPosBuffer[index].y = gPlayer.qWorldY;
 }
 
 void GetPreviousPlayerPos(Vec2_32 *pos, u8 pastFrameDelta)
@@ -179,7 +179,7 @@ static inline void sub_8015B64_inline(AnimId anim, u16 palId)
     }
 }
 
-void sub_801583C(void)
+void CreateBoostEffectTasks(void)
 {
     Sprite *s;
     u8 i;
@@ -210,7 +210,7 @@ void sub_801583C(void)
             s->x = 0;
             s->y = 0;
 
-            actions->transform.height = +Q(1);
+            actions->transform.qScaleY = +Q(1);
         }
 
         if (s->palId != 0) {
@@ -269,15 +269,15 @@ void Task_80159C8(void)
                 s->frameFlags |= (gUnknown_030054B8++) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
 
                 if (actions->plState.moveState & MOVESTATE_FACING_LEFT) {
-                    transform->width = +Q(1);
+                    transform->qScaleX = +Q(1);
                 } else {
-                    transform->width = -Q(1);
+                    transform->qScaleX = -Q(1);
                 }
 
                 actions->plState.moveState &= MOVESTATE_80000000;
 
                 if (actions->plState.moveState) {
-                    transform->width = -transform->width;
+                    transform->qScaleX = -transform->qScaleX;
                 }
 
                 TransformSprite(s, transform);

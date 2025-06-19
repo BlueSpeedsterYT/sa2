@@ -155,15 +155,15 @@ void CreateEntity_Whirlwind(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
 // (fake-matched) https://decomp.me/scratch/Jl2c3
 void sub_807C9C0(Sprite_IA86 *ia086)
 {
-    gPlayer.moveState |= MOVESTATE_400000;
+    gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
     gPlayer.charState = CHARSTATE_IN_WHIRLWIND;
 
     ia086->unk182 = 64;
     ia086->unk184 = Q(0.5);
-    ia086->unk186 = gPlayer.speedAirY;
+    ia086->unk186 = gPlayer.qSpeedAirY;
     ia086->unk180 = 0;
-    ia086->unk188 = Q(ia086->unk228.centerX) - gPlayer.x;
-    ia086->unk18C = Q(ia086->unk228.centerY) - gPlayer.y;
+    ia086->unk188 = Q(ia086->unk228.centerX) - gPlayer.qWorldX;
+    ia086->unk18C = Q(ia086->unk228.centerY) - gPlayer.qWorldY;
     ia086->unk190 = 0;
     ia086->unk194 = 0;
 
@@ -179,14 +179,14 @@ void sub_807C9C0(Sprite_IA86 *ia086)
     register s32 r1 asm("r1");
     s16 *p184;
 
-    p1->moveState |= MOVESTATE_400000;
+    p1->moveState |= MOVESTATE_IA_OVERRIDE;
     p1->charState = CHARSTATE_IN_WHIRLWIND;
 
     // Must be some debug stuff happening here
     r0 = 0x23C;
     r0 = Q(*(s32 *)((void *)ia086 + r0));
     asm("" ::"r"(r0));
-    r1 = p1->x;
+    r1 = p1->qWorldX;
     asm("" ::"r"(r1));
     p = p1;
     asm("" ::: "r0");
@@ -197,13 +197,13 @@ void sub_807C9C0(Sprite_IA86 *ia086)
     zero = 0;
     *p184 = Q(0.5);
 
-    ia086->unk186 = p->speedAirY;
+    ia086->unk186 = p->qSpeedAirY;
 
     r0 = 0x180;
     (*(s16 *)((void *)ia086 + r0)) = zero;
 
-    ia086->unk188 = p->x - Q(ia086->unk228.centerX);
-    ia086->unk18C = p->y - Q(ia086->unk228.centerY);
+    ia086->unk188 = p->qWorldX - Q(ia086->unk228.centerX);
+    ia086->unk18C = p->qWorldY - Q(ia086->unk228.centerY);
     ia086->unk190 = zero;
     ia086->unk194 = zero;
 
@@ -228,8 +228,8 @@ bool32 sub_807CA64(Sprite_IA86 *ia086)
         ia086->unk186 += MIN((-ia086->unk186 >> 4), -Q(0.25));
     }
 
-    gPlayer.y += ia086->unk186;
-    gPlayer.y = MIN(gPlayer.y, someY);
+    gPlayer.qWorldY += ia086->unk186;
+    gPlayer.qWorldY = MIN(gPlayer.qWorldY, someY);
 
     ia086->unk184 += Q(0.25);
     ia086->unk184 = MIN(ia086->unk184, +Q(3.0));
@@ -249,7 +249,7 @@ bool32 sub_807CA64(Sprite_IA86 *ia086)
         sub_807CC28(ia086);
     }
 
-    gPlayer.x = Q(ia086->unk228.centerX) + ia086->unk188 + ia086->unk190;
+    gPlayer.qWorldX = Q(ia086->unk228.centerX) + ia086->unk188 + ia086->unk190;
 
     return (returnState == 2);
 }
@@ -258,7 +258,7 @@ bool32 sub_807CB78(Sprite_IA86 *ia086)
 {
     bool32 result = FALSE;
 
-    if (gPlayer.y > Q(ia086->unk228.posY + ia086->unk228.top)) {
+    if (gPlayer.qWorldY > Q(ia086->unk228.posY + ia086->unk228.top)) {
         ia086->unk186 -= 0x10;
 
         ia086->unk186 = MAX(ia086->unk186, -Q(3.0));
@@ -276,12 +276,12 @@ bool32 sub_807CB78(Sprite_IA86 *ia086)
         x = Q(ia086->unk228.centerX);
         x += ia086->unk188;
         x += ia086->unk190;
-        p->x = x;
+        p->qWorldX = x;
 
         y = Q(ia086->unk228.centerY);
         y += ia086->unk18C;
         y += ia086->unk194;
-        p->y = y;
+        p->qWorldY = y;
     }
 
     return result;
@@ -492,8 +492,8 @@ bool32 sub_807CFB4(Sprite_IA86 *ia086)
     if (PLAYER_IS_ALIVE) {
         s16 x = ia086->unk228.centerX - gCamera.x;
         s16 y = ia086->unk228.centerY - gCamera.y;
-        s16 px = I(gPlayer.x) - gCamera.x;
-        s16 py = I(gPlayer.y) - gCamera.y;
+        s16 px = I(gPlayer.qWorldX) - gCamera.x;
+        s16 py = I(gPlayer.qWorldY) - gCamera.y;
         s32 r5, r4;
         u16 r3;
         s32 r2 = (y - ia086->unk228.height);
@@ -557,7 +557,7 @@ void TaskDestructor_Interactable086(struct Task *t)
 void sub_807D130(Sprite_IA86 *ia086)
 {
     ia086->unk188 = 0;
-    ia086->unk18C = gPlayer.y - Q(ia086->unk228.centerY);
+    ia086->unk18C = gPlayer.qWorldY - Q(ia086->unk228.centerY);
 
     gCurTask->main = Task_807D268;
 }
@@ -622,10 +622,10 @@ void Task_807D268(void)
 
 void sub_807D2BC(Sprite_IA86 *unused)
 {
-    gPlayer.moveState &= ~MOVESTATE_400000;
+    gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
     gPlayer.transition = PLTRANS_PT7;
-    gPlayer.speedAirX = 0;
-    gPlayer.speedAirY = -Q(8.0);
+    gPlayer.qSpeedAirX = 0;
+    gPlayer.qSpeedAirY = -Q(8.0);
 
     gCurTask->main = Task_807D06C;
 }

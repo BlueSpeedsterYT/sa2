@@ -2,7 +2,7 @@
 #include "malloc_vram.h"
 #include "sprite.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/mon.h"
@@ -78,7 +78,7 @@ static void Task_MonMain(void)
     s->x = I(mon->x) - gCamera.x;
     s->y = I(mon->y) - gCamera.y;
 
-    if (sub_800C4FC(s, I(mon->x), I(mon->y), 0)) {
+    if (Coll_Player_Enemy_Attack(s, I(mon->x), I(mon->y), 0)) {
         TaskDestroy(gCurTask);
         return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
@@ -86,8 +86,8 @@ static void Task_MonMain(void)
         TaskDestroy(gCurTask);
         return;
     } else {
-        if ((gPlayer.x > mon->x - Q(DISPLAY_WIDTH / 2)) && (gPlayer.x < mon->x + Q(DISPLAY_WIDTH / 2)) && (gPlayer.y > mon->y - Q(50))
-            && (gPlayer.y < mon->y + Q(50))) {
+        if ((gPlayer.qWorldX > mon->x - Q(DISPLAY_WIDTH / 2)) && (gPlayer.qWorldX < mon->x + Q(DISPLAY_WIDTH / 2))
+            && (gPlayer.qWorldY > mon->y - Q(50)) && (gPlayer.qWorldY < mon->y + Q(50))) {
             gCurTask->main = Task_Mon_2;
             s->graphics.anim = SA2_ANIM_MON;
             s->variant = 2;
@@ -109,7 +109,7 @@ static void Task_Mon_2(void)
     s->x = I(mon->x) - gCamera.x;
     s->y = I(mon->y) - gCamera.y;
 
-    if (sub_800C4FC(s, I(mon->x), I(mon->y), 0)) {
+    if (Coll_Player_Enemy_Attack(s, I(mon->x), I(mon->y), 0)) {
         TaskDestroy(gCurTask);
         return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
@@ -143,7 +143,7 @@ static void Task_Mon_3(void)
     s->x = I(mon->x) - gCamera.x;
     s->y = I(mon->y + mon->offsetY) - gCamera.y;
 
-    if (sub_800C4FC(s, I(mon->x), I(mon->y + mon->offsetY), 0)) {
+    if (Coll_Player_Enemy_Attack(s, I(mon->x), I(mon->y + mon->offsetY), 0)) {
         TaskDestroy(gCurTask);
         return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
@@ -172,7 +172,7 @@ static void Task_Mon_4(void)
     s->x = I(mon->x) - gCamera.x;
     s->y = I(mon->y) - gCamera.y;
 
-    if (sub_800C4FC(s, I(mon->x), I(mon->y), 0)) {
+    if (Coll_Player_Enemy_Attack(s, I(mon->x), I(mon->y), 0)) {
         TaskDestroy(gCurTask);
         return;
     } else if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
@@ -183,8 +183,8 @@ static void Task_Mon_4(void)
         Player_UpdateHomingPosition(mon->x, mon->y);
 
         if (UpdateSpriteAnimation(s) == 0) {
-            if ((gPlayer.x > mon->x - Q(DISPLAY_WIDTH / 2)) && (gPlayer.x < mon->x + Q(DISPLAY_WIDTH / 2)) && (gPlayer.y > mon->y - Q(50))
-                && (gPlayer.y < mon->y + Q(50))) {
+            if ((gPlayer.qWorldX > mon->x - Q(DISPLAY_WIDTH / 2)) && (gPlayer.qWorldX < mon->x + Q(DISPLAY_WIDTH / 2))
+                && (gPlayer.qWorldY > mon->y - Q(50)) && (gPlayer.qWorldY < mon->y + Q(50))) {
 
                 ENEMY_TURN_TO_PLAYER(mon->x, s);
 

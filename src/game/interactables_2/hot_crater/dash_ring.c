@@ -175,63 +175,63 @@ static void DashRing_SetPlayerSpeedAndDir(Sprite_DashRing *ring)
     gPlayer.transition = PLTRANS_DASHRING;
 
     // NOTE: This doesn't take the sprite offset, is it a bug?
-    gPlayer.x = Q(ring->posX);
-    gPlayer.y = Q(ring->posY);
+    gPlayer.qWorldX = Q(ring->posX);
+    gPlayer.qWorldY = Q(ring->posY);
     gPlayer.unk72 = 0x10;
 
     switch (ring->orientation) {
         case DASH_RING_DIR__UP: {
             gPlayer.charState = CHARSTATE_SPRING_B;
-            gPlayer.speedAirX = COS_DEG(270) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(270) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(270) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(270) * IA_DASH_RING_ACCELERATION;
         } break;
 
         case DASH_RING_DIR__UP_RIGHT: {
             gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
             gPlayer.charState = CHARSTATE_SPRING_B;
-            gPlayer.speedAirX = COS_DEG(315) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(315) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(315) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(315) * IA_DASH_RING_ACCELERATION;
         } break;
 
         case DASH_RING_DIR__RIGHT: {
             gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
             gPlayer.charState = CHARSTATE_RAMP_AND_DASHRING;
-            gPlayer.speedAirX = COS_DEG(0) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(0) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(0) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(0) * IA_DASH_RING_ACCELERATION;
         } break;
 
         case DASH_RING_DIR__DOWN_RIGHT: {
             gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
             gPlayer.charState = CHARSTATE_FALLING_VULNERABLE_B;
-            gPlayer.speedAirX = COS_DEG(45) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(45) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(45) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(45) * IA_DASH_RING_ACCELERATION;
         } break;
 
         case DASH_RING_DIR__DOWN: {
             gPlayer.charState = CHARSTATE_FALLING_VULNERABLE_B;
-            gPlayer.speedAirX = COS_DEG(90) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(90) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(90) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(90) * IA_DASH_RING_ACCELERATION;
         } break;
 
         case DASH_RING_DIR__DOWN_LEFT: {
             gPlayer.moveState |= MOVESTATE_FACING_LEFT;
             gPlayer.charState = CHARSTATE_FALLING_VULNERABLE_B;
-            gPlayer.speedAirX = COS_DEG(135) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(135) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(135) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(135) * IA_DASH_RING_ACCELERATION;
         } break;
 
         case DASH_RING_DIR__LEFT: {
             gPlayer.moveState |= MOVESTATE_FACING_LEFT;
             gPlayer.charState = CHARSTATE_RAMP_AND_DASHRING;
-            gPlayer.speedAirX = COS_DEG(180) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(180) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(180) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(180) * IA_DASH_RING_ACCELERATION;
         } break;
 
         case DASH_RING_DIR__UP_LEFT: {
             gPlayer.moveState |= MOVESTATE_FACING_LEFT;
             gPlayer.charState = CHARSTATE_SPRING_B;
-            gPlayer.speedAirX = COS_DEG(225) * IA_DASH_RING_ACCELERATION;
-            gPlayer.speedAirY = SIN_DEG(225) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirX = COS_DEG(225) * IA_DASH_RING_ACCELERATION;
+            gPlayer.qSpeedAirY = SIN_DEG(225) * IA_DASH_RING_ACCELERATION;
         } break;
     }
 
@@ -254,8 +254,8 @@ static bool32 DashRing_PlayerIsColliding(Sprite_DashRing *ring)
     ringScreenY = ring->posY;
     ringScreenY -= gCamera.y;
 
-    playerScreenX = I(gPlayer.x) - gCamera.x;
-    playerScreenY = I(gPlayer.y) - gCamera.y;
+    playerScreenX = I(gPlayer.qWorldX) - gCamera.x;
+    playerScreenY = I(gPlayer.qWorldY) - gCamera.y;
 
     for (i = 0; i < ARRAY_COUNT(ring->positions); i++) {
         ringScreenX2 = ringScreenX;

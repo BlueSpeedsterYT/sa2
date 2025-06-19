@@ -10,7 +10,7 @@
 #include "game/options_screen.h"
 #include "game/multiboot/connection.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/decomp_credits.h"
 #include "game/stage/tilemap_table.h"
@@ -21,6 +21,10 @@
 #include "game/stage/dust_effect_braking.h"
 #include "game/stage/rings_scatter.h"
 
+#if COLLECT_RINGS_ROM
+#include "game/multiboot/collect_rings/results.h"
+#endif
+
 #include "game/water_effects.h"
 #include "game/dummy_task.h"
 
@@ -30,7 +34,8 @@
 
 #include "data/sprite_tables.h"
 
-void GameStart(void)
+#ifndef COLLECT_RINGS_ROM
+void GameInit(void)
 {
     u32 i;
     bool32 hasProfile = FALSE;
@@ -49,7 +54,7 @@ void GameStart(void)
     gPlayer.spriteTask = NULL;
     gCamera.movementTask = NULL;
 
-    gUnknown_030059D0.t = NULL;
+    gDustEffectBrakingTask.t = NULL;
     gWater.t = NULL;
 
     gUnknown_0300543C = 0;
@@ -58,11 +63,15 @@ void GameStart(void)
     gSmallAirBubbleCount = 0;
     gDemoPlayCounter = 0;
     // TODO: resolve this
-    gUnknown_030054E4 = 0;
+    gDestroySpotlights = 0;
 
     for (i = 0; i < 4; i++) {
         gMultiplayerPlayerTasks[i] = NULL;
     }
+
+#if (GAME == GAME_SA1)
+    gTask_03006240 = 0;
+#endif
 
     for (i = 0; i < 4; i++) {
         gMultiplayerCharacters[i] = 0;
@@ -77,7 +86,7 @@ void GameStart(void)
         hasProfile = TRUE;
     }
 
-    // This flag is only set in GameInit
+    // This flag is only set in EngineInit
     if (gFlags & FLAGS_200) {
         ShowSinglePakResults();
         return;
@@ -122,3 +131,37 @@ void GameStart(void)
     CreateTitleScreen();
 #endif
 }
+#else
+void GameInit(void)
+{
+    u32 i;
+#ifndef NON_MATCHING
+    u8 *multiSioEnabled;
+#endif
+    gGameMode = 5;
+
+    gUnknown_03004D54 = gBgOffsetsBuffer[0];
+    gUnknown_030022C0 = gBgOffsetsBuffer[1];
+
+    i = 0;
+#ifndef NON_MATCHING
+    multiSioEnabled = &gMultiSioEnabled;
+#endif
+
+    for (; i < 4; i++) {
+        gMultiplayerCharacters[i] = 0;
+        gMPRingCollectWins[i] = 0;
+        gUnknown_030054B4[i] = i;
+        gMultiplayerMissingHeartbeats[i] = 0;
+    }
+#ifndef NON_MATCHING
+    *multiSioEnabled = TRUE;
+#else
+    gMultiSioEnabled = TRUE;
+#endif
+    // gMultiSioStatusFlags = 0;
+    MultiSioInit(gMultiSioStatusFlags);
+    MultiSioStart();
+    CreateMultiplayerSinglePakResultsScreen(0);
+}
+#endif

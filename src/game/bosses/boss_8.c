@@ -6,10 +6,10 @@
 #include "bg_triangles.h"
 #include "malloc_vram.h"
 #include "lib/m4a/m4a.h"
-#include "game/sa1_leftovers/globals.h"
-#include "game/sa1_leftovers/camera.h"
-#include "game/sa1_leftovers/collision.h"
-#include "game/sa1_leftovers/player.h"
+#include "game/sa1_sa2_shared/globals.h"
+#include "game/sa1_sa2_shared/camera.h"
+#include "game/sa1_sa2_shared/collision.h"
+#include "game/sa1_sa2_shared/player.h"
 #include "game/bosses/common.h"
 #include "game/player_callbacks.h" // UpdateHomingPosition
 #include "game/cheese.h"
@@ -20,6 +20,11 @@
 #include "game/stage/game_7.h"
 #include "game/stage/screen_fade.h"
 #include "game/stage/screen_shake.h"
+
+#if TAS_TESTING
+#include <stdio.h>
+#include <stdlib.h>
+#endif
 
 #include "constants/animations.h"
 #include "constants/char_states.h"
@@ -102,7 +107,7 @@ static void TaskDestructor_SuperEggRoboZMain(struct Task *);
 static void Task_BossRunManagerMain(void);
 static void TaskDestructor_BossRunManager(struct Task *);
 
-static void Task_804AB24(void);
+void Task_804AB24(void);
 static void Task_804AD68(void);
 static u8 sub_804B0EC(SuperEggRoboZ *boss, u8 arm);
 static void sub_804B43C(SuperEggRoboZ *boss, u8 p1);
@@ -110,10 +115,10 @@ static void sub_804B594(SuperEggRoboZ *boss, u8 p1);
 static void sub_804B734(SuperEggRoboZ *boss, u8 p1);
 static void sub_804B984(SuperEggRoboZ *boss, u8 p1);
 static void sub_804BAC0(SuperEggRoboZ *boss, u8 p1);
-static void sub_804BC44(SuperEggRoboZ *boss, u8 p1);
+void sub_804BC44(SuperEggRoboZ *boss, u8 p1);
 static void sub_804BE6C(SuperEggRoboZ *boss, u8 p1);
 static void sub_804C080(SuperEggRoboZ *boss);
-static void sub_804C240(SuperEggRoboZ *boss, u8 p1);
+void sub_804C240(SuperEggRoboZ *boss, u8 p1);
 static void sub_804C3AC(SuperEggRoboZ *boss);
 static void sub_804C5B8(SuperEggRoboZ *boss);
 static void sub_804C830(SuperEggRoboZ *boss);
@@ -121,7 +126,7 @@ static void sub_804CA08(SuperEggRoboZ *boss);
 static void sub_804CA70(SuperEggRoboZ *boss);
 static void Task_ShowResultsAndDelete(void);
 static void sub_804CC98(SuperEggRoboZ *boss);
-static void sub_804AE40(SuperEggRoboZ *boss);
+void sub_804AE40(SuperEggRoboZ *boss);
 static void Boss8_HitCockpit(SuperEggRoboZ *boss);
 static void sub_804C8F4(SuperEggRoboZ *boss);
 static void sub_804CCD0(SuperEggRoboZ *boss, s32 qP1);
@@ -206,13 +211,13 @@ void CreateBossRunManager(u8 bossIndex)
         Cheese *cheese;
         Player_DisableInputAndBossTimer();
 
-        gPlayer.speedGroundX = Q(5);
+        gPlayer.qSpeedGround = Q(5);
 
         // ???
-        x = gUnknown_080D87E6[bossIndex - 1][0] - I(gPlayer.x);
-        y = gUnknown_080D87E6[bossIndex][1] - I(gPlayer.y);
-        gPlayer.x += Q(x);
-        gPlayer.y += Q(y);
+        x = gUnknown_080D87E6[bossIndex - 1][0] - I(gPlayer.qWorldX);
+        y = gUnknown_080D87E6[bossIndex][1] - I(gPlayer.qWorldY);
+        gPlayer.qWorldX += Q(x);
+        gPlayer.qWorldY += Q(y);
 
         gCamera.x += x - 120;
         gCamera.y += y - 120;
@@ -229,6 +234,11 @@ void CreateBossRunManager(u8 bossIndex)
         }
         manager->bossIndex--;
     }
+
+#if TAS_TESTING
+    printf("Got to boss run\n");
+    exit(0);
+#endif
 }
 
 static void Task_BossRunManagerMain(void)
@@ -248,14 +258,14 @@ static void Task_BossRunManagerMain(void)
         if (manager->bossIndex == 6) {
             gBossCameraClampYLower = gBossCameraYClamps[7][0];
             gBossCameraClampYUpper = gBossCameraYClamps[7][1];
-            if (gPlayer.x < Q(42960) && gPlayer.x > Q(gUnknown_080D8808[6][0] + 30)) {
+            if (gPlayer.qWorldX < Q(42960) && gPlayer.qWorldX > Q(gUnknown_080D8808[6][0] + 30)) {
                 gPlayer.moveState |= MOVESTATE_IGNORE_INPUT;
-                gPlayer.speedGroundX = Q(5);
+                gPlayer.qSpeedGround = Q(5);
                 gPlayer.frameInput = 0;
                 gPlayer.heldInput = 0;
                 gPlayer.rotation = 0;
-                if (I(gPlayer.x) - 120 != gCamera.x) {
-                    if (I(gPlayer.x) - 120 > gCamera.x) {
+                if (I(gPlayer.qWorldX) - 120 != gCamera.x) {
+                    if (I(gPlayer.qWorldX) - 120 > gCamera.x) {
                         gCamera.unk20++;
                         gCamera.x++;
                         gCamera.unk10++;
@@ -265,17 +275,17 @@ static void Task_BossRunManagerMain(void)
                         gCamera.unk10--;
                     }
                 }
-            } else if (gPlayer.x < Q(42700) && gPlayer.x > Q(gUnknown_080D8808[6][0] + 20)) {
+            } else if (gPlayer.qWorldX < Q(42700) && gPlayer.qWorldX > Q(gUnknown_080D8808[6][0] + 20)) {
                 if (gActiveBossTask == NULL && !(gStageFlags & STAGE_FLAG__100)) {
                     gPlayer.checkpointTime = gCourseTime;
                     CreateZoneBoss(7);
                     gStageFlags &= ~STAGE_FLAG__2;
                 }
             } else {
-                r5 = gPlayer.x;
+                r5 = gPlayer.qWorldX;
                 if (r5 > Q(42960)) {
                     gPlayer.moveState &= ~MOVESTATE_GOAL_REACHED;
-                    gPlayer.speedGroundX = 0;
+                    gPlayer.qSpeedGround = 0;
                     gPlayer.transition = 1;
                     manager->bossIndex++;
                     manager->unk6 = 1;
@@ -287,7 +297,7 @@ static void Task_BossRunManagerMain(void)
                             r4 = gUnknown_080D8808[manager->bossIndex][1];
                             r6 = Q(r4);
                             r0 = r5 + r6;
-                            gPlayer.x = r0;
+                            gPlayer.qWorldX = r0;
                             gUnknown_030054FC = r6;
                             sub_8039F50(r6, manager->bossIndex);
                             gBossRingsShallRespawn = 1;
@@ -311,10 +321,10 @@ static void Task_BossRunManagerMain(void)
             }
 
             if (gUnknown_080D8808[manager->bossIndex][0] >= 0 && gActiveBossTask != NULL
-                && gPlayer.x >= Q(gUnknown_080D8808[manager->bossIndex][0])) {
+                && gPlayer.qWorldX >= Q(gUnknown_080D8808[manager->bossIndex][0])) {
                 r4 = gUnknown_080D8808[manager->bossIndex][1];
                 r5 = Q(r4);
-                gPlayer.x += r5;
+                gPlayer.qWorldX += r5;
                 gUnknown_030054FC = r5;
                 sub_8039F50(r5, manager->bossIndex);
                 gBossRingsShallRespawn = 1;
@@ -410,8 +420,8 @@ static void Task_SuperEggRoboZTowersMain(void)
         sTowerStateCallbacks[towers->unk15A[i]](towers, i);
     }
 
-    if (I(gPlayer.y) < 133) {
-        sub_800CBA4(&gPlayer);
+    if (I(gPlayer.qWorldY) < 133) {
+        Coll_DamagePlayer(&gPlayer);
     }
 
     if (towers->unk15F == 0 && towers->boss->livesCockpit == 0) {
@@ -452,19 +462,19 @@ static void sub_8049F1C(SuperEggRoboZTowers *towers, u8 towerIndex)
         }
     }
 
-    if (gPlayer.moveState & MOVESTATE_8 && gPlayer.unk3C == prop) {
-        gPlayer.y += Q(1);
-        gPlayer.y += preY;
+    if (gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ && gPlayer.stoodObj == prop) {
+        gPlayer.qWorldY += Q(1);
+        gPlayer.qWorldY += preY;
         if (towers->unk15E == 1) {
-            gPlayer.x += Q(1);
+            gPlayer.qWorldX += Q(1);
         }
     }
 
-    if (!(gPlayer.moveState & MOVESTATE_400000)) {
-        u32 result = sub_800CCB8(prop, pos.x, pos.y, &gPlayer);
+    if (!(gPlayer.moveState & MOVESTATE_IA_OVERRIDE)) {
+        u32 result = Coll_Player_Platform(prop, pos.x, pos.y, &gPlayer);
 
         if (result & 0x10000) {
-            gPlayer.y += Q(result << 0x10) >> 0x10;
+            gPlayer.qWorldY += Q(result << 0x10) >> 0x10;
         }
     }
 
@@ -492,11 +502,11 @@ static void sub_804A070(SuperEggRoboZTowers *towers, u8 towerIndex)
     s->x = pos.x - gCamera.x;
     s->y = pos.y - gCamera.y;
 
-    if (!(gPlayer.moveState & MOVESTATE_400000)) {
-        s32 result = sub_800C204(s, pos.x, pos.y, 0, &gPlayer, 0);
+    if (!(gPlayer.moveState & MOVESTATE_IA_OVERRIDE)) {
+        s32 result = Coll_Player_Entity_HitboxN(s, pos.x, pos.y, 0, &gPlayer, 0);
         if (result != 0) {
-            gPlayer.y -= Q(8);
-            gPlayer.speedAirY = -Q(3.5);
+            gPlayer.qWorldY -= Q(8);
+            gPlayer.qSpeedAirY = -Q(3.5);
             gPlayer.charState = CHARSTATE_HIT_AIR;
             gPlayer.transition = PLTRANS_PT6;
         }
@@ -567,19 +577,19 @@ static void sub_804A1C0(SuperEggRoboZTowers *towers, u8 towerIndex)
         }
     }
 
-    if (gPlayer.moveState & MOVESTATE_8 && gPlayer.unk3C == s) {
-        gPlayer.y += preY + Q(1);
+    if (gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ && gPlayer.stoodObj == s) {
+        gPlayer.qWorldY += preY + Q(1);
 
         if (towers->unk15E == 1) {
-            gPlayer.x += Q(1);
+            gPlayer.qWorldX += Q(1);
         }
     }
 
-    if (!(gPlayer.moveState & MOVESTATE_400000)) {
-        u32 result = sub_800CCB8(s, pos.x, pos.y, &gPlayer);
+    if (!(gPlayer.moveState & MOVESTATE_IA_OVERRIDE)) {
+        u32 result = Coll_Player_Platform(s, pos.x, pos.y, &gPlayer);
 
         if (result & 0x10000) {
-            gPlayer.y += Q(result << 0x10) >> 0x10;
+            gPlayer.qWorldY += Q(result << 0x10) >> 0x10;
         }
     }
 
@@ -617,19 +627,19 @@ static void sub_804A398(SuperEggRoboZTowers *towers, u8 towerIndex)
         }
     }
 
-    if (gPlayer.moveState & MOVESTATE_8 && gPlayer.unk3C == s) {
-        gPlayer.y += preY + Q(1);
+    if (gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ && gPlayer.stoodObj == s) {
+        gPlayer.qWorldY += preY + Q(1);
 
         if (towers->unk15E == 1) {
-            gPlayer.x += Q(1);
+            gPlayer.qWorldX += Q(1);
         }
     }
 
-    if (!(gPlayer.moveState & MOVESTATE_400000)) {
-        u32 result = sub_800CCB8(s, pos.x, pos.y, &gPlayer);
+    if (!(gPlayer.moveState & MOVESTATE_IA_OVERRIDE)) {
+        u32 result = Coll_Player_Platform(s, pos.x, pos.y, &gPlayer);
 
         if (result & 0x10000) {
-            gPlayer.y += Q(result << 0x10) >> 0x10;
+            gPlayer.qWorldY += Q(result << 0x10) >> 0x10;
         }
     }
 
@@ -670,19 +680,19 @@ static void sub_804A53C(SuperEggRoboZTowers *towers, u8 towerIndex)
         }
     }
 
-    if (gPlayer.moveState & MOVESTATE_8 && gPlayer.unk3C == s) {
-        gPlayer.y += preY + Q(2);
+    if (gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ && gPlayer.stoodObj == s) {
+        gPlayer.qWorldY += preY + Q(2);
 
         if (towers->unk15E == 1) {
-            gPlayer.x += Q(1);
+            gPlayer.qWorldX += Q(1);
         }
     }
 
-    if (!(gPlayer.moveState & MOVESTATE_400000)) {
-        u32 result = sub_800CCB8(s, pos.x, pos.y, &gPlayer);
+    if (!(gPlayer.moveState & MOVESTATE_IA_OVERRIDE)) {
+        u32 result = Coll_Player_Platform(s, pos.x, pos.y, &gPlayer);
 
         if (result & 0x10000) {
-            gPlayer.y += Q(result << 0x10) >> 0x10;
+            gPlayer.qWorldY += Q(result << 0x10) >> 0x10;
         }
     }
 
@@ -723,10 +733,10 @@ void CreateSuperEggRoboZ(void)
     gPlayer.moveState |= MOVESTATE_IGNORE_INPUT;
     sub_8039ED4();
     gPseudoRandom = gStageTime;
-    gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
-    gUnknown_03005AA0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AA0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+    gPlayerBodyPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gPlayerBodyPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+    gPlayerLimbsPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gPlayerLimbsPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
 
     t = TaskCreate(Task_SuperEggRoboZMain, sizeof(SuperEggRoboZ), 0x4000, 0, TaskDestructor_SuperEggRoboZMain);
     gActiveBossTask = t;
@@ -830,7 +840,7 @@ void CreateSuperEggRoboZ(void)
     s->palId = 0;
     s->hitboxes[0].index = -1;
     s->frameFlags = SPRITE_FLAG(PRIORITY, 3);
-    gUnknown_030054A8.unk6 = 200;
+    gMusicManagerState.fadeoutSpeed = 200;
     gStageFlags |= STAGE_FLAG__DISABLE_PAUSE_MENU;
 }
 
@@ -868,34 +878,35 @@ static void Task_804A9D8(void)
     boss->unkB = 1;
     sub_804C3AC(boss);
 
-    gPlayer.moveState |= (MOVESTATE_IGNORE_INPUT | MOVESTATE_400000);
+    gPlayer.moveState |= (MOVESTATE_IGNORE_INPUT | MOVESTATE_IA_OVERRIDE);
 
     if (--boss->unk14 == 0) {
         gStageFlags &= ~STAGE_FLAG__DISABLE_PAUSE_MENU;
-        gPlayer.moveState &= ~(MOVESTATE_IGNORE_INPUT | MOVESTATE_400000);
+        gPlayer.moveState &= ~(MOVESTATE_IGNORE_INPUT | MOVESTATE_IA_OVERRIDE);
 
         m4aSongNumStart(SE_260);
 
-        gUnknown_030054A8.unk0 = 0;
-        gUnknown_030054A8.unk1 = 18;
+        gMusicManagerState.unk0 = 0;
+        gMusicManagerState.unk1 = 0x12;
         gCamera.minX = 42820;
         boss->unkB = 0;
         gPlayer.moveState &= ~(MOVESTATE_IGNORE_INPUT);
 
-        gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-        gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
-        gUnknown_03005AA0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-        gUnknown_03005AA0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+        gPlayerBodyPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+        gPlayerBodyPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+        gPlayerLimbsPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+        gPlayerLimbsPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
         gCurTask->main = Task_804AB24;
     }
 }
 
 // (99.89%) https://decomp.me/scratch/kiah8
-NONMATCH("asm/non_matching/game/bosses/boss_8__Task_804AB24.inc", static void Task_804AB24(void))
+void Task_804AB24(void)
 {
     s32 speed;
     SuperEggRoboZ *boss = TASK_DATA(gCurTask);
     ScreenFade *fade = &boss->fade;
+    Player *p;
 
     sub_804CC98(boss);
     sub_804CA08(boss);
@@ -908,41 +919,74 @@ NONMATCH("asm/non_matching/game/bosses/boss_8__Task_804AB24.inc", static void Ta
     sub_804C830(boss);
     sub_804CA70(boss);
 
-    if ((I(gPlayer.y) > 184) && (I(gPlayer.x) >= 43034)) {
-        sub_800CBA4(&gPlayer);
-
-        speed = gPlayer.speedAirX;
+    // TODO: maybe these are macros or inline functions?
+    p = &gPlayer;
+    if ((I(p->qWorldY) > 184) && (I(p->qWorldX) >= 43034)) {
+        Coll_DamagePlayer(p);
+        // These are just hacks to make the read use the right register
+        // if we use c it uses r2 on some of these
+#ifndef NON_MATCHING
+        asm("mov r1, %2\n"
+            "ldrsh %0, [%1, r1]"
+            : "=r"(speed)
+            : "r"(p), "I"(offsetof(Player, qSpeedAirX)));
+#else
+        speed = p->qSpeedAirX;
+#endif
         if (speed > 0) {
-            gPlayer.speedAirX = -speed;
+            speed = -speed;
+            p->qSpeedAirX = speed;
         }
 
-        speed = gPlayer.speedGroundX;
+#ifndef NON_MATCHING
+        asm("mov r1, %2\n"
+            "ldrsh %0, [%1, r1]"
+            : "=r"(speed)
+            : "r"(p), "I"(offsetof(Player, qSpeedGround)));
+#else
+        speed = p->qSpeedGround;
+#endif
         if (speed > 0) {
-            gPlayer.speedGroundX = -speed;
+            p->qSpeedGround = -speed;
         }
     }
     // _0804ABC0
 
-    if (I(gPlayer.x) >= 43088) {
-        sub_800CBA4(&gPlayer);
-
-        speed = gPlayer.speedAirX;
+    p = &gPlayer;
+    if (I(p->qWorldX) >= 43088) {
+        Coll_DamagePlayer(p);
+#ifndef NON_MATCHING
+        asm("mov r1, %2\n"
+            "ldrsh %0, [%1, r1]"
+            : "=r"(speed)
+            : "r"(p), "I"(offsetof(Player, qSpeedAirX)));
+#else
+        speed = p->qSpeedAirX;
+#endif
         if (speed > 0) {
-            gPlayer.speedAirX = -speed;
+            p->qSpeedAirX = -speed;
         }
 
-        speed = gPlayer.speedGroundX;
+#ifndef NON_MATCHING
+        asm("mov r1, %2\n"
+            "ldrsh %0, [%1, r1]"
+            : "=r"(speed)
+            : "r"(p), "I"(offsetof(Player, qSpeedGround)));
+#else
+        speed = p->qSpeedGround;
+#endif
         if (speed > 0) {
-            gPlayer.speedGroundX = -speed;
+            p->qSpeedGround = -speed;
         }
     }
+
     // _0804ABF2
 
     if (boss->livesCockpit == 0) {
         u8 arm;
         // _0804ABF2
 
-        gFlags &= ~FLAGS_4;
+        gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
         gCurTask->main = Task_804AD68;
         boss->unk14 = 0xFF;
 
@@ -952,16 +996,16 @@ NONMATCH("asm/non_matching/game/bosses/boss_8__Task_804AB24.inc", static void Ta
         gPlayer.heldInput = 0;
         gPlayer.frameInput = 0;
 
-        if (gPlayer.moveState & (MOVESTATE_8 | MOVESTATE_IN_AIR)) {
+        if (gPlayer.moveState & (MOVESTATE_STOOD_ON_OBJ | MOVESTATE_IN_AIR)) {
             gPlayer.charState = CHARSTATE_CURLED_IN_AIR;
-            gPlayer.speedAirX = -Q(2);
-            gPlayer.speedAirY = -Q(0);
-            gPlayer.transition = PLTRANS_PT5;
+            gPlayer.qSpeedAirX = -Q(2);
+            gPlayer.qSpeedAirY = -Q(0);
+            gPlayer.transition = PLTRANS_UNCURL;
         } else {
             // _0804AC68
-            gPlayer.speedGroundX = Q(0);
-            gPlayer.speedAirX = Q(0);
-            gPlayer.speedAirY = Q(0);
+            gPlayer.qSpeedGround = Q(0);
+            gPlayer.qSpeedAirX = Q(0);
+            gPlayer.qSpeedAirY = Q(0);
         }
         // _0804AC6E
 
@@ -989,7 +1033,6 @@ NONMATCH("asm/non_matching/game/bosses/boss_8__Task_804AB24.inc", static void Ta
         }
     }
 }
-END_NONMATCH
 
 static void Task_804AD68(void)
 {
@@ -1002,7 +1045,7 @@ static void Task_804AD68(void)
         gStageFlags |= STAGE_FLAG__TURN_OFF_HUD;
 
         gPlayer.moveState |= MOVESTATE_100000;
-        gPlayer.moveState |= MOVESTATE_400000;
+        gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
         gCurTask->main = Task_ShowResultsAndDelete;
     } else {
         sub_804CC98(boss);
@@ -1017,10 +1060,7 @@ static void Task_804AD68(void)
     }
 }
 
-// (95.06%) https://decomp.me/scratch/of4k0
-// (98.77%) https://decomp.me/scratch/Kzx1m
-// (99.59%) https://decomp.me/scratch/IzRyM
-NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804AE40.inc", static void sub_804AE40(SuperEggRoboZ *boss))
+void sub_804AE40(SuperEggRoboZ *boss)
 {
     Sprite *s;
 
@@ -1028,7 +1068,7 @@ NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804AE40.inc", static void sub
         if (boss->unkE == 0) {
             gBldRegs.bldY = 0;
             boss->fade.brightness = 0;
-            gFlags &= ~FLAGS_4;
+            gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
         }
         boss->unkE = 2;
     }
@@ -1049,12 +1089,12 @@ NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804AE40.inc", static void sub
             }
             // _0804AEC2
 
-            gFlags &= ~FLAGS_4;
+            gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
         } else {
             // _0804AED4
             if (--boss->unk12 == 0) {
                 u32 livesCockpit;
-                gFlags &= ~FLAGS_4;
+                gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
 
                 boss->fade.brightness = Q(32);
                 UpdateScreenFade(&boss->fade);
@@ -1118,8 +1158,28 @@ NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804AE40.inc", static void sub
                         r4 = ((116 - boss->unk12) >> 2) + ((rand % 8u) + 30);
                     }
                     // _0804B096
-
+#ifndef NON_MATCHING
+                    // Only needed because because r4 is loaded in the wrong order
+                    // in the original rom
+                    // (99.59%) https://decomp.me/scratch/IzRyM
+                    asm("ldrh r0, [%3, #0x10]\n\t"
+                        "mov r1, %0\n\t"
+                        "lsl r3, r1, #0x10\n\t"
+                        "asr r3, r3, #0x10\n\t"
+                        "add r1, %1, #1\n\t"
+                        "lsl r1, r1, #0x10\n\t"
+                        "asr r1, r1, #0x10\n\t"
+                        "str r1, [sp]\n\t"
+                        "mov r1, #0x20\n\t"
+                        "str r1, [sp, #4]\n\t"
+                        "add r1, %2, #0\n\t"
+                        "mov r2, #6\n\t"
+                        "bl sub_802E784"
+                        :
+                        : "r"(r8), "r"(r6), "r"(r4), "r"(boss));
+#else
                     sub_802E784(boss->unk10, r4, 6, r8, r6 + 1, 32);
+#endif
 
                     boss->fade.brightness = Q(32) - (boss->unk12 * 91);
                     UpdateScreenFade(&boss->fade);
@@ -1128,8 +1188,6 @@ NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804AE40.inc", static void sub
         }
     }
 }
-
-END_NONMATCH
 
 static u8 sub_804B0EC(SuperEggRoboZ *boss, u8 arm)
 {
@@ -1165,14 +1223,14 @@ static u8 sub_804B0EC(SuperEggRoboZ *boss, u8 arm)
     r3 = SIN(boss->rotation[arm]);
     r4 += (r3 * 190) >> 9;
 
-    r5 = (gPlayer.x - r5) >> 8;
-    r4 = (gPlayer.y - r4) >> 8;
+    r5 = (gPlayer.qWorldX - r5) >> 8;
+    r4 = (gPlayer.qWorldY - r4) >> 8;
 
     r5 = SQUARE(r5);
     r4 = SQUARE(r4);
 
     if ((r5 + r4) < 200) {
-        sub_800CBA4(&gPlayer);
+        Coll_DamagePlayer(&gPlayer);
 
         boss->unk40[arm] = 1;
 
@@ -1183,7 +1241,7 @@ static u8 sub_804B0EC(SuperEggRoboZ *boss, u8 arm)
         return result;
     } else {
         s32 r0, r1;
-        Sprite *s = &gPlayer.unk90->s;
+        Sprite *s = &gPlayer.spriteInfoBody->s;
 
         r5 = sp04 + sl;
         r4 = ip + r7;
@@ -1198,8 +1256,8 @@ static u8 sub_804B0EC(SuperEggRoboZ *boss, u8 arm)
         }
 
         if (PLAYER_IS_ALIVE && HITBOX_IS_ACTIVE(s->hitboxes[1])) {
-            r5 = I(gPlayer.x - r6);
-            r4 = I(gPlayer.y - r7);
+            r5 = I(gPlayer.qWorldX - r6);
+            r4 = I(gPlayer.qWorldY - r7);
 
             r5 = SQUARE(r5);
             r4 = SQUARE(r4);
@@ -1207,14 +1265,14 @@ static u8 sub_804B0EC(SuperEggRoboZ *boss, u8 arm)
                 s32 speed;
                 result = sub_804C9B4(boss, arm);
 
-                speed = -gPlayer.speedAirX;
-                gPlayer.speedAirX = speed;
+                speed = -gPlayer.qSpeedAirX;
+                gPlayer.qSpeedAirX = speed;
 
-                speed = -gPlayer.speedAirY;
-                gPlayer.speedAirY = speed;
+                speed = -gPlayer.qSpeedAirY;
+                gPlayer.qSpeedAirY = speed;
 
-                speed = -gPlayer.speedGroundX;
-                gPlayer.speedGroundX = speed;
+                speed = -gPlayer.qSpeedGround;
+                gPlayer.qSpeedGround = speed;
 
                 return result;
             }
@@ -1237,81 +1295,72 @@ static u8 sub_804B0EC(SuperEggRoboZ *boss, u8 arm)
     return result;
 }
 
-// Copy-paste of sub_804B0EC() aside from code above:
-// if (gSelectedCharacter != CHARACTER_SONIC) {
-//     ...
-// }
-// (93.51%) https://decomp.me/scratch/ecqNB
-NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804B2EC.inc", static bool8 sub_804B2EC(SuperEggRoboZ *boss, u8 arm))
+bool8 sub_804B2EC(SuperEggRoboZ *boss, u8 arm)
 {
     u8 result = 0;
-    s32 sp04, ip;
-    s32 r3;
-    s32 r4;
-    s32 r5;
-    s32 r6;
-    s32 r7;
-    s32 sl;
+    s32 x, y;
+    s32 r6, r0;
+    Sprite *s;
 
     if (boss->unk3E[arm] > 0) {
         return result;
     }
-    // _0804B314
 
-    {
-        s32 r0, r1;
-        Sprite *s = &gPlayer.unk90->s;
+    s = &gPlayer.spriteInfoBody->s;
 
-        r6 = boss->qPos.x + boss->qUnk18[arm].x;
-        r4 = r6 + gUnknown_080D8888[arm][0];
+#ifndef NON_MATCHING
+    // unused lines required for match
+    // maybe they had a calculation here they just forgot about
+    r0 = boss->qPos.x + boss->qUnk18[arm].x + gUnknown_080D8888[arm][0];
+    r6 = boss->qPos.x + boss->qUnk18[arm].x;
+    r0 = boss->qPos.y + boss->qUnk18[arm].y + gUnknown_080D8888[arm][1];
+#endif
 
-        r5 = boss->qPos.y + boss->qUnk18[arm].y;
-        r5 = r5 + gUnknown_080D8888[arm][1];
+    x = boss->qPos.x + boss->qUnk18[arm].x + gUnknown_080D8888[arm][0];
+    y = boss->qPos.y + boss->qUnk18[arm].y + gUnknown_080D8888[arm][1];
 
-        if (gSelectedCharacter != CHARACTER_SONIC) {
-            Player_UpdateHomingPosition(r4, r5);
+    if (gSelectedCharacter != CHARACTER_SONIC) {
+        Player_UpdateHomingPosition(x, y);
+    }
+
+    if (PLAYER_IS_ALIVE && HITBOX_IS_ACTIVE(s->hitboxes[1])) {
+        r6 = I(gPlayer.qWorldX - x);
+        r0 = I(gPlayer.qWorldY - y);
+
+        r6 = SQUARE(r6);
+        r0 = SQUARE(r0);
+        if ((r6 + r0) < 376) {
+            s32 speed;
+            result = sub_804C9B4(boss, arm);
+
+            speed = -gPlayer.qSpeedAirX;
+            gPlayer.qSpeedAirX = speed;
+
+            speed = -gPlayer.qSpeedAirY;
+            gPlayer.qSpeedAirY = speed;
+
+            speed = -gPlayer.qSpeedGround;
+            gPlayer.qSpeedGround = speed;
+
+            return result;
         }
+    }
 
-        if (PLAYER_IS_ALIVE && HITBOX_IS_ACTIVE(s->hitboxes[1])) {
-            r5 = I(gPlayer.x - r6);
-            r4 = I(gPlayer.y - r7);
+    if ((gCheese != NULL) && HITBOX_IS_ACTIVE(gCheese->reserved)) {
+        x -= gCheese->posX;
+        x = (x) >> 8;
+        y -= gCheese->posY;
+        y = (y) >> 8;
 
-            r5 = SQUARE(r5);
-            r4 = SQUARE(r4);
-            if ((r5 + r4) < 376) {
-                s32 speed;
-                result = sub_804C9B4(boss, arm);
+        if ((SQUARE(x) + SQUARE(y)) < 376) {
+            result = sub_804C9B4(boss, arm);
 
-                speed = -gPlayer.speedAirX;
-                gPlayer.speedAirX = speed;
-
-                speed = -gPlayer.speedAirY;
-                gPlayer.speedAirY = speed;
-
-                speed = -gPlayer.speedGroundX;
-                gPlayer.speedGroundX = speed;
-
-                return result;
-            }
-        }
-
-        if ((gCheese != NULL) && HITBOX_IS_ACTIVE(gCheese->reserved)) {
-            r6 -= gCheese->posX;
-            r6 = (r6) >> 8;
-            r7 -= gCheese->posY;
-            r7 = (r7) >> 8;
-
-            if ((SQUARE(r6) + SQUARE(r7)) < 376) {
-                result = sub_804C9B4(boss, arm);
-
-                gCheeseTarget.task->unk15 = 0;
-            }
+            gCheeseTarget.task->unk15 = 0;
         }
     }
 
     return result;
 }
-END_NONMATCH
 
 static void sub_804B43C(SuperEggRoboZ *boss, u8 arm)
 {
@@ -1354,7 +1403,7 @@ static void sub_804B594(SuperEggRoboZ *boss, u8 arm)
     pos.x = boss->qPos.x + boss->qUnk18[arm].x + gUnknown_080D8888[arm][0];
     pos.y = boss->qPos.y + boss->qUnk18[arm].y + gUnknown_080D8888[arm][1];
 
-    angle = sub_8004418(I(gPlayer.y - pos.y), I(gPlayer.x - pos.x));
+    angle = sub_8004418(I(gPlayer.qWorldY - pos.y), I(gPlayer.qWorldX - pos.x));
 
     if (angle != boss->rotation[arm]) {
         if (angle < boss->rotation[arm]) {
@@ -1500,7 +1549,7 @@ static void sub_804BAC0(SuperEggRoboZ *boss, u8 arm)
 }
 
 // (81.31%) https://decomp.me/scratch/432q4
-NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804BC44.inc", static void sub_804BC44(SuperEggRoboZ *boss, u8 arm))
+NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804BC44.inc", void sub_804BC44(SuperEggRoboZ *boss, u8 arm))
 {
     ExplosionPartsInfo info;
     s32 speed0;
@@ -1633,7 +1682,7 @@ static void sub_804C080(SuperEggRoboZ *boss)
         info.unk4 = 0;
 
         CreateBossParticleStatic(&info, &boss->unkC);
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
         m4aMPlayImmInit(&gMPlayInfo_SE3);
     }
 
@@ -1665,7 +1714,7 @@ static void sub_804C080(SuperEggRoboZ *boss)
 }
 
 // (87.37%) https://decomp.me/scratch/98Mjg
-NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804C240.inc", static void sub_804C240(SuperEggRoboZ *boss, u8 arm))
+NONMATCH("asm/non_matching/game/bosses/boss_8__sub_804C240.inc", void sub_804C240(SuperEggRoboZ *boss, u8 arm))
 {
     ExplosionPartsInfo info;
     s32 x, y;
@@ -1750,8 +1799,8 @@ static void sub_804C3AC(SuperEggRoboZ *boss)
         = (gUnknown_030054B8++ | (SPRITE_FLAG(PRIORITY, 3) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE | SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE));
 
     tf->rotation = boss->unk10;
-    tf->width = Q(1);
-    tf->height = Q(1);
+    tf->qScaleX = Q(1);
+    tf->qScaleY = Q(1);
     tf->x = s->x;
     tf->y = s->y;
 
@@ -1773,8 +1822,8 @@ static void sub_804C3AC(SuperEggRoboZ *boss)
                          | (SPRITE_FLAG(PRIORITY, 1) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE | SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE));
 
         tf->rotation = boss->rotation[i];
-        tf->width = Q(1);
-        tf->height = Q(1);
+        tf->qScaleX = Q(1);
+        tf->qScaleY = Q(1);
         tf->x = s->x;
         tf->y = s->y;
 
@@ -1837,8 +1886,8 @@ static void sub_804C5B8(SuperEggRoboZ *boss)
         = (gUnknown_030054B8++ | (SPRITE_FLAG(PRIORITY, 3) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE | SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE));
 
     tf->rotation = boss->unk10;
-    tf->width = Q(1);
-    tf->height = Q(1);
+    tf->qScaleX = Q(1);
+    tf->qScaleY = Q(1);
     tf->x = s->x;
     tf->y = s->y;
 
@@ -1864,8 +1913,8 @@ static void sub_804C5B8(SuperEggRoboZ *boss)
                          | (SPRITE_FLAG(PRIORITY, 1) | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE | SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE));
 
         tf->rotation = boss->rotation[i];
-        tf->width = Q(1);
-        tf->height = Q(1);
+        tf->qScaleX = Q(1);
+        tf->qScaleY = Q(1);
         tf->x = s->x;
         tf->y = s->y;
 
@@ -1894,22 +1943,22 @@ static void sub_804C830(SuperEggRoboZ *boss)
 
         s = &boss->bsHead.s;
         p = &gPlayer;
-        if (IsColliding_Cheese(s, headPos.x, headPos.y, 0, p) == TRUE) {
+        if (Coll_Cheese_Enemy_Attack(s, headPos.x, headPos.y, 0, p) == TRUE) {
             Boss8_HitCockpit(boss);
             return;
-        } else if (sub_800C320(s, headPos.x, headPos.y, 0, p) == TRUE) {
+        } else if (Coll_Player_Boss_Attack(s, headPos.x, headPos.y, 0, p) == TRUE) {
             Boss8_HitCockpit(boss);
 
             {
-                s32 speed = p->speedAirX;
+                s32 speed = p->qSpeedAirX;
                 if (speed > 0) {
-                    p->speedAirX = -ABS(speed);
+                    p->qSpeedAirX = -ABS(speed);
                 }
             }
-        } else if (sub_800CA20(s, headPos.x, headPos.y, 0, p) == TRUE) {
-            s32 speed = p->speedAirX;
+        } else if (Coll_Player_Enemy(s, headPos.x, headPos.y, 0, p) == TRUE) {
+            s32 speed = p->qSpeedAirX;
             if (speed > 0) {
-                p->speedAirX = -speed;
+                p->qSpeedAirX = -speed;
             }
         }
     }
@@ -1930,11 +1979,13 @@ static void Boss8_HitCockpit(SuperEggRoboZ *boss)
     }
 
     if (boss->livesCockpit == 3) {
-        gUnknown_030054A8.unk1 = 19;
+        gMusicManagerState.unk1 = 0x10 | 0x3;
     }
 
     if (boss->livesCockpit == 0) {
-        INCREMENT_SCORE_C(1000);
+        INCREMENT_SCORE_A(1000)
+        // Stops the music?
+        gMusicManagerState.unk1 = 0x10 | 0x20;
     }
 
     boss->unkB = 64;
@@ -2027,7 +2078,7 @@ static void Task_SuperEggRoboZMain(void)
 
     gPlayer.moveState |= MOVESTATE_IGNORE_INPUT;
 
-    if ((gPlayer.speedGroundX == 0) && (--boss->unk14 == 0)) {
+    if ((gPlayer.qSpeedGround == 0) && (--boss->unk14 == 0)) {
         boss->unk14 = 300;
         gCurTask->main = Task_804A9D8;
         m4aSongNumStart(SE_260);
@@ -2043,7 +2094,7 @@ static void Task_ShowResultsAndDelete(void)
     UpdateScreenFade(&boss->fade);
 
     CreateStageResults(gCourseTime, gRingCount, gSpecialRingCount);
-    m4aSongNumStop(SE_144);
+    m4aSongNumStop(SE_EXPLOSION);
     m4aMPlayVolumeControl(&gMPlayInfo_SE3, 0xFFFF, 0xFF);
     TaskDestroy(gCurTask);
 }
@@ -2065,8 +2116,8 @@ static void sub_804CCD0(SuperEggRoboZ *boss, s32 qP1)
 {
     Vec2_32 pos = { boss->qPos.x + Q(190), boss->qPos.y + Q(40) };
 
-    if ((I(gPlayer.y) < pos.x) && (gPlayer.y >= (pos.y - qP1)) && (gPlayer.y <= (qP1 + pos.y))) {
-        sub_800CBA4(&gPlayer);
+    if ((I(gPlayer.qWorldY) < pos.x) && (gPlayer.qWorldY >= (pos.y - qP1)) && (gPlayer.qWorldY <= (qP1 + pos.y))) {
+        Coll_DamagePlayer(&gPlayer);
     }
 }
 

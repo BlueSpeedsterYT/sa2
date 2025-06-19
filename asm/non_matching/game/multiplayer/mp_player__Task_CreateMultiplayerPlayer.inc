@@ -380,7 +380,7 @@ _080164C4:
 	str r0, [r4, #0x20]
 	adds r0, r4, #0
 	movs r1, #0xe
-	bl sub_8023B5C
+	bl Player_HandleSpriteYOffsetChange
 	movs r0, #6
 	strb r0, [r4, #0x16]
 	movs r0, #0xe
@@ -573,8 +573,8 @@ _0801666C:
 	ldr r1, _080166D4 @ =0x0000FFFF
 	movs r0, #0
 	bl TasksDestroyInPriorityRange
-	ldr r1, _080166D8 @ =gUnknown_03002AE4
-	ldr r0, _080166DC @ =gUnknown_0300287C
+	ldr r1, _080166D8 @ =gBackgroundsCopyQueueCursor
+	ldr r0, _080166DC @ =gBackgroundsCopyQueueIndex
 	ldrb r0, [r0]
 	strb r0, [r1]
 	ldr r1, _080166E0 @ =gUnknown_03005390
@@ -586,12 +586,12 @@ _0801666C:
 	strb r0, [r1]
 	ldr r0, _080166EC @ =gGameMode
 	ldrb r0, [r0]
-	bl MultiPakCommunicationError
+	bl LinkCommunicationError
 	b _08016D08
 	.align 2, 0
 _080166D4: .4byte 0x0000FFFF
-_080166D8: .4byte gUnknown_03002AE4
-_080166DC: .4byte gUnknown_0300287C
+_080166D8: .4byte gBackgroundsCopyQueueCursor
+_080166DC: .4byte gBackgroundsCopyQueueIndex
 _080166E0: .4byte gUnknown_03005390
 _080166E4: .4byte gVramGraphicsCopyCursor
 _080166E8: .4byte gVramGraphicsCopyQueueIndex
@@ -740,7 +740,7 @@ _080167FE:
 	mov r4, sl
 	cmp r4, #0
 	beq _0801680C
-	bl sub_8019224
+	bl CreateRoomEvent
 	movs r1, #7
 	strb r1, [r0]
 _0801680C:
@@ -940,7 +940,7 @@ _08016956:
 	ands r0, r1
 	str r0, [r2, #0x20]
 _080169AC:
-	bl sub_8019224
+	bl CreateRoomEvent
 	movs r2, #0
 	movs r1, #8
 	strb r1, [r0]
@@ -1356,19 +1356,19 @@ _08016CE2:
 	adds r0, r6, #0
 	bl DisplaySprite
 _08016CE8:
-	ldr r4, _08016D18 @ =gUnknown_03005B7C
+	ldr r4, _08016D18 @ =gShouldSpawnMPAttackEffect
 	ldrb r0, [r4]
 	cmp r0, #0
 	beq _08016CF8
-	bl sub_8087368
+	bl CreateMPAttackEffect
 	movs r0, #0
 	strb r0, [r4]
 _08016CF8:
-	ldr r4, _08016D1C @ =gUnknown_0300583C
+	ldr r4, _08016D1C @ =gShouldSpawnMPAttack2Effect
 	ldrb r0, [r4]
 	cmp r0, #0
 	beq _08016D08
-	bl sub_801A384
+	bl CreateMPAttack2Effect
 	movs r0, #0
 	strb r0, [r4]
 _08016D08:
@@ -1381,8 +1381,8 @@ _08016D08:
 	pop {r0}
 	bx r0
 	.align 2, 0
-_08016D18: .4byte gUnknown_03005B7C
-_08016D1C: .4byte gUnknown_0300583C
+_08016D18: .4byte gShouldSpawnMPAttackEffect
+_08016D1C: .4byte gShouldSpawnMPAttack2Effect
 
 	
 .syntax divided

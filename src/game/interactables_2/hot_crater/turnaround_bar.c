@@ -68,20 +68,20 @@ static void sub_8073474(Sprite_TurnAroundBar *turnAroundBar)
     Sprite *s = &turnAroundBar->s;
     Player_ClearMovestate_IsInScriptedSequence();
 
-    gPlayer.moveState &= ~MOVESTATE_400000;
-    gPlayer.y -= turnAroundBar->unk44;
+    gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
+    gPlayer.qWorldY -= turnAroundBar->unk44;
 
-    if (gPlayer.speedGroundX > 0) {
-        gPlayer.x = Q(turnAroundBar->x - 6);
-        gPlayer.speedGroundX += Q_8_8(1.25);
+    if (gPlayer.qSpeedGround > 0) {
+        gPlayer.qWorldX = Q(turnAroundBar->x - 6);
+        gPlayer.qSpeedGround += Q_8_8(1.25);
     } else {
-        gPlayer.x = Q(turnAroundBar->x + 6);
-        gPlayer.speedGroundX -= Q_8_8(1.25);
+        gPlayer.qWorldX = Q(turnAroundBar->x + 6);
+        gPlayer.qSpeedGround -= Q_8_8(1.25);
     }
 
-    gPlayer.speedGroundX = ClampSpeed(-gPlayer.speedGroundX);
+    gPlayer.qSpeedGround = ClampSpeed(-gPlayer.qSpeedGround);
     gPlayer.rotation = 0;
-    gPlayer.speedAirY = 0;
+    gPlayer.qSpeedAirY = 0;
     gPlayer.moveState = gPlayer.moveState ^ 1;
     gPlayer.transition = PLTRANS_TOUCH_GROUND;
 
@@ -100,11 +100,11 @@ static u32 sub_8073520(Sprite_TurnAroundBar *turnAroundBar)
 
     temp = turnAroundBar->x - gCamera.x;
     temp3 = turnAroundBar->y + -gCamera.y;
-    temp2 = I(gPlayer.x) - gCamera.x;
-    temp4 = I(gPlayer.y) - gCamera.y;
+    temp2 = I(gPlayer.qWorldX) - gCamera.x;
+    temp4 = I(gPlayer.qWorldY) - gCamera.y;
     if (temp - 6 <= temp2 && temp + 6 >= temp2) {
         if (temp3 - 32 <= temp4 && temp3 >= temp4) {
-            if (abs(gPlayer.speedGroundX) < Q_8_8(4)) {
+            if (abs(gPlayer.qSpeedGround) < Q_8_8(4)) {
                 return 1;
             }
 
@@ -167,10 +167,10 @@ static void sub_8073670(Sprite_TurnAroundBar *turnAroundBar)
     Sprite *s = &turnAroundBar->s;
     Player_SetMovestate_IsInScriptedSequence();
 
-    gPlayer.moveState |= MOVESTATE_400000;
-    turnAroundBar->unk44 = Q(turnAroundBar->y) - gPlayer.y;
-    gPlayer.x = Q(turnAroundBar->x);
-    gPlayer.y = Q(turnAroundBar->y);
+    gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
+    turnAroundBar->unk44 = Q(turnAroundBar->y) - gPlayer.qWorldY;
+    gPlayer.qWorldX = Q(turnAroundBar->x);
+    gPlayer.qWorldY = Q(turnAroundBar->y);
     gPlayer.charState = CHARSTATE_TURNAROUND_BAR;
 
     s->graphics.anim = SA2_ANIM_TURNAROUND_BAR;

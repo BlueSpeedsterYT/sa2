@@ -2,10 +2,10 @@
 #include "sprite.h"
 #include "malloc_vram.h"
 #include "trig.h"
-#include "game/sa1_leftovers/globals.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/globals.h"
+#include "game/sa1_sa2_shared/collision.h"
 
-#include "game/stage/collision.h"
+#include "game/stage/terrain_collision.h"
 #include "game/stage/camera.h"
 #include "game/player_callbacks.h"
 #include "game/stage/player.h"
@@ -303,7 +303,7 @@ static void Task_BomberTankCannonReload(void)
         INCREMENT_SCORE_B(500);
 
         if (!IS_FINAL_STAGE(gCurrentLevel)) {
-            gUnknown_030054A8.unk1 = 0x11;
+            gMusicManagerState.unk1 = 0x11;
         }
     }
 
@@ -348,7 +348,7 @@ static void Task_TransitionToEscapeSequence(void)
     rand = PseudoRandom32();
 
     if (Mod(gStageTime + rand, 0x11) == 0) {
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
     }
 
     if (x < 50) {
@@ -436,8 +436,8 @@ static u8 RenderEggBomberTank(EggBomberTank *boss)
         s->frameFlags = gUnknown_030054B8++ | 0x2060;
 
         transform->rotation = boss->cannonAngle;
-        transform->width = 0x100;
-        transform->height = 0x100;
+        transform->qScaleX = Q(1);
+        transform->qScaleY = Q(1);
         transform->x = s->x;
         transform->y = s->y;
 
@@ -686,8 +686,8 @@ static bool8 RenderCannon(EggBomberTank *boss)
     s->frameFlags = gUnknown_030054B8++ | 0x2060;
 
     transform->rotation = boss->cannonAngle;
-    transform->width = 0x100;
-    transform->height = 0x100;
+    transform->qScaleX = Q(1);
+    transform->qScaleY = Q(1);
     transform->x = s->x;
     transform->y = s->y;
     UpdateSpriteAnimation(s);
@@ -726,7 +726,7 @@ static void HandleCannonBombTrigger(EggBomberTank *boss)
         INCREMENT_SCORE_B(500);
 
         if (!IS_FINAL_STAGE(gCurrentLevel)) {
-            gUnknown_030054A8.unk1 = 0x11;
+            gMusicManagerState.unk1 = 0x11;
         }
     } else {
         if (boss->timer == 0) {
@@ -761,13 +761,13 @@ static bool8 HandleCannonCollision(EggBomberTank *boss)
     dX = QS(Div(boss->qWorldX, 256) - 8);
     x = dX + ((COS(boss->cannonAngle) * 5) >> 3);
 
-    dX = x - gPlayer.x;
+    dX = x - gPlayer.qWorldX;
     dX = I(dX);
 
     dY = QS(Div(boss->qWorldY, 256) - 22);
     y = dY + ((SIN(boss->cannonAngle) * 5) >> 3);
 
-    dY = y - gPlayer.y;
+    dY = y - gPlayer.qWorldY;
     dY = I(dY);
 
     distance = (SQUARE(dY) + SQUARE(dX));
@@ -780,9 +780,9 @@ static bool8 HandleCannonCollision(EggBomberTank *boss)
     }
 
     if (distance < 600) {
-        Sprite *s = &gPlayer.unk90->s;
+        Sprite *s = &gPlayer.spriteInfoBody->s;
         if (!PLAYER_IS_ALIVE || s->hitboxes[1].index == -1) {
-            sub_800CBA4(&gPlayer);
+            Coll_DamagePlayer(&gPlayer);
             return 0;
         }
 
@@ -800,7 +800,7 @@ static bool8 HandleCannonCollision(EggBomberTank *boss)
             ret = 1;
         }
 
-        Collision_AdjustPlayerSpeed(&gPlayer);
+        Coll_Player_Enemy_AdjustSpeed(&gPlayer);
         boss->cannonHitTimer = 30;
     }
 
@@ -842,8 +842,8 @@ static u8 CheckBossDestruction(EggBomberTank *boss, Player *player)
         return 1;
     }
 
-    sub_800CA20(s, I(boss->qWorldX), I(boss->qWorldY), 1, player);
-    if (sub_800C320(s, I(boss->qWorldX), I(boss->qWorldY), 0, player) == 1) {
+    Coll_Player_Enemy(s, I(boss->qWorldX), I(boss->qWorldY), 1, player);
+    if (Coll_Player_Boss_Attack(s, I(boss->qWorldX), I(boss->qWorldY), 0, player) == 1) {
         if (boss->cannonHealth != 0) {
             Sprite *s = &boss->pilot;
             boss->unk73 = ZONE_TIME_TO_INT(0, 0.5);
@@ -853,12 +853,12 @@ static u8 CheckBossDestruction(EggBomberTank *boss, Player *player)
                 s->variant = 1;
                 s->prevVariant = -1;
             }
-            sub_800CBA4(player);
+            Coll_DamagePlayer(player);
         } else {
             ret = HandleBossHit(boss);
         }
     } else {
-        if (sub_800CA20(s, I(boss->qWorldX), I(boss->qWorldY), 0, player) == 1) {
+        if (Coll_Player_Enemy(s, I(boss->qWorldX), I(boss->qWorldY), 0, player) == 1) {
             Sprite *s = &boss->pilot;
             boss->unk73 = ZONE_TIME_TO_INT(0, 0.5);
             if (boss->bossHitTimer == 0) {
@@ -867,14 +867,14 @@ static u8 CheckBossDestruction(EggBomberTank *boss, Player *player)
                 s->variant = 1;
                 s->prevVariant = -1;
             }
-            sub_800CBA4(player);
+            Coll_DamagePlayer(player);
         }
     }
 
     Player_UpdateHomingPosition(boss->qWorldX, boss->qWorldY);
 
     if (boss->bossHitTimer == 0) {
-        if (IsColliding_Cheese(s, I(boss->qWorldX), I(boss->qWorldY), 0, player) == 1 && boss->cannonHealth == 0) {
+        if (Coll_Cheese_Enemy_Attack(s, I(boss->qWorldX), I(boss->qWorldY), 0, player) == 1 && boss->cannonHealth == 0) {
             ret = HandleBossHit(boss);
         }
     }
@@ -999,7 +999,7 @@ static void Task_StartBossDestruction(void)
 
     rand = PseudoRandom32();
     if (Mod(gStageTime + rand, 21) == 0) {
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
     }
 
     boss->timer--;
@@ -1023,7 +1023,7 @@ static void Task_WaitForBossOffScreen(void)
     rand = PseudoRandom32();
 
     if (Mod(gStageTime + rand, 13) == 0) {
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
     }
 
     if (x < -200) {
@@ -1149,7 +1149,7 @@ static void Task_EggBomberTankBombExplosion(void)
 
     if (bomb->boss->health != 0) {
         // If hit player
-        if (sub_800CA20(s, I(bomb->x) + gCamera.x, I(bomb->y) + gCamera.y, 0, &gPlayer) == 1) {
+        if (Coll_Player_Enemy(s, I(bomb->x) + gCamera.x, I(bomb->y) + gCamera.y, 0, &gPlayer) == 1) {
             if (bomb->boss->bossHitTimer == 0) {
                 Sprite *s = &bomb->boss->pilot;
                 bomb->boss->unk73 = ZONE_TIME_TO_INT(0, 0.5);
@@ -1227,7 +1227,7 @@ static void Task_BombExplosionMain(void)
     s->y = explosion->y;
 
     if (explosion->boss->health != 0) {
-        if (sub_800CA20(s, explosion->x + gCamera.x, explosion->y + gCamera.y, 0, &gPlayer) == 1) {
+        if (Coll_Player_Enemy(s, explosion->x + gCamera.x, explosion->y + gCamera.y, 0, &gPlayer) == 1) {
             if (explosion->boss->bossHitTimer == 0) {
                 Sprite *s = &explosion->boss->pilot;
                 explosion->boss->unk73 = ZONE_TIME_TO_INT(0, 0.5);

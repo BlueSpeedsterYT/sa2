@@ -1,7 +1,7 @@
 #include "global.h"
 #include "core.h"
 #include "trig.h"
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 
 #include "game/stage/spawn_positions.h"
 #include "game/stage/camera.h"
@@ -32,7 +32,7 @@ static void sub_802C8A0(struct SuperSonic *sonic);
 static void sub_802C8EC(struct SuperSonic *);
 static void sub_802C92C(struct SuperSonic *sonic);
 static void sub_802C9B0(struct SuperSonic *sonic);
-static void sub_802BCCC(struct SuperSonic *sonic);
+void sub_802BCCC(struct SuperSonic *sonic);
 static u8 SuperSonicHandleDirectionalInput(struct SuperSonic *sonic);
 static void sub_802C058(struct SuperSonic *sonic);
 static void sub_802C988(struct SuperSonic *sonic);
@@ -61,11 +61,11 @@ static void SuperSonicInitPlayer(void)
 {
     Player *p = &gPlayer;
     p->unk4 = 0;
-    p->x = 0;
-    p->y = 0;
-    p->speedAirX = 0;
-    p->speedAirY = 0;
-    p->speedGroundX = 0;
+    p->qWorldX = 0;
+    p->qWorldY = 0;
+    p->qSpeedAirX = 0;
+    p->qSpeedAirY = 0;
+    p->qSpeedGround = 0;
     p->spriteOffsetX = 0;
     p->spriteOffsetY = 0;
     // /* 0x18 */ u8 filler18[8]; // no idea what this data is and why it's not set
@@ -79,26 +79,26 @@ static void SuperSonicInitPlayer(void)
     p->timerInvulnerability = 0;
     p->timerInvincibility = 0;
     p->timerSpeedup = 0;
-    p->unk32 = 0;
-    p->unk34 = 0;
-    p->unk36 = 0;
+    p->confusionTimer = 0;
+    p->itemEffect20Timer = 0;
+    p->disableTrickTimer = 0;
     p->itemEffect = 0;
     p->layer = 0;
-    p->unk3C = NULL;
-    p->unk40 = 0;
-    p->unk44 = 0;
-    p->unk48 = 0;
-    p->unk4C = 0;
-    p->unk50 = 0;
-    p->unk52 = 0;
-    p->unk54 = 0;
+    p->stoodObj = NULL;
+    p->maxSpeed = 0;
+    p->topSpeed = 0;
+    p->acceleration = 0;
+    p->deceleration = 0;
+    p->rollingDeceleration = 0;
+    p->boostThreshold = 0;
+    p->walkAnim = 0;
     p->unk56 = 0;
-    p->unk58 = 0;
+    p->boostSpeed = 0;
     p->isBoosting = FALSE;
-    p->unk5B = 0;
+    p->trickDir = 0;
     p->heldInput = 0;
     p->frameInput = 0;
-    p->unk60 = 0;
+    p->playerID = 0;
     p->unk61 = 0;
     p->unk62 = 0;
     p->unk63 = 0;
@@ -124,7 +124,7 @@ static void SuperSonicInitPlayer(void)
     p->character = CHARACTER_SONIC;
     p->secondsUntilDrown = 0;
     p->framesUntilDrownCountDecrement = 0;
-    p->unk88 = 0;
+    p->framesUntilWaterSurfaceEffect = 0;
 }
 
 void SuperSonicInit()
@@ -138,8 +138,8 @@ void SuperSonicInit()
 
     gPlayer.moveState = 0;
     gPlayer.checkpointTime = 0;
-    gPlayer.speedAirX = Q(2.0);
-    gPlayer.speedGroundX = Q(2.0);
+    gPlayer.qSpeedAirX = Q(2.0);
+    gPlayer.qSpeedGround = Q(2.0);
 
     gCourseTime = 0;
 
@@ -324,7 +324,7 @@ static void Task_802BC10(void)
 
     if (sonic->shouldDestroy) {
         TasksDestroyAll();
-        gUnknown_03002AE4 = gUnknown_0300287C;
+        PAUSE_BACKGROUNDS_QUEUE();
         gUnknown_03005390 = 0;
         PAUSE_GRAPHICS_QUEUE();
 
@@ -343,7 +343,7 @@ static void Task_802BC10(void)
 }
 
 // (99.25%) https://decomp.me/scratch/2dbbE
-NONMATCH("asm/non_matching/game/super_sonic__sub_802BCCC.inc", static void sub_802BCCC(struct SuperSonic *sonic))
+NONMATCH("asm/non_matching/game/super_sonic__sub_802BCCC.inc", void sub_802BCCC(struct SuperSonic *sonic))
 {
     s32 ssx, ssx2;
     u8 i;
@@ -439,8 +439,8 @@ static void sub_802BE1C(struct SuperSonic *sonic)
 
     if (sonic->flags & SUPER_FLAG__4) {
         transform->rotation = (COS((sonic->unkC * 20) & ONE_CYCLE) >> 4) & ONE_CYCLE;
-        transform->width = Q(1.0);
-        transform->height = Q(1.0);
+        transform->qScaleX = Q(1.0);
+        transform->qScaleY = Q(1.0);
         transform->x = spr->x;
         transform->y = spr->y;
         TransformSprite(spr, transform);

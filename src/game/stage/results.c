@@ -263,7 +263,7 @@ u16 CreateStageResults(u32 courseTime, u16 ringCount, u8 spRingCount)
         UpdateSpriteAnimation(s);
     }
 
-    gUnknown_030054A8.unk0 |= -1;
+    gMusicManagerState.unk0 |= -1;
 
     if (IS_FINAL_STAGE(gCurrentLevel)) {
         m4aSongNumStart(MUS_FINAL_CLEAR);
@@ -351,7 +351,7 @@ static void Task_UpdateStageResults(void)
                 TasksDestroyAll();
 
                 { // TODO: This is a macro!
-                    gUnknown_03002AE4 = gUnknown_0300287C;
+                    PAUSE_BACKGROUNDS_QUEUE();
                     gUnknown_03005390 = 0;
                     PAUSE_GRAPHICS_QUEUE();
                 }
@@ -367,7 +367,7 @@ static void Task_UpdateStageResults(void)
                 TasksDestroyAll();
 
                 { // TODO: This is a macro!
-                    gUnknown_03002AE4 = gUnknown_0300287C;
+                    PAUSE_BACKGROUNDS_QUEUE();
                     gUnknown_03005390 = 0;
                     PAUSE_GRAPHICS_QUEUE();
                 }
@@ -386,7 +386,7 @@ static void Task_UpdateStageResults(void)
                     TasksDestroyAll();
 
                     { // TODO: This is a macro!
-                        gUnknown_03002AE4 = gUnknown_0300287C;
+                        PAUSE_BACKGROUNDS_QUEUE();
                         gUnknown_03005390 = 0;
                         PAUSE_GRAPHICS_QUEUE();
                     }
@@ -435,7 +435,7 @@ static void Task_UpdateStageResults(void)
                         TasksDestroyAll();
 
                         { // TODO: This is a macro!
-                            gUnknown_03002AE4 = gUnknown_0300287C;
+                            PAUSE_BACKGROUNDS_QUEUE();
                             gUnknown_03005390 = 0;
                             PAUSE_GRAPHICS_QUEUE();
                         }
@@ -458,7 +458,7 @@ static void Task_UpdateStageResults(void)
                     TasksDestroyAll();
 
                     { // TODO: This is a macro!
-                        gUnknown_03002AE4 = gUnknown_0300287C;
+                        PAUSE_BACKGROUNDS_QUEUE();
                         gUnknown_03005390 = 0;
                         PAUSE_GRAPHICS_QUEUE();
                     }

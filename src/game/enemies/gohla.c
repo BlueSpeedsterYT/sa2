@@ -2,7 +2,7 @@
 #include "game/entity.h"
 #include "game/enemies/gohla.h"
 
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 
 #include "malloc_vram.h"
 #include "sprite.h"
@@ -189,11 +189,11 @@ static bool8 CheckPlayerHit(Sprite_Gohla *gohla, s32 x, s32 y)
 {
     Sprite *s = &gohla->s;
     bool8 ret = FALSE;
-    if (sub_800C4FC(s, x, y, 0) != 0) {
+    if (Coll_Player_Enemy_Attack(s, x, y, 0) != 0) {
         ret = TRUE;
     } else {
-        sub_800CA20(s, x, y, 0, &gPlayer);
-        sub_800CA20(s, x, y, 1, &gPlayer);
+        Coll_Player_Enemy(s, x, y, 0, &gPlayer);
+        Coll_Player_Enemy(s, x, y, 1, &gPlayer);
     }
 
     return ret;

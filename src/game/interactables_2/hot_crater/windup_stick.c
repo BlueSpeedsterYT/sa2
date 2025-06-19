@@ -65,18 +65,18 @@ static void sub_8072650(void)
     if ((u8)(windUpStick->unk10 - 1) < 2) {
         if (gPlayer.heldInput & 0x10) {
             if (sub_8072A28(windUpStick)) {
-                gPlayer.x += 0x80;
+                gPlayer.qWorldX += 0x80;
             }
         }
 
         if (gPlayer.heldInput & 0x20) {
             if (sub_80729F4(windUpStick)) {
-                gPlayer.x -= 0x80;
+                gPlayer.qWorldX -= 0x80;
             }
         }
     }
 
-    if (gPlayer.unk90->s.frameFlags & 0x4000) {
+    if (gPlayer.spriteInfoBody->s.frameFlags & SPRITE_FLAG_MASK_ANIM_OVER) {
         sub_80727F4(windUpStick);
     }
 }
@@ -84,21 +84,19 @@ static void sub_8072650(void)
 static void sub_80726E8(Sprite_WindUpStick *windUpStick)
 {
     Player_TransitionCancelFlyingAndBoost(&gPlayer);
-    sub_8023B5C(&gPlayer, 0xE);
-    gPlayer.spriteOffsetX = 6;
-    gPlayer.spriteOffsetY = 14;
+    PLAYERFN_CHANGE_SHIFT_OFFSETS(&gPlayer, 6, 14);
     Player_SetMovestate_IsInScriptedSequence();
-    gPlayer.moveState |= MOVESTATE_400000;
-    windUpStick->unk12 = (gUnknown_03005AF0.s.frameFlags & SPRITE_FLAG_MASK_PRIORITY) >> SPRITE_FLAG_SHIFT_PRIORITY;
-    gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
-    gPlayer.y = Q(windUpStick->unk4 + 3);
+    gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
+    windUpStick->unk12 = (gPlayerBodyPSI.s.frameFlags & SPRITE_FLAG_MASK_PRIORITY) >> SPRITE_FLAG_SHIFT_PRIORITY;
+    gPlayerBodyPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gPlayerBodyPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+    gPlayer.qWorldY = Q(windUpStick->unk4 + 3);
 
     switch (windUpStick->unk10) {
         case 1:
             gPlayer.charState = CHARSTATE_WINDUP_STICK_UPWARDS;
-            gPlayer.speedAirX = 0;
-            gPlayer.speedAirY -= Q(6.5);
+            gPlayer.qSpeedAirX = 0;
+            gPlayer.qSpeedAirY -= Q(6.5);
             break;
         case 2:
 #ifndef NON_MATCHING
@@ -109,22 +107,22 @@ static void sub_80726E8(Sprite_WindUpStick *windUpStick)
 #else
             gPlayer.charState = CHARSTATE_WINDUP_STICK_DOWNWARDS;
 #endif
-            gPlayer.speedAirX = 0;
+            gPlayer.qSpeedAirX = 0;
             break;
         case 3:
             gPlayer.charState = CHARSTATE_WINDUP_STICK_SINGLE_TURN_UP;
             if (gPlayer.moveState & MOVESTATE_FACING_LEFT) {
-                gPlayer.speedGroundX -= Q(2.5);
+                gPlayer.qSpeedGround -= Q(2.5);
             } else {
-                gPlayer.speedGroundX += Q(2.5);
+                gPlayer.qSpeedGround += Q(2.5);
             }
             break;
         case 4:
             gPlayer.charState = CHARSTATE_WINDUP_STICK_SINGLE_TURN_DOWN;
             if (gPlayer.moveState & MOVESTATE_FACING_LEFT) {
-                gPlayer.speedGroundX -= Q(1.25);
+                gPlayer.qSpeedGround -= Q(1.25);
             } else {
-                gPlayer.speedGroundX += Q(1.25);
+                gPlayer.qSpeedGround += Q(1.25);
             }
             gPlayer.moveState ^= 1;
             break;
@@ -135,19 +133,19 @@ static void sub_80726E8(Sprite_WindUpStick *windUpStick)
 static void sub_80727F4(Sprite_WindUpStick *windUpStick)
 {
     Player_ClearMovestate_IsInScriptedSequence();
-    gPlayer.moveState &= ~MOVESTATE_400000;
+    gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
 
-    gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, windUpStick->unk12);
+    gPlayerBodyPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gPlayerBodyPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, windUpStick->unk12);
 
     switch (windUpStick->unk10) {
         case 1:
         case 3:
-            gPlayer.y = Q(windUpStick->unk4 + windUpStick->unkA);
+            gPlayer.qWorldY = Q(windUpStick->unk4 + windUpStick->unkA);
             break;
         case 2:
         case 4:
-            gPlayer.y = Q(windUpStick->unk4 + windUpStick->unkE);
+            gPlayer.qWorldY = Q(windUpStick->unk4 + windUpStick->unkE);
             break;
     }
 
@@ -181,19 +179,19 @@ static u8 sub_80728D4(Sprite_WindUpStick *windUpStick)
     if (PLAYER_IS_ALIVE) {
         s16 posX = windUpStick->unk0 - gCamera.x;
         s16 posY = windUpStick->unk4 - gCamera.y;
-        s16 playerX = I(gPlayer.x) - gCamera.x;
-        s16 playerY = I(gPlayer.y) - gCamera.y;
+        s16 playerX = I(gPlayer.qWorldX) - gCamera.x;
+        s16 playerY = I(gPlayer.qWorldY) - gCamera.y;
 
         if ((posX + windUpStick->unk8) <= playerX && (posX + windUpStick->unk8) + (windUpStick->unkC - windUpStick->unk8) >= playerX) {
             if (posY + windUpStick->unkA <= playerY && (posY + windUpStick->unkA) + (windUpStick->unkE - windUpStick->unkA) >= playerY) {
                 if (gPlayer.moveState & MOVESTATE_IN_AIR) {
-                    if (gPlayer.speedAirY < 0) {
+                    if (gPlayer.qSpeedAirY < 0) {
                         return 1;
                     } else {
                         return 2;
                     }
                 } else {
-                    if (gPlayer.speedAirY < 0) {
+                    if (gPlayer.qSpeedAirY < 0) {
                         return 3;
                     } else {
                         return 4;
@@ -239,7 +237,7 @@ bool32 sub_80729F4(Sprite_WindUpStick *windUpStick)
         x -= camX;
     });
 
-    s16 r0 = I(gPlayer.x) - gCamera.x;
+    s16 r0 = I(gPlayer.qWorldX) - gCamera.x;
     return r1 < r0;
 }
 
@@ -253,7 +251,7 @@ bool32 sub_8072A28(Sprite_WindUpStick *windUpStick)
         x -= camX;
     });
 
-    s16 r0 = I(gPlayer.x) - gCamera.x;
+    s16 r0 = I(gPlayer.qWorldX) - gCamera.x;
     return r1 > r0;
 }
 

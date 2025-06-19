@@ -1,13 +1,13 @@
 #include "global.h"
 #include "malloc_vram.h"
-#include "game/sa1_leftovers/collision.h"
-#include "game/sa1_leftovers/dust_cloud.h"
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/collision.h"
+#include "game/sa1_sa2_shared/dust_cloud.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 #include "game/entity.h"
 #include "game/cheese.h"
 #include "game/enemies/projectiles.h"
 #include "game/stage/trapped_animals.h"
-#include "game/multiplayer/player_unk_1.h"
+#include "game/multiplayer/multiplayer_event_mgr.h"
 #include "lib/m4a/m4a.h"
 
 #include "constants/animations.h"
@@ -34,8 +34,8 @@ void TaskDestructor_Yado(struct Task *);
 #define YADO_PROJ_COOLDOWN (2 * GBA_FRAMES_PER_SECOND)
 
 #define IS_YADO_FACING_PLAYER(_yado, _yadoX, _player)                                                                                      \
-    (((I(gPlayer.x) < _yadoX) && (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP))                                                                \
-     || ((I(gPlayer.x) > _yadoX) && (~s->frameFlags & SPRITE_FLAG_MASK_X_FLIP)))
+    (((I(gPlayer.qWorldX) < _yadoX) && (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP))                                                          \
+     || ((I(gPlayer.qWorldX) > _yadoX) && (~s->frameFlags & SPRITE_FLAG_MASK_X_FLIP)))
 
 void CreateEntity_Yado(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
@@ -91,12 +91,12 @@ void Task_YadoMain(void)
 
     ENEMY_UPDATE_POSITION_STATIC(yado, s, pos.x, pos.y);
 
-    if (sub_800C204(s, pos.x, pos.y, 0, &gPlayer, 0) == TRUE) {
+    if (Coll_Player_Entity_HitboxN(s, pos.x, pos.y, 0, &gPlayer, 0) == TRUE) {
         m4aSongNumStart(SE_SPRING);
-        gPlayer.speedAirY = YADO_PLAYER_ACCEL;
+        gPlayer.qSpeedAirY = YADO_PLAYER_ACCEL;
         gPlayer.charState = CHARSTATE_CURLED_IN_AIR;
         gPlayer.unk6C = 1;
-        gPlayer.transition = PLTRANS_PT5;
+        gPlayer.transition = PLTRANS_UNCURL;
 
         // TODO: Why is this called twice?
         m4aSongNumStart(SE_SPRING);
@@ -130,19 +130,19 @@ void Task_8055084(void)
     ENEMY_UPDATE_POSITION_STATIC(yado, s, pos.x, pos.y);
 
     if (!(gPlayer.moveState & MOVESTATE_IN_AIR)) {
-        if (sub_800C4FC(s, pos.x, pos.y, 1) == TRUE) {
+        if (Coll_Player_Enemy_Attack(s, pos.x, pos.y, 1) == TRUE) {
             TaskDestroy(gCurTask);
             return;
-        } else if (sub_800C204(s, pos.x, pos.y, 0, &gPlayer, 0) == 1) {
-            gPlayer.speedAirY = YADO_PLAYER_ACCEL;
+        } else if (Coll_Player_Entity_HitboxN(s, pos.x, pos.y, 0, &gPlayer, 0) == 1) {
+            gPlayer.qSpeedAirY = YADO_PLAYER_ACCEL;
             gPlayer.charState = CHARSTATE_CURLED_IN_AIR;
             gPlayer.unk6C = 1;
             gPlayer.transition = 5;
 
             m4aSongNumStart(SE_SPRING);
         }
-    } else if (sub_800C204(s, pos.x, pos.y, 0, &gPlayer, 0) == 1) {
-        gPlayer.speedAirY = YADO_PLAYER_ACCEL;
+    } else if (Coll_Player_Entity_HitboxN(s, pos.x, pos.y, 0, &gPlayer, 0) == 1) {
+        gPlayer.qSpeedAirY = YADO_PLAYER_ACCEL;
         gPlayer.charState = CHARSTATE_CURLED_IN_AIR;
         gPlayer.unk6C = 1;
         gPlayer.transition = 5;
@@ -159,11 +159,11 @@ void Task_8055084(void)
             if (cheese->s.hitboxes[1].index != HITBOX_STATE_INACTIVE) {
                 if (HB_COLLISION(x, y, s->hitboxes[0], I(cheese->posX), I(cheese->posY), cheese->s.hitboxes[1])) {
                     if (IS_MULTI_PLAYER) {
-                        struct UNK_3005510 *unk = sub_8019224();
-                        unk->unk0 = 3;
-                        unk->unk1 = yado2->base.regionX;
-                        unk->unk2 = yado2->base.regionY;
-                        unk->unk3 = yado2->base.id;
+                        RoomEvent_EnemyDestroy *roomEvent = CreateRoomEvent();
+                        roomEvent->type = ROOMEVENT_TYPE_ENEMY_DESTROYED;
+                        roomEvent->x = yado2->base.regionX;
+                        roomEvent->y = yado2->base.regionY;
+                        roomEvent->id = yado2->base.id;
                     }
 
                     CreateDustCloud(x, y);
@@ -223,11 +223,11 @@ void Task_8055378(void)
 
     ENEMY_UPDATE_POSITION_STATIC(yado, s, pos.x, pos.y);
 
-    if (sub_800C204(s, pos.x, pos.y, 0, &gPlayer, 0) == TRUE) {
-        gPlayer.speedAirY = YADO_PLAYER_ACCEL;
+    if (Coll_Player_Entity_HitboxN(s, pos.x, pos.y, 0, &gPlayer, 0) == TRUE) {
+        gPlayer.qSpeedAirY = YADO_PLAYER_ACCEL;
         gPlayer.charState = CHARSTATE_CURLED_IN_AIR;
         gPlayer.unk6C = 1;
-        gPlayer.transition = PLTRANS_PT5;
+        gPlayer.transition = PLTRANS_UNCURL;
 
         m4aSongNumStart(SE_SPRING);
     }

@@ -4,7 +4,7 @@
 #include "trig.h"
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/kubinaga.h"
@@ -112,15 +112,15 @@ static void sub_80524D0(void)
     Player_UpdateHomingPosition(k->spawnX, k->spawnY);
     if (k->unkB8 != 0) {
         k->unkB8--;
-    } else if (gPlayer.x > k->spawnX - 0x7800 && gPlayer.x < k->spawnX + 0x7800 && gPlayer.y > k->spawnY - 0x6400
-               && gPlayer.y < k->spawnY + 0x6400) {
+    } else if (gPlayer.qWorldX > k->spawnX - 0x7800 && gPlayer.qWorldX < k->spawnX + 0x7800 && gPlayer.qWorldY > k->spawnY - 0x6400
+               && gPlayer.qWorldY < k->spawnY + 0x6400) {
         k->unkBE = 0;
         if (k->unkC0 == 0) {
-            k->unkBA = sub_8004418((I(gPlayer.y) - pos.y) + 10, I(gPlayer.x) - pos.x);
+            k->unkBA = sub_8004418((I(gPlayer.qWorldY) - pos.y) + 10, I(gPlayer.qWorldX) - pos.x);
         } else if ((k->unkC0 & 1)) {
-            k->unkBA = sub_8004418((I(gPlayer.y) - pos.y), (I(gPlayer.x) - pos.x) + 10);
+            k->unkBA = sub_8004418((I(gPlayer.qWorldY) - pos.y), (I(gPlayer.qWorldX) - pos.x) + 10);
         } else {
-            k->unkBA = sub_8004418((I(gPlayer.y) - pos.y), (I(gPlayer.x) - pos.x) - 10);
+            k->unkBA = sub_8004418((I(gPlayer.qWorldY) - pos.y), (I(gPlayer.qWorldX) - pos.x) - 10);
         }
 
         k->headX = k->spawnX;
@@ -335,7 +335,7 @@ static void sub_8052CC8(Sprite_Kubinaga *k)
             sNeck->y = pos.y - gCamera.y;
         }
 
-        sub_800C84C(sNeck, pos.x, pos.y);
+        Coll_Player_Projectile(sNeck, pos.x, pos.y);
         DisplaySprite(sNeck);
     }
 
@@ -349,24 +349,24 @@ static void sub_8052CC8(Sprite_Kubinaga *k)
 
     if (k->unkC0 == 0) {
         sHead->y = (pos.y - gCamera.y) - 10;
-        transform->rotation = sub_8004418(I(gPlayer.y) - pos.y + 10, I(gPlayer.x) - pos.x);
+        transform->rotation = sub_8004418(I(gPlayer.qWorldY) - pos.y + 10, I(gPlayer.qWorldX) - pos.x);
     } else {
         if (k->unkC0 & 1) {
 
             sHead->x = sHead->x + 10;
-            transform->rotation = sub_8004418(I(gPlayer.y) - pos.y, (I(gPlayer.x) - pos.x) + 10);
+            transform->rotation = sub_8004418(I(gPlayer.qWorldY) - pos.y, (I(gPlayer.qWorldX) - pos.x) + 10);
         } else {
 
             sHead->x = sHead->x - 10;
-            transform->rotation = sub_8004418(I(gPlayer.y) - pos.y, (I(gPlayer.x) - pos.x) - 10);
+            transform->rotation = sub_8004418(I(gPlayer.qWorldY) - pos.y, (I(gPlayer.qWorldX) - pos.x) - 10);
         }
         sHead->y = (pos.y - gCamera.y);
     }
 
-    sub_800C84C(sHead, pos.x, pos.y);
+    Coll_Player_Projectile(sHead, pos.x, pos.y);
 
-    transform->width = 0x100;
-    transform->height = 0x100;
+    transform->qScaleX = Q(1);
+    transform->qScaleY = Q(1);
     transform->x = sHead->x;
     transform->y = sHead->y;
     k->unkBC = transform->rotation;

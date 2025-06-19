@@ -6,7 +6,7 @@
 #include "task.h"
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 
 #include "game/game_over.h"
 #include "game/time_attack/lobby.h"
@@ -24,7 +24,22 @@ typedef struct {
     u8 delay;
 } GameOverScreenFade;
 
+typedef struct {
+    ScreenFade unk0;
+    Sprite sprGameOrTime;
+    Sprite sprOver;
+    u32 framesUntilDone;
+} GameOverScreen;
+
 void Task_FadeoutToOverScreen(void);
+void DisplayOverScreenTextSprites(GameOverScreen *screen);
+void sub_80369D8(void);
+static void InitOverScreen(LostLifeCause lostLifeCause);
+void Task_GameOverScreenMain(void);
+void TaskDestructor_GameOverTimeOverScreen(struct Task *);
+void Task_TimeOverScreenMain(void);
+void sub_8036B70(void);
+void UpdateTimeOverScreenSprites(GameOverScreen *screen);
 
 void CreateGameOverScreen(LostLifeCause lostLifeCause)
 {
@@ -48,8 +63,6 @@ void CreateGameOverScreen(LostLifeCause lostLifeCause)
     m4aMPlayFadeOut(&gMPlayInfo_SE3, 8);
 }
 
-static void InitOverScreen(LostLifeCause lostLifeCause);
-
 void Task_FadeoutToOverScreen(void)
 {
     GameOverScreenFade *gameover_fade = TASK_DATA(gCurTask);
@@ -63,7 +76,7 @@ void Task_FadeoutToOverScreen(void)
     if (UpdateScreenFade(&gameover_fade->unk0) != SCREEN_FADE_RUNNING) {
         gBldRegs.bldY = 16;
         TasksDestroyAll();
-        gUnknown_03002AE4 = gUnknown_0300287C;
+        PAUSE_BACKGROUNDS_QUEUE();
         gUnknown_03005390 = 0;
         PAUSE_GRAPHICS_QUEUE();
         InitOverScreen(lostLifeCause);
@@ -75,17 +88,6 @@ void Task_FadeoutToOverScreen(void)
         }
     }
 }
-
-typedef struct {
-    ScreenFade unk0;
-    Sprite sprGameOrTime;
-    Sprite sprOver;
-    u32 framesUntilDone;
-} GameOverScreen;
-
-void Task_GameOverScreenMain(void);
-void TaskDestructor_GameOverTimeOverScreen(struct Task *);
-void Task_TimeOverScreenMain(void);
 
 static void InitOverScreen(LostLifeCause lostLifeCause)
 {
@@ -103,7 +105,7 @@ static void InitOverScreen(LostLifeCause lostLifeCause)
     gBldRegs.bldCnt = 0;
     gBldRegs.bldY = 0;
     gBldRegs.bldAlpha = 0;
-    gFlags &= ~FLAGS_4;
+    gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
 
     memset(gBgPalette, 0, sizeof(gBgPalette));
     gFlags |= FLAGS_UPDATE_BACKGROUND_PALETTES;
@@ -165,9 +167,6 @@ static void InitOverScreen(LostLifeCause lostLifeCause)
     fade->bldCnt = (BLDCNT_TGT2_ALL | BLDCNT_EFFECT_DARKEN | BLDCNT_TGT1_OBJ);
     fade->bldAlpha = 0;
 }
-
-void DisplayOverScreenTextSprites(GameOverScreen *screen);
-void sub_80369D8(void);
 
 void Task_GameOverScreenMain(void)
 {
@@ -244,8 +243,6 @@ void sub_80369D8(void)
     DisplayOverScreenTextSprites(screen);
 }
 
-void UpdateTimeOverScreenSprites(GameOverScreen *screen);
-
 void Task_TimeOverScreenMain(void)
 {
     GameOverScreen *screen = TASK_DATA(gCurTask);
@@ -285,7 +282,7 @@ void Task_TimeOverScreenMain(void)
 
     if (--screen->framesUntilDone == 0) {
         TasksDestroyAll();
-        gUnknown_03002AE4 = gUnknown_0300287C;
+        PAUSE_BACKGROUNDS_QUEUE();
         gUnknown_03005390 = 0;
         PAUSE_GRAPHICS_QUEUE();
         gRingCount = 0;
@@ -300,8 +297,6 @@ void Task_TimeOverScreenMain(void)
 
     UpdateTimeOverScreenSprites(screen);
 }
-
-void sub_8036B70(void);
 
 void sub_8036B30(void)
 {
@@ -322,7 +317,7 @@ void sub_8036B70(void)
 
     if (--screen->framesUntilDone == 0) {
         TasksDestroyAll();
-        gUnknown_03002AE4 = gUnknown_0300287C;
+        PAUSE_BACKGROUNDS_QUEUE();
         gUnknown_03005390 = 0;
         PAUSE_GRAPHICS_QUEUE();
         CreateTitleScreen();

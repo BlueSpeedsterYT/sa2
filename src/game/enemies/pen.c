@@ -5,7 +5,7 @@
 #include "game/entity.h"
 
 #include "game/enemies/pen.h"
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "constants/animations.h"
 
@@ -86,7 +86,7 @@ static void Task_PenMove(void)
     ENEMY_DESTROY_IF_OFFSCREEN(pen, me, s);
 
     if (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP) {
-        s32 playerX = gPlayer.x;
+        s32 playerX = gPlayer.qWorldX;
         // Feels like a fake match, oh well
         posX_24_8 = Q(pos.x);
         if (playerX > posX_24_8 && playerX < Q(pos.x + 100)) {
@@ -98,7 +98,7 @@ static void Task_PenMove(void)
             pen->boosting = TRUE;
         }
     } else {
-        s32 playerX = gPlayer.x;
+        s32 playerX = gPlayer.qWorldX;
         posX_24_8 = Q(pos.x);
         if (playerX < posX_24_8 && playerX > Q(pos.x - 100)) {
             if (!pen->boosting) {

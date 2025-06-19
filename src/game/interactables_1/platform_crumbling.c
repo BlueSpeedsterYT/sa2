@@ -3,7 +3,7 @@
 #include "sprite.h"
 #include "task.h"
 
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -28,7 +28,7 @@ static const u16 sInt019_AnimationIds[]
 
 extern const struct SpriteTables *gRefSpriteTables;
 
-extern u32 sub_800C060(Sprite *, s32, s32, Player *);
+extern u32 Coll_Player_PlatformCrumbling(Sprite *, s32, s32, Player *);
 
 static void Task_Interactable_019(void);
 
@@ -100,7 +100,7 @@ void Task_Interactable_019(void)
     s->x = screenX - gCamera.x;
     s->y = screenY - gCamera.y;
 
-    if (sub_800C060(s, screenX, screenY, &gPlayer) & 0x8) {
+    if (Coll_Player_PlatformCrumbling(s, screenX, screenY, &gPlayer) & 0x8) {
         gCurTask->main = Task_805E35C;
         platform->unk3C = 0;
     }
@@ -135,7 +135,7 @@ void Task_805E35C(void)
     s->x = screenX - gCamera.x;
     s->y = screenY - gCamera.y;
 
-    sub_800C060(s, screenX, screenY, &gPlayer);
+    Coll_Player_PlatformCrumbling(s, screenX, screenY, &gPlayer);
 
     if (IS_MULTI_PLAYER && ((s8)me->x == MAP_ENTITY_STATE_MINUS_THREE)) {
         platform->unk3C = 0;
@@ -175,7 +175,7 @@ void Task_805E480(void)
     s->y = screenY - gCamera.y;
     platform->unk3C++;
 
-    sub_800C060(s, screenX, screenY, &gPlayer);
+    Coll_Player_PlatformCrumbling(s, screenX, screenY, &gPlayer);
 
     if (screenX > gCamera.x + DISPLAY_WIDTH + (CAM_REGION_WIDTH / 2) || (screenX < gCamera.x - (CAM_REGION_WIDTH / 2))) {
         if ((u16)(s->x + (CAM_REGION_WIDTH / 2)) > (u16)(DISPLAY_WIDTH + CAM_REGION_WIDTH)) {
@@ -198,8 +198,8 @@ void Task_805E480(void)
 
             if (value > 0) {
                 if (r6 == 0 && value == 1) {
-                    if ((gPlayer.moveState & MOVESTATE_8) && gPlayer.unk3C == s) {
-                        gPlayer.moveState = ((gPlayer.moveState & (~MOVESTATE_8)) | MOVESTATE_IN_AIR);
+                    if ((gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ) && gPlayer.stoodObj == s) {
+                        gPlayer.moveState = ((gPlayer.moveState & (~MOVESTATE_STOOD_ON_OBJ)) | MOVESTATE_IN_AIR);
                     }
 
                     gCurTask->main = Task_805E6A4;

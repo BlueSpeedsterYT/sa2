@@ -2,7 +2,7 @@
 #include "game/heart_particles_effect.h"
 #include "malloc_vram.h"
 
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -79,8 +79,8 @@ static void sub_8086A88(void)
 
     for (i = 0; i < NUM_HEARTS; i++) {
         s = &unk998->sprites[i];
-        s->x = gPlayer.unk90->s.x;
-        s->y = gPlayer.unk90->s.y;
+        s->x = gPlayer.spriteInfoBody->s.x;
+        s->y = gPlayer.spriteInfoBody->s.y;
     }
 
     {
@@ -166,8 +166,8 @@ static void sub_8086BE8(u8 i)
     Sprite *s;
     HeartParticles *unk998 = TASK_DATA(gCurTask);
 
-    unk998->unkC4[i] = gPlayer.x;
-    unk998->unkD4[i] = gPlayer.y;
+    unk998->unkC4[i] = gPlayer.qWorldX;
+    unk998->unkD4[i] = gPlayer.qWorldY;
 
     if (i == 1) {
         unk998->unkD4[1] += 0x800;

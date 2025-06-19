@@ -1,12 +1,12 @@
 #include "trig.h"
 
-#include "game/sa1_leftovers/globals.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/globals.h"
+#include "game/sa1_sa2_shared/collision.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "game/stage/boss_results_transition.h"
-#include "game/stage/collision.h"
+#include "game/stage/terrain_collision.h"
 
 #include "game/bosses/boss_7.h"
 #include "game/bosses/common.h"
@@ -87,7 +87,7 @@ static void sub_8048654(EggFrog *);
 static void sub_8048F44(void);
 static void sub_8048D78(EggFrog *);
 static void sub_804928C(EggFrog *);
-static bool8 sub_8048C7C(EggFrog *);
+bool8 sub_8048C7C(EggFrog *);
 static void sub_80493F8(EggFrog *, s32 x, s32 y, u8);
 static void sub_804920C(EggFrog *);
 static void sub_80494EC(void);
@@ -255,8 +255,8 @@ void CreateEggFrog(void)
     gPlayer.moveState |= MOVESTATE_IGNORE_INPUT;
     sub_8039ED4();
     gPseudoRandom = gStageTime;
-    gUnknown_03005AF0.s.frameFlags &= ~0x3000;
-    gUnknown_03005AF0.s.frameFlags |= 0x1000;
+    gPlayerBodyPSI.s.frameFlags &= ~0x3000;
+    gPlayerBodyPSI.s.frameFlags |= 0x1000;
     gActiveBossTask = TaskCreate(Task_EggFrogMain, sizeof(EggFrog), 0x4000, 0, TaskDestructor_EggFrogMain);
 
     boss = TASK_DATA(gActiveBossTask);
@@ -397,7 +397,7 @@ static void sub_8047F0C(void)
     sub_804931C(boss);
 
     if (Mod(gStageTime, 13) == 0) {
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
     }
 
     if (Mod(gStageTime, 7) == 0 && boss->unk65 == 0) {
@@ -486,7 +486,7 @@ static void Render(EggFrog *boss)
                     DisplaySprite(s);
 
                     if (boss->unk14 && boss->unk0 == 0) {
-                        sub_800CA20(s, s->x + gCamera.x, s->y + gCamera.y, 0, &gPlayer);
+                        Coll_Player_Enemy(s, s->x + gCamera.x, s->y + gCamera.y, 0, &gPlayer);
                     }
                 }
             }
@@ -521,15 +521,15 @@ static void sub_8048408(EggFrog *boss)
     s->y = pos.y - gCamera.y;
 
     if (boss->unk16 == 0) {
-        if (sub_800C320(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
+        if (Coll_Player_Boss_Attack(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
             sub_8048D78(boss);
-        } else if (sub_800CA20(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
+        } else if (Coll_Player_Enemy(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
             sub_804928C(boss);
         }
 
         Player_UpdateHomingPosition(QS(pos.x), QS(pos.y));
 
-        if (boss->unk16 == 0 && IsColliding_Cheese(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
+        if (boss->unk16 == 0 && Coll_Cheese_Enemy_Attack(s, pos.x, pos.y, 0, &gPlayer) == TRUE) {
             sub_8048D78(boss);
             gCheeseTarget.task->unk15 = 0;
         }
@@ -842,7 +842,7 @@ static void sub_8048BF0(EggFrog *boss)
 
 // https://decomp.me/scratch/aDy46
 // 98.5%, some register hacks get it very close. All instructions match
-NONMATCH("asm/non_matching/game/bosses/boss_7__sub_8048C7C.inc", static bool8 sub_8048C7C(EggFrog *boss))
+NONMATCH("asm/non_matching/game/bosses/boss_7__sub_8048C7C.inc", bool8 sub_8048C7C(EggFrog *boss))
 {
     const u16 **unk60 = (void *)boss->unk60;
     s16 *unk28 = boss->unk28;
@@ -935,7 +935,7 @@ static void sub_8048D78(EggFrog *boss)
     s->prevVariant = -1;
 
     if (!IS_FINAL_STAGE(gCurrentLevel) && boss->unk14 == 4) {
-        gUnknown_030054A8.unk1 = 0x11;
+        gMusicManagerState.unk1 = 0x11;
     }
 }
 
@@ -1254,7 +1254,7 @@ static void sub_80494EC(void)
     s->x = I(bomb->x);
     s->y = I(bomb->y);
     if (bomb->boss->unk14) {
-        s32 result = sub_800CA20(s, I(bomb->x) + gCamera.x, I(bomb->y) + gCamera.y, 0, &gPlayer);
+        s32 result = Coll_Player_Enemy(s, I(bomb->x) + gCamera.x, I(bomb->y) + gCamera.y, 0, &gPlayer);
         if (result == 1 && bomb->boss->unk16 == 0) {
             Sprite *unk68 = &bomb->boss->unk68;
             bomb->boss->unk15 = 0x1E;
@@ -1289,7 +1289,7 @@ static void sub_8049658(void)
 
     if (!((val - 1) % 4)) {
         s32 x, y;
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
         x = bomb->x + Q(gCamera.x);
         y = bomb->y + Q(gCamera.y);
         sub_80496FC(bomb->boss, x, y, bomb->gravityInverted);
@@ -1350,7 +1350,7 @@ static void Task_80497E0(void)
     s->x = I(bombFlame->x);
     s->y = I(bombFlame->y);
     if (bombFlame->boss->unk14) {
-        s32 result = sub_800CA20(s, I(bombFlame->x) + gCamera.x, I(bombFlame->y) + gCamera.y, 0, &gPlayer);
+        s32 result = Coll_Player_Enemy(s, I(bombFlame->x) + gCamera.x, I(bombFlame->y) + gCamera.y, 0, &gPlayer);
         if (result == 1 && bombFlame->boss->unk16 == 0) {
             Sprite *unk68 = &bombFlame->boss->unk68;
             bombFlame->boss->unk15 = 30;

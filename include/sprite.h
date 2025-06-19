@@ -93,11 +93,18 @@ typedef struct {
 } Background; /* size = 0x40 */
 
 typedef struct {
+#if (ENGINE >= ENGINE_3)
+    // In SA3 flip-bits are integrated into the oamIndex.
+    // X-Flip: Bit 14
+    // Y-Flip: Bit 15
+    /* 0x00 */ u16 oamIndex;
+#else
     /* 0x00 */ u8 flip;
 
     // every animation has an associated oamData pointer, oamIndex starts at
     // 0 for every new animation and ends at variantCount-1
     /* 0x01 */ u8 oamIndex;
+#endif
 
     // some sprite frames consist of multiple images (of the same size
     // as GBA's Object Attribute Memory, e.g. 8x8, 8x32, 32x64, ...)
@@ -119,6 +126,8 @@ typedef struct {
 typedef struct {
     // index: -1 on init; lower 4 bits = index (in anim-cmds)
     /* 0x00 */ s32 index;
+
+    // TODO: Make this a Rect8, like in SA1 and SA3!
     /* 0x04 */ s8 left;
     /* 0x05 */ s8 top;
     /* 0x06 */ s8 right;
@@ -188,13 +197,8 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ u16 rotation;
-
-    // TODO:
-    //     The names "width" and "height" appear to be inaccurate.
-    //     Maybe "scaleX" and "scaleY" would be more fitting?
-    //     It's 0x100 or Q_8_8(1.0) for 1x, Q_8_8(2.0) for 2x, etc.
-    /* 0x02 */ s16 width;
-    /* 0x04 */ s16 height;
+    /* 0x02 */ s16 qScaleX;
+    /* 0x04 */ s16 qScaleY;
     /* 0x06 */ s16 x;
     /* 0x08 */ s16 y;
 } SpriteTransform; /* size 0xA */
@@ -263,6 +267,13 @@ void sub_8003914(Sprite *);
 void sub_80047A0(u16, s16, s16, u16);
 
 s16 sub_8004418(s16 x, s16 y);
+void numToASCII(u8 digits[5], u16 number);
+
+#if ((GAME == GAME_SA1) || (GAME == GAME_SA2))
+#define GET_SPRITE_ANIM(s) ((s)->graphics.anim)
+#else
+#define GET_SPRITE_ANIM(s) ((s)->anim)
+#endif
 
 #define SpriteShouldUpdate(sprite) (((sprite)->prevVariant != (sprite)->variant) || ((sprite)->prevAnim != (sprite)->graphics.anim))
 

@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -13,12 +14,13 @@
 
 #include "global.h"
 #include "core.h"
+#include "multi_sio.h"
 #include "gba/defines.h"
 #include "gba/io_reg.h"
 #include "gba/types.h"
 #include "lib/agb_flash/flash_internal.h"
-#define DMA_DEST_MASK 0x0060
-#define DMA_SRC_MASK  0x0180
+#include "platform/shared/dma.h"
+#include "platform/shared/input.h"
 
 #if ENABLE_AUDIO
 #include "platform/shared/audio/cgb_audio.h"
@@ -55,25 +57,6 @@ uint16_t vramBuffer[VRAM_VIEW_WIDTH * VRAM_VIEW_HEIGHT];
 uint8_t vramPalIdBuffer[(VRAM_VIEW_WIDTH / TILE_WIDTH) * (VRAM_VIEW_HEIGHT / TILE_WIDTH)];
 #endif
 
-#define DMA_COUNT 4
-
-struct DMATransfer {
-    union {
-        const void *src;
-        const u16 *src16;
-        const u32 *src32;
-    };
-    union {
-        void *dst;
-        vu16 *dst16;
-        vu32 *dst32;
-    };
-    u32 size;
-    u16 control;
-} DMAList[DMA_COUNT];
-
-enum { DMA_NOW, DMA_VBLANK, DMA_HBLANK, DMA_SPECIAL };
-
 struct scanlineData {
     uint16_t layers[4][DISPLAY_WIDTH];
     uint16_t spriteLayers[4][DISPLAY_WIDTH];
@@ -90,7 +73,6 @@ struct bgPriority {
     char subPriority;
 };
 
-SDL_Thread *mainLoopThread;
 SDL_Window *sdlWindow;
 SDL_Renderer *sdlRenderer;
 SDL_Texture *sdlTexture;
@@ -102,26 +84,25 @@ SDL_Texture *vramTexture;
 #define INITIAL_VIDEO_SCALE 1
 unsigned int videoScale = INITIAL_VIDEO_SCALE;
 unsigned int preFullscreenVideoScale = INITIAL_VIDEO_SCALE;
-SDL_sem *vBlankSemaphore;
-SDL_atomic_t isFrameAvailable;
+
 bool speedUp = false;
 bool videoScaleChanged = false;
 bool isRunning = true;
 bool paused = false;
 bool stepOneFrame = false;
-double simTime = 0;
+bool headless = false;
+
 double lastGameTime = 0;
 double curGameTime = 0;
 double fixedTimestep = 1.0 / 60.0; // 16.666667ms
 double timeScale = 1.0;
-// struct SiiRtcInfo internalClock;
+double accumulator = 0.0;
 
 static FILE *sSaveFile = NULL;
 
 extern void AgbMain(void);
 void DoSoftReset(void) {};
 
-int DoMain(void *param);
 void ProcessSDLEvents(void);
 void VDraw(SDL_Texture *texture);
 void VramDraw(SDL_Texture *texture);
@@ -131,7 +112,6 @@ static void StoreSaveFile(void);
 static void CloseSaveFile(void);
 
 static void UpdateInternalClock(void);
-static void RunDMAs(u32 type);
 
 u16 Platform_GetKeyInput(void);
 
@@ -142,8 +122,23 @@ void Platform_free(void *ptr) { HeapFree(GetProcessHeap(), 0, ptr); }
 
 int main(int argc, char **argv)
 {
+    const char *headlessEnv = getenv("HEADLESS");
+
+    if (headlessEnv && strcmp(headlessEnv, "true") == 0) {
+        headless = true;
+    }
+
+    const char *parentEnv = getenv("SIO_PARENT");
+
+    if (parentEnv && strcmp(parentEnv, "true") == 0) {
+        SIO_MULTI_CNT->id = 0;
+        SIO_MULTI_CNT->si = 1;
+        SIO_MULTI_CNT->sd = 1;
+        SIO_MULTI_CNT->enable = false;
+    }
+
     // Open an output console on Windows
-#ifdef _WIN32
+#if (defined _WIN32) && (DEBUG != 0)
     AllocConsole();
     AttachConsole(GetCurrentProcessId());
     freopen("CON", "w", stdout);
@@ -151,7 +146,18 @@ int main(int argc, char **argv)
 
     ReadSaveFile("sa2.sav");
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
+    // Prevent the multiplayer screen from being drawn ( see core.c:EngineInit() )
+    REG_RCNT = 0x8000;
+    REG_KEYINPUT = 0x3FF;
+
+    if (headless) {
+        // Required or it makes an infinite loop
+        cgb_audio_init(48000);
+        AgbMain();
+        return 1;
+    }
+
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return 1;
     }
@@ -199,7 +205,7 @@ int main(int argc, char **argv)
     }
 #endif
 
-    SDL_SetRenderDrawColor(sdlRenderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
     SDL_RenderClear(sdlRenderer);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_RenderSetLogicalSize(sdlRenderer, DISPLAY_WIDTH, DISPLAY_HEIGHT);
@@ -222,14 +228,6 @@ int main(int argc, char **argv)
         return 1;
     }
 #endif
-
-    simTime = curGameTime = lastGameTime = SDL_GetPerformanceCounter();
-
-    isFrameAvailable.value = 0;
-    vBlankSemaphore = SDL_CreateSemaphore(0);
-    if (vBlankSemaphore == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create Semaphore:\n  %s", SDL_GetError());
-    }
 
 #if ENABLE_AUDIO
     SDL_AudioSpec want;
@@ -254,59 +252,75 @@ int main(int argc, char **argv)
 #if ENABLE_VRAM_VIEW
     VramDraw(vramTexture);
 #endif
-    // Prevent the multiplayer screen from being drawn ( see core.c:GameInit() )
-    REG_RCNT = 0x8000;
+    AgbMain();
 
-    mainLoopThread = SDL_CreateThread(DoMain, "AgbMain", NULL);
+    return 0;
+}
 
-    double accumulator = 0.0;
+bool newFrameRequested = FALSE;
 
-#if 0
-    memset(&internalClock, 0, sizeof(internalClock));
-    internalClock.status = SIIRTCINFO_24HOUR;
-    UpdateInternalClock();
-#endif
+// Every GBA frame we process the SDL events and render the number of times
+// SDL requires us to for vsync. When we need another frame we break out of
+// the loop via a return
+void VBlankIntrWait(void)
+{
+    // ((struct MultiSioPacket *)gMultiSioArea.nextSendBufp)
+#define HANDLE_VBLANK_INTRS()                                                                                                              \
+    ({                                                                                                                                     \
+        REG_DISPSTAT |= INTR_FLAG_VBLANK;                                                                                                  \
+        RunDMAs(DMA_VBLANK);                                                                                                               \
+        if (REG_DISPSTAT & DISPSTAT_VBLANK_INTR)                                                                                           \
+            gIntrTable[INTR_INDEX_VBLANK]();                                                                                               \
+        REG_DISPSTAT &= ~INTR_FLAG_VBLANK;                                                                                                 \
+    })
 
-    REG_KEYINPUT = 0x3FF;
+    if (headless) {
+        REG_VCOUNT = DISPLAY_HEIGHT + 1;
+        HANDLE_VBLANK_INTRS();
+        return;
+    }
+
+    bool frameAvailable = TRUE;
 
     while (isRunning) {
         ProcessSDLEvents();
 
         if (!paused || stepOneFrame) {
             double dt = fixedTimestep / timeScale; // TODO: Fix speedup
-            double deltaTime = 0;
 
-            curGameTime = SDL_GetPerformanceCounter();
-            if (stepOneFrame) {
-                deltaTime = dt;
+            // Hack to emulate the behaviour of threaded sdl
+            // it will not add any new values to the accumulator
+            // when a new frame was requested within a frame cycle
+            if (!newFrameRequested) {
+                double deltaTime = 0;
+
+                curGameTime = SDL_GetPerformanceCounter();
+                if (stepOneFrame) {
+                    deltaTime = dt;
+                } else {
+                    deltaTime = (double)((curGameTime - lastGameTime) / (double)SDL_GetPerformanceFrequency());
+                    if (deltaTime > (dt * 5))
+                        deltaTime = dt * 5;
+                }
+                lastGameTime = curGameTime;
+
+                accumulator += deltaTime;
             } else {
-                deltaTime = (double)((curGameTime - lastGameTime) / (double)SDL_GetPerformanceFrequency());
-                if (deltaTime > (dt * 5))
-                    deltaTime = dt * 5;
+                newFrameRequested = FALSE;
             }
-            lastGameTime = curGameTime;
-
-            accumulator += deltaTime;
 
             while (accumulator >= dt) {
                 REG_KEYINPUT = KEYS_MASK ^ Platform_GetKeyInput();
-                if (SDL_AtomicGet(&isFrameAvailable)) {
+                if (frameAvailable) {
                     VDraw(sdlTexture);
-                    SDL_AtomicSet(&isFrameAvailable, 0);
+                    frameAvailable = FALSE;
 
-                    REG_DISPSTAT |= INTR_FLAG_VBLANK;
-
-                    // TODO(Jace): I think this should be DMA_VBLANK.
-                    //             If not, and it is HBLANK instead, add a note here, why it is!
-                    RunDMAs(DMA_VBLANK);
-
-                    if (REG_DISPSTAT & DISPSTAT_VBLANK_INTR)
-                        gIntrTable[INTR_INDEX_VBLANK]();
-                    REG_DISPSTAT &= ~INTR_FLAG_VBLANK;
-
-                    SDL_SemPost(vBlankSemaphore);
+                    HANDLE_VBLANK_INTRS();
 
                     accumulator -= dt;
+                } else {
+                    newFrameRequested = TRUE;
+                    return;
                 }
             }
 
@@ -327,18 +341,19 @@ int main(int argc, char **argv)
             SDL_SetWindowSize(sdlWindow, DISPLAY_WIDTH * videoScale, DISPLAY_HEIGHT * videoScale);
             videoScaleChanged = false;
         }
+
         SDL_RenderPresent(sdlRenderer);
 #if ENABLE_VRAM_VIEW
         SDL_RenderPresent(vramRenderer);
 #endif
     }
 
-    // StoreSaveFile();
     CloseSaveFile();
 
     SDL_DestroyWindow(sdlWindow);
     SDL_Quit();
-    return 0;
+    exit(0);
+#undef RUN_VBLANK_INTRS
 }
 
 static void ReadSaveFile(char *path)
@@ -411,10 +426,13 @@ static SDL_DisplayMode sdlDispMode = { 0 };
 
 void Platform_QueueAudio(const void *data, uint32_t bytesCount)
 {
-    // Reset the audio buffer if we are 3 frames out of sync
+    if (headless) {
+        return;
+    }
+    // Reset the audio buffer if we are 10 frames out of sync
     // If this happens it suggests there was some OS level lag
-    // in playing audio. The queue length should remain stable at < 3 otherwise
-    if (SDL_GetQueuedAudioSize(1) > (bytesCount * 3)) {
+    // in playing audio. The queue length should remain stable at < 10 otherwise
+    if (SDL_GetQueuedAudioSize(1) > (bytesCount * 10)) {
         SDL_ClearQueuedAudio(1);
     }
 
@@ -525,60 +543,6 @@ void ProcessSDLEvents(void)
     }
 }
 
-#ifdef _WIN32
-#define STICK_THRESHOLD 0.5f
-u16 GetXInputKeys()
-{
-    XINPUT_STATE state;
-    ZeroMemory(&state, sizeof(XINPUT_STATE));
-
-    DWORD dwResult = XInputGetState(0, &state);
-    u16 xinputKeys = 0;
-
-    if (dwResult == ERROR_SUCCESS) {
-        /* A */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_A) >> 12;
-        /* B */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_X) >> 13;
-        /* Start */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_START) >> 1;
-        /* Select */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK) >> 3;
-        /* L */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) << 1;
-        /* R */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) >> 1;
-        /* Up */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) << 6;
-        /* Down */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) << 6;
-        /* Left */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) << 3;
-        /* Right */ xinputKeys |= (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) << 1;
-
-        /* Control Stick */
-        float xAxis = (float)state.Gamepad.sThumbLX / (float)SHRT_MAX;
-        float yAxis = (float)state.Gamepad.sThumbLY / (float)SHRT_MAX;
-
-        if (xAxis < -STICK_THRESHOLD)
-            xinputKeys |= DPAD_LEFT;
-        else if (xAxis > STICK_THRESHOLD)
-            xinputKeys |= DPAD_RIGHT;
-        if (yAxis < -STICK_THRESHOLD)
-            xinputKeys |= DPAD_DOWN;
-        else if (yAxis > STICK_THRESHOLD)
-            xinputKeys |= DPAD_UP;
-
-        /* Speedup */
-        // Note: 'speedup' variable is only (un)set on keyboard input
-        double oldTimeScale = timeScale;
-        timeScale = (state.Gamepad.bRightTrigger > 0x80 || speedUp) ? 5.0 : 1.0;
-
-        if (oldTimeScale != timeScale) {
-            if (timeScale > 1.0) {
-                SDL_PauseAudio(1);
-            } else {
-                SDL_ClearQueuedAudio(1);
-                SDL_PauseAudio(0);
-            }
-        }
-    }
-
-    return xinputKeys;
-}
-#endif // _WIN32
-
 u16 Platform_GetKeyInput(void)
 {
 #ifdef _WIN32
@@ -602,158 +566,6 @@ static void CPUWriteHalfWord(void *dest, uint16_t val) { *(uint16_t *)dest = val
 static uint8_t CPUReadByte(const void *src) { return *(uint8_t *)src; }
 
 static void CPUWriteByte(void *dest, uint8_t val) { *(uint8_t *)dest = val; }
-
-static void RunDMAs(u32 type)
-{
-    for (int dmaNum = 0; dmaNum < DMA_COUNT; dmaNum++) {
-        struct DMATransfer *dma = &DMAList[dmaNum];
-#if !USE_NEW_DMA
-        // Regular GBA order
-        u32 dmaCntReg = (&REG_DMA0CNT)[dmaNum * 3];
-#else
-        // "64 bit" order
-        u32 dmaCntReg = (&REG_DMA0CNT)[dmaNum];
-#endif
-        if (!((dmaCntReg >> 16) & DMA_ENABLE)) {
-            dma->control &= ~DMA_ENABLE;
-        }
-
-        if ((dma->control & DMA_ENABLE) && (((dma->control & DMA_START_MASK) >> 12) == type)) {
-            // printf("DMA%d src=%p, dest=%p, control=%d\n", dmaNum, dma->src, dma->dst, dma->control);
-            for (int i = 0; i < dma->size; i++) {
-                if ((dma->control) & DMA_32BIT)
-                    *dma->dst32 = *dma->src32;
-                else
-                    *dma->dst16 = *dma->src16;
-
-                // process destination pointer changes
-                if (((dma->control) & DMA_DEST_MASK) == DMA_DEST_INC) {
-                    if ((dma->control) & DMA_32BIT)
-                        dma->dst32++;
-                    else
-                        dma->dst16++;
-                } else if (((dma->control) & DMA_DEST_MASK) == DMA_DEST_DEC) {
-                    if ((dma->control) & DMA_32BIT)
-                        dma->dst32--;
-                    else
-                        dma->dst16--;
-                } else if (((dma->control) & DMA_DEST_MASK) == DMA_DEST_RELOAD) // TODO
-                {
-                    if ((dma->control) & DMA_32BIT)
-                        dma->dst32++;
-                    else
-                        dma->dst16++;
-                }
-
-                // process source pointer changes
-                if (((dma->control) & DMA_SRC_MASK) == DMA_SRC_INC) {
-                    if ((dma->control) & DMA_32BIT)
-                        dma->src32++;
-                    else
-                        dma->src16++;
-                } else if (((dma->control) & DMA_SRC_MASK) == DMA_SRC_DEC) {
-                    if ((dma->control) & DMA_32BIT)
-                        dma->src32--;
-                    else
-                        dma->src16--;
-                }
-            }
-
-            if (dma->control & DMA_REPEAT) {
-                // NOTE: If we change dma->size anywhere above, we need to reset its value here.
-
-                if (((dma->control) & DMA_DEST_MASK) == DMA_DEST_RELOAD) {
-#if !USE_NEW_DMA
-                    dma->dst = (void *)(uintptr_t)(&REG_DMA0DAD)[dmaNum * 3];
-#else
-                    dma->dst = (void *)(uintptr_t)(&REG_DMA0DAD)[dmaNum];
-#endif
-                }
-            } else {
-                dma->control &= ~DMA_ENABLE;
-            }
-        }
-    }
-}
-
-#if 0
-s32 Div(s32 num, s32 denom)
-{
-    if (denom != 0) {
-        return num / denom;
-    } else {
-        return 0;
-    }
-}
-
-s32 Mod(s32 num, s32 denom)
-{
-    if (denom != 0) {
-        return num % denom;
-    } else {
-        return 0;
-    }
-}
-#endif
-
-int MultiBoot(struct MultiBootParam *mp) { return 0; }
-
-#ifdef DmaSet
-#undef DmaSet
-#endif
-void DmaSet(int dmaNum, const void *src, void *dest, u32 control)
-{
-    if (dmaNum >= DMA_COUNT) {
-        fprintf(stderr, "DmaSet with invalid DMA number: dmaNum=%d, src=%p, dest=%p, control=%d\n", dmaNum, src, dest, control);
-        return;
-    }
-
-#if !USE_NEW_DMA
-    // Regular GBA order
-    (&REG_DMA0SAD)[dmaNum * 3] = (uintptr_t)src;
-    (&REG_DMA0DAD)[dmaNum * 3] = (uintptr_t)dest;
-    (&REG_DMA0CNT)[dmaNum * 3] = (size_t)control;
-#else
-    // "64 bit" order
-    (&REG_DMA0SAD)[dmaNum] = (uintptr_t)src;
-    (&REG_DMA0DAD)[dmaNum] = (uintptr_t)dest;
-    (&REG_DMA0CNT)[dmaNum] = (size_t)control;
-#endif
-
-    struct DMATransfer *dma = &DMAList[dmaNum];
-    dma->src = src;
-    dma->dst = dest;
-    dma->size = control & 0x1ffff;
-    dma->control = control >> 16;
-
-    // printf("\nDMA%d: S:%p %p -> %p\n", dmaNum, src, dest, dest + dma->size);
-
-    RunDMAs(DMA_NOW);
-}
-
-void DmaStop(int dmaNum)
-{
-#if !USE_NEW_DMA
-    (&REG_DMA0CNT)[dmaNum * 3] &= ~((DMA_ENABLE | DMA_START_MASK | DMA_DREQ_ON | DMA_REPEAT) << 16);
-#else
-    (&REG_DMA0CNT)[dmaNum] &= ~((DMA_ENABLE | DMA_START_MASK | DMA_DREQ_ON | DMA_REPEAT) << 16);
-#endif
-
-    struct DMATransfer *dma = &DMAList[dmaNum];
-    dma->control &= ~(DMA_ENABLE | DMA_START_MASK | DMA_DREQ_ON | DMA_REPEAT);
-}
-
-void DmaWait(int dmaNum)
-{
-    vu32 *ctrlRegs = &REG_DMA0CNT;
-#if !USE_NEW_DMA
-    while (ctrlRegs[dmaNum * 3] & (DMA_ENABLE << 16))
-        ;
-#else
-    while (ctrlRegs[dmaNum] & (DMA_ENABLE << 16))
-        ;
-#endif
-}
 
 void CpuSet(const void *src, void *dst, u32 cnt)
 {
@@ -1356,6 +1168,7 @@ static void RenderRotScaleBGScanline(int bgNum, uint16_t control, uint16_t x, ui
 
     s32 currentX = getBgX(bgNum);
     s32 currentY = getBgY(bgNum);
+
     // sign extend 28 bit number
     currentX = ((currentX & (1 << 27)) ? currentX | 0xF0000000 : currentX);
     currentY = ((currentY & (1 << 27)) ? currentY | 0xF0000000 : currentY);
@@ -1539,7 +1352,7 @@ static bool winCheckHorizontalBounds(u16 left, u16 right, u16 xpos)
 }
 
 // Parts of this code heavily borrowed from NanoboyAdvance.
-static void DrawSprites(struct scanlineData *scanline, uint16_t vcount, bool windowsEnabled)
+static void DrawOamSprites(struct scanlineData *scanline, uint16_t vcount, bool windowsEnabled)
 {
     int i;
     unsigned int x;
@@ -1699,7 +1512,6 @@ static void DrawSprites(struct scanlineData *scanline, uint16_t vcount, bool win
 
                 if (pixel != 0) {
                     uint16_t color = palette[pixel];
-                    ;
 
                     // if sprite mode is 2 then write to the window mask instead
                     if (isObjWin) {
@@ -1811,11 +1623,12 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     if (REG_DISPCNT & DISPCNT_WIN0_ON) {
         // acquire the window coordinates
 
-        WIN0bottom = WIN_GET_HIGHER(gWinRegs[WINREG_WIN0V]); // y2;
-        WIN0top = WIN_GET_LOWER(gWinRegs[WINREG_WIN0V]); // y1;
-        WIN0right = WIN_GET_HIGHER(gWinRegs[WINREG_WIN0H]); // x2
-        WIN0left = WIN_GET_LOWER(gWinRegs[WINREG_WIN0H]); // x1
+        WIN0bottom = WIN_GET_HIGHER(REG_WIN0V); // y2;
+        WIN0top = WIN_GET_LOWER(REG_WIN0V); // y1;
+        WIN0right = WIN_GET_HIGHER(REG_WIN0H); // x2
+        WIN0left = WIN_GET_LOWER(REG_WIN0H); // x1
 
+        // printf("%d, %d, %d, %d\n", WIN0bottom, WIN0top, WIN0right, WIN0left);
         // figure out WIN Y wraparound and check bounds accordingly
         if (WIN0top > WIN0bottom) {
             if (vcount >= WIN0top || vcount < WIN0bottom)
@@ -1829,10 +1642,10 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     }
     // figure out if WIN1 masks on this scanline
     if (REG_DISPCNT & DISPCNT_WIN1_ON) {
-        WIN1bottom = WIN_GET_HIGHER(gWinRegs[WINREG_WIN1V]); // y2;
-        WIN1top = WIN_GET_LOWER(gWinRegs[WINREG_WIN1V]); // y1;
-        WIN1right = WIN_GET_HIGHER(gWinRegs[WINREG_WIN1H]); // x2
-        WIN1left = WIN_GET_LOWER(gWinRegs[WINREG_WIN1H]); // x1
+        WIN1bottom = WIN_GET_HIGHER(REG_WIN1V); // y2;
+        WIN1top = WIN_GET_LOWER(REG_WIN1V); // y1;
+        WIN1right = WIN_GET_HIGHER(REG_WIN1H); // x2
+        WIN1left = WIN_GET_LOWER(REG_WIN1H); // x1
 
         if (WIN1top > WIN1bottom) {
             if (vcount >= WIN1top || vcount < WIN1bottom)
@@ -1864,7 +1677,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     }
 
     if (REG_DISPCNT & DISPCNT_OBJ_ON)
-        DrawSprites(&scanline, vcount, windowsEnabled);
+        DrawOamSprites(&scanline, vcount, windowsEnabled);
 
     // iterate trough every priority in order
     for (prnum = 3; prnum >= 0; prnum--) {
@@ -1943,22 +1756,6 @@ static void DrawFrame(uint16_t *pixels)
     int j;
     static uint16_t scanlines[DISPLAY_HEIGHT][DISPLAY_WIDTH];
     unsigned int blendMode = (REG_BLDCNT >> 6) & 3;
-    uint16_t backdropColor = ((uint16_t *)PLTT)[0];
-
-    // backdrop color brightness effects
-    if (REG_BLDCNT & BLDCNT_TGT1_BD) {
-        switch (blendMode) {
-            case 2:
-                backdropColor = alphaBrightnessIncrease(backdropColor);
-                break;
-            case 3:
-                backdropColor = alphaBrightnessDecrease(backdropColor);
-                break;
-        }
-
-        // Make sure to push the backdrop color back to PLTT mem.
-        *(uint16_t *)PLTT = backdropColor;
-    }
 
     for (i = 0; i < DISPLAY_HEIGHT; i++) {
         REG_VCOUNT = i;
@@ -2034,19 +1831,7 @@ void VDraw(SDL_Texture *texture)
     memset(gameImage, 0, sizeof(gameImage));
     DrawFrame(gameImage);
     SDL_UpdateTexture(texture, NULL, gameImage, DISPLAY_WIDTH * sizeof(Uint16));
-    REG_VCOUNT = 161; // prep for being in VBlank period
-}
-
-int DoMain(void *data)
-{
-    AgbMain();
-    return 0;
-}
-
-void VBlankIntrWait(void)
-{
-    SDL_AtomicSet(&isFrameAvailable, 1);
-    SDL_SemWait(vBlankSemaphore);
+    REG_VCOUNT = DISPLAY_HEIGHT + 1; // prep for being in VBlank period
 }
 
 u8 BinToBcd(u8 bin)
@@ -2147,3 +1932,5 @@ u16 Sqrt(u32 num)
     }
     return bound;
 }
+
+int MultiBoot(struct MultiBootParam *mp) { return 0; }

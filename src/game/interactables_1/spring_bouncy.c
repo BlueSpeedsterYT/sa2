@@ -7,7 +7,7 @@
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "game/entity.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 #include "sprite.h"
 #include "task.h"
 
@@ -100,30 +100,27 @@ static void Task_Interactable_BouncySpring()
 
     s->x = screenX - gCamera.x;
     s->y = screenY - gCamera.y;
-    if (!(gPlayer.moveState & (MOVESTATE_400000 | MOVESTATE_DEAD))) {
-        airSpeed = gPlayer.speedAirY;
-        if ((sub_800CCB8(s, screenX, screenY, &gPlayer) != 0)) {
+    if (!(gPlayer.moveState & (MOVESTATE_IA_OVERRIDE | MOVESTATE_DEAD))) {
+        airSpeed = gPlayer.qSpeedAirY;
+        if ((Coll_Player_Platform(s, screenX, screenY, &gPlayer) != 0)) {
             u8 index;
 
             index = Div(airSpeed, 400);
             if (index > (ARRAY_COUNT(gUnknown_080D948C) - 1))
                 index = (ARRAY_COUNT(gUnknown_080D948C) - 1);
 
-            gPlayer.speedAirY = -(airSpeed + (airSpeed >> 3));
+            gPlayer.qSpeedAirY = -(airSpeed + (airSpeed >> 3));
 
-            if (gPlayer.speedAirY > Q_8_8(-7.5))
-                gPlayer.speedAirY = Q_8_8(-7.5);
+            if (gPlayer.qSpeedAirY > Q_8_8(-7.5))
+                gPlayer.qSpeedAirY = Q_8_8(-7.5);
 
-            if (gPlayer.speedAirY < Q_8_8(-12))
-                gPlayer.speedAirY = Q_8_8(-12);
+            if (gPlayer.qSpeedAirY < Q_8_8(-12))
+                gPlayer.qSpeedAirY = Q_8_8(-12);
 
-            gPlayer.unk36 = 3;
+            gPlayer.disableTrickTimer = 3;
 
             Player_TransitionCancelFlyingAndBoost(&gPlayer);
-            sub_8023B5C(&gPlayer, 14);
-
-            gPlayer.spriteOffsetX = 6;
-            gPlayer.spriteOffsetY = 14;
+            PLAYERFN_CHANGE_SHIFT_OFFSETS(&gPlayer, 6, 14);
 
             gPlayer.moveState = (gPlayer.moveState | MOVESTATE_IN_AIR) & ~MOVESTATE_100;
 

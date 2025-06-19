@@ -1,7 +1,7 @@
 #include "global.h"
 #include "gba/types.h"
 
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -54,8 +54,8 @@ static bool32 sub_80809B8(Sprite_IA105 *ia105)
         screenX = (ia105->posX + ia105->offsetX) - gCamera.x;
         screenY = (ia105->posY + ia105->offsetY) - gCamera.y;
 
-        playerX = I(gPlayer.x) - gCamera.x;
-        playerY = I(gPlayer.y) - gCamera.y;
+        playerX = I(gPlayer.qWorldX) - gCamera.x;
+        playerY = I(gPlayer.qWorldY) - gCamera.y;
 
         someX = ia105->width - ia105->offsetX;
         someY = ia105->height - ia105->offsetY;
@@ -73,7 +73,7 @@ static void Task_Interactable105(void)
     Sprite_IA105 *ia105 = TASK_DATA(gCurTask);
 
     if (sub_80809B8(ia105)) {
-        sub_800CBA4(&gPlayer);
+        Coll_DamagePlayer(&gPlayer);
     }
 
     if (sub_8080A9C(ia105)) {

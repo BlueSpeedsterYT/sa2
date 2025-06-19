@@ -15,7 +15,6 @@
 
 // #include "types.h"
 // #include "variables.h"
-#include "functions.h"
 
 #if !PLATFORM_GBA
 #ifdef _WIN32
@@ -33,13 +32,20 @@ typedef void (*VoidFn)(void);
 
 // helper macros
 
+// This macro is only needed while SA2 still has variables called gUnknown_XXXXXXX left
+#if ((GAME == GAME_SA1) || (GAME == GAME_SA3))
+#define SA2_LABEL(_label) sa2__##_label
+#else
+#define SA2_LABEL(_label) _label
+#endif
+
 #if (PORTABLE)
 #define BUG_FIX
 
 #if !(defined NON_MATCHING)
 #define NON_MATCHING 1
 #endif
-#elif defined(DEBUG)
+#elif (DEBUG)
 #define NON_MATCHING 1
 #endif
 
@@ -220,7 +226,49 @@ typedef void (*VoidFn)(void);
 
 #define RECT_DISTANCE(aXA, aYA, aXB, aYB) (ABS((aXA) - (aXB)) + ABS((aYA) - (aYB)))
 
-#define GetBit(x, y) ((x) >> (y)&1)
+#define BitValue(y)      (1 << (y))
+#define CheckBit(x, y)   ((x) & (BitValue(y)))
+#define GetBit(x, y)     (((x) >> (y)) & 1)
+#define SetBit(x, y)     (x) |= BitValue(y)
+#define SetSoleBit(x, y) (x) = BitValue(y)
+#define ClearBit(x, y)   (x) &= ~BitValue(y)
+
+// TODO: Use instrinsics for these, on platforms that support it!
+// Like GetFirstSetBitIndex, but an external iterator can be passed.
+#define GetFirstSetBitIndexExt(value, max, it)                                                                                             \
+    ({                                                                                                                                     \
+        s32 res;                                                                                                                           \
+                                                                                                                                           \
+        for (it = 0; it < (max); it++) {                                                                                                   \
+            if (GetBit(value, it)) {                                                                                                       \
+                break;                                                                                                                     \
+            }                                                                                                                              \
+        }                                                                                                                                  \
+                                                                                                                                           \
+        res = it;                                                                                                                          \
+    })
+
+// Get the index to the first set bit in a given value.
+#define GetFirstSetBitIndex(value, max)                                                                                                    \
+    ({                                                                                                                                     \
+        s16 bit;                                                                                                                           \
+                                                                                                                                           \
+        bit = GetFirstSetBitIndexExt(value, max, bit);                                                                                     \
+    })
+
+// Like GetFirstSetBitIndex, but expects input value to only have 1 bit set.
+#define GetSoleSetBitIndex(value, max)                                                                                                     \
+    ({                                                                                                                                     \
+        s16 bit;                                                                                                                           \
+                                                                                                                                           \
+        for (bit = 0; bit < (max); bit++) {                                                                                                \
+            if ((value) == (1 << bit)) {                                                                                                   \
+                break;                                                                                                                     \
+            }                                                                                                                              \
+        }                                                                                                                                  \
+                                                                                                                                           \
+        bit;                                                                                                                               \
+    })
 
 // 60 is not exactly true as the GBA's FPS, but it's what they went
 // with for the calculation

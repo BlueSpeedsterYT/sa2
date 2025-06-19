@@ -1,6 +1,6 @@
 #include "global.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/mouse.h"
@@ -117,11 +117,11 @@ static void sub_8057348(void)
     ENEMY_DESTROY_IF_OFFSCREEN(mouse, me, s);
 
     if (s->frameFlags & SPRITE_FLAG_MASK_X_FLIP) {
-        if (gPlayer.x > QS(pos.x) && gPlayer.x < QS(pos.x + 100)) {
+        if (gPlayer.qWorldX > QS(pos.x) && gPlayer.qWorldX < QS(pos.x + 100)) {
             mouse->unk52 = 1;
         }
     } else {
-        if (gPlayer.x < QS(pos.x) && gPlayer.x > QS(pos.x - 100)) {
+        if (gPlayer.qWorldX < QS(pos.x) && gPlayer.qWorldX > QS(pos.x - 100)) {
             mouse->unk52 = 1;
         }
     }

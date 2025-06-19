@@ -2,7 +2,7 @@
 #include "flags.h"
 #include "malloc_vram.h"
 #include "trig.h"
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 #include "game/stage/player.h"
 #include "game/cheese.h"
 #include "game/stage/game_7.h"
@@ -165,23 +165,115 @@ static const u8 sGettingReadyAnimationDuration[NUM_CHARACTERS]
     = { [CHARACTER_SONIC] = 40, [CHARACTER_CREAM] = 55, [CHARACTER_TAILS] = 52, [CHARACTER_KNUCKLES] = 40, [CHARACTER_AMY] = 40 };
 
 // Each byte represents one RGB channel (0-31)
-static const u8 gUnknown_080D6FF5[][3] = {
-    { 0x00, 0x17, 0x06 }, { 0x16, 0x16, 0x16 }, { 0x00, 0x04, 0x13 }, { 0x00, 0x08, 0x1D }, { 0x00, 0x00, 0x0C }, { 0x00, 0x13, 0x00 },
-    { 0x1F, 0x1F, 0x13 }, { 0x1F, 0x1B, 0x00 }, { 0x13, 0x0A, 0x02 }, { 0x1F, 0x15, 0x0A }, { 0x15, 0x00, 0x00 }, { 0x1F, 0x04, 0x04 },
-    { 0x04, 0x04, 0x04 }, { 0x1F, 0x1F, 0x1F }, { 0x0E, 0x0E, 0x0E }, { 0x00, 0x13, 0x1F }, { 0x00, 0x19, 0x14 }, { 0x19, 0x19, 0x19 },
-    { 0x1F, 0x0B, 0x00 }, { 0x1F, 0x12, 0x00 }, { 0x19, 0x05, 0x00 }, { 0x1C, 0x0B, 0x00 }, { 0x13, 0x00, 0x00 }, { 0x1F, 0x1C, 0x17 },
-    { 0x1D, 0x18, 0x10 }, { 0x13, 0x0F, 0x08 }, { 0x1F, 0x1E, 0x00 }, { 0x08, 0x11, 0x1F }, { 0x02, 0x02, 0x02 }, { 0x1F, 0x1F, 0x1F },
-    { 0x0E, 0x0E, 0x0E }, { 0x1F, 0x00, 0x1F }, { 0x00, 0x17, 0x06 }, { 0x1F, 0x00, 0x1F }, { 0x1D, 0x11, 0x04 }, { 0x1F, 0x17, 0x04 },
-    { 0x17, 0x0A, 0x02 }, { 0x15, 0x19, 0x1B }, { 0x00, 0x13, 0x1F }, { 0x04, 0x08, 0x1F }, { 0x13, 0x13, 0x13 }, { 0x0E, 0x0E, 0x0E },
-    { 0x15, 0x00, 0x00 }, { 0x1F, 0x04, 0x04 }, { 0x02, 0x02, 0x02 }, { 0x1F, 0x1F, 0x1F }, { 0x1F, 0x00, 0x1F }, { 0x1F, 0x00, 0x1F },
-    { 0x00, 0x16, 0x14 }, { 0x16, 0x16, 0x16 }, { 0x17, 0x00, 0x00 }, { 0x1F, 0x04, 0x00 }, { 0x0E, 0x00, 0x00 }, { 0x04, 0x08, 0x1F },
-    { 0x1F, 0x1F, 0x13 }, { 0x1F, 0x1B, 0x00 }, { 0x13, 0x0A, 0x00 }, { 0x1F, 0x15, 0x0A }, { 0x00, 0x15, 0x02 }, { 0x0E, 0x1F, 0x00 },
-    { 0x04, 0x04, 0x04 }, { 0x1F, 0x1F, 0x1F }, { 0x0E, 0x0E, 0x0E }, { 0x1F, 0x13, 0x00 }, { 0x00, 0x17, 0x06 }, { 0x15, 0x19, 0x1B },
-    { 0x1D, 0x08, 0x13 }, { 0x1F, 0x13, 0x17 }, { 0x17, 0x04, 0x0A }, { 0x00, 0x15, 0x00 }, { 0x0E, 0x0E, 0x0E }, { 0x13, 0x13, 0x13 },
-    { 0x13, 0x0A, 0x00 }, { 0x1F, 0x15, 0x0A }, { 0x15, 0x00, 0x00 }, { 0x1F, 0x00, 0x00 }, { 0x00, 0x00, 0x00 }, { 0x1F, 0x1F, 0x1F },
-    { 0x1F, 0x1F, 0x13 }, { 0x1F, 0x1F, 0x00 }, { 0x00, 0x12, 0x0B }, { 0x04, 0x06, 0x0A }, { 0x00, 0x1F, 0x00 }, { 0x1F, 0x1F, 0x1F },
-    { 0x14, 0x1F, 0x1F }, { 0x10, 0x1C, 0x1E }, { 0x0C, 0x18, 0x19 }, { 0x09, 0x14, 0x15 }, { 0x00, 0x0E, 0x10 }, { 0x00, 0x1F, 0x00 },
-    { 0x1F, 0x16, 0x18 }, { 0x1F, 0x0A, 0x10 }, { 0x1F, 0x1E, 0x00 }, { 0x19, 0x18, 0x00 }, { 0x13, 0x0A, 0x00 }, { 0x1F, 0x00, 0x00 },
+static const u8 gUnknown_080D6FF5[NUM_CHARACTERS + 1][16][3] = {
+    {
+        { 0x00, 0x17, 0x06 },
+        { 0x16, 0x16, 0x16 },
+        { 0x00, 0x04, 0x13 },
+        { 0x00, 0x08, 0x1D },
+        { 0x00, 0x00, 0x0C },
+        { 0x00, 0x13, 0x00 },
+        { 0x1F, 0x1F, 0x13 },
+        { 0x1F, 0x1B, 0x00 },
+        { 0x13, 0x0A, 0x02 },
+        { 0x1F, 0x15, 0x0A },
+        { 0x15, 0x00, 0x00 },
+        { 0x1F, 0x04, 0x04 },
+        { 0x04, 0x04, 0x04 },
+        { 0x1F, 0x1F, 0x1F },
+        { 0x0E, 0x0E, 0x0E },
+        { 0x00, 0x13, 0x1F },
+    },
+    {
+        { 0x00, 0x19, 0x14 },
+        { 0x19, 0x19, 0x19 },
+        { 0x1F, 0x0B, 0x00 },
+        { 0x1F, 0x12, 0x00 },
+        { 0x19, 0x05, 0x00 },
+        { 0x1C, 0x0B, 0x00 },
+        { 0x13, 0x00, 0x00 },
+        { 0x1F, 0x1C, 0x17 },
+        { 0x1D, 0x18, 0x10 },
+        { 0x13, 0x0F, 0x08 },
+        { 0x1F, 0x1E, 0x00 },
+        { 0x08, 0x11, 0x1F },
+        { 0x02, 0x02, 0x02 },
+        { 0x1F, 0x1F, 0x1F },
+        { 0x0E, 0x0E, 0x0E },
+        { 0x1F, 0x00, 0x1F },
+    },
+    {
+        { 0x00, 0x17, 0x06 },
+        { 0x1F, 0x00, 0x1F },
+        { 0x1D, 0x11, 0x04 },
+        { 0x1F, 0x17, 0x04 },
+        { 0x17, 0x0A, 0x02 },
+        { 0x15, 0x19, 0x1B },
+        { 0x00, 0x13, 0x1F },
+        { 0x04, 0x08, 0x1F },
+        { 0x13, 0x13, 0x13 },
+        { 0x0E, 0x0E, 0x0E },
+        { 0x15, 0x00, 0x00 },
+        { 0x1F, 0x04, 0x04 },
+        { 0x02, 0x02, 0x02 },
+        { 0x1F, 0x1F, 0x1F },
+        { 0x1F, 0x00, 0x1F },
+        { 0x1F, 0x00, 0x1F },
+    },
+    {
+        { 0x00, 0x16, 0x14 },
+        { 0x16, 0x16, 0x16 },
+        { 0x17, 0x00, 0x00 },
+        { 0x1F, 0x04, 0x00 },
+        { 0x0E, 0x00, 0x00 },
+        { 0x04, 0x08, 0x1F },
+        { 0x1F, 0x1F, 0x13 },
+        { 0x1F, 0x1B, 0x00 },
+        { 0x13, 0x0A, 0x00 },
+        { 0x1F, 0x15, 0x0A },
+        { 0x00, 0x15, 0x02 },
+        { 0x0E, 0x1F, 0x00 },
+        { 0x04, 0x04, 0x04 },
+        { 0x1F, 0x1F, 0x1F },
+        { 0x0E, 0x0E, 0x0E },
+        { 0x1F, 0x13, 0x00 },
+    },
+    {
+        { 0x00, 0x17, 0x06 },
+        { 0x15, 0x19, 0x1B },
+        { 0x1D, 0x08, 0x13 },
+        { 0x1F, 0x13, 0x17 },
+        { 0x17, 0x04, 0x0A },
+        { 0x00, 0x15, 0x00 },
+        { 0x0E, 0x0E, 0x0E },
+        { 0x13, 0x13, 0x13 },
+        { 0x13, 0x0A, 0x00 },
+        { 0x1F, 0x15, 0x0A },
+        { 0x15, 0x00, 0x00 },
+        { 0x1F, 0x00, 0x00 },
+        { 0x00, 0x00, 0x00 },
+        { 0x1F, 0x1F, 0x1F },
+        { 0x1F, 0x1F, 0x13 },
+        { 0x1F, 0x1F, 0x00 },
+    },
+    {
+        { 0x00, 0x12, 0x0B },
+        { 0x04, 0x06, 0x0A },
+        { 0x00, 0x1F, 0x00 },
+        { 0x1F, 0x1F, 0x1F },
+        { 0x14, 0x1F, 0x1F },
+        { 0x10, 0x1C, 0x1E },
+        { 0x0C, 0x18, 0x19 },
+        { 0x09, 0x14, 0x15 },
+        { 0x00, 0x0E, 0x10 },
+        { 0x00, 0x1F, 0x00 },
+        { 0x1F, 0x16, 0x18 },
+        { 0x1F, 0x0A, 0x10 },
+        { 0x1F, 0x1E, 0x00 },
+        { 0x19, 0x18, 0x00 },
+        { 0x13, 0x0A, 0x00 },
+        { 0x1F, 0x00, 0x00 },
+    },
 };
 
 const u16 sZoneLoadingCharacterColors[NUM_CHARACTERS] = {
@@ -201,52 +293,52 @@ const s16 gUnknown_080D7130[6] = { 10, -8, 6, -4, 2, 0 };
 typedef struct {
     /* 0x00 */ u32 counter;
     /* 0x04 */ bool8 skippedIntro;
-} SITaskA; /* size: 0x8 */
+} IntroController; /* size: 0x8 */
 
-// TODO: Are SITaskB/C/F the same struct?
+// TODO: Are IntroBackgrounds/C/F the same struct?
 typedef struct {
-    /* 0x00 */ SITaskA *parent;
+    /* 0x00 */ IntroController *controller;
     /* 0x04 */ ScreenFade fade;
-    /* 0x10 */ Vec2_16 unk10;
-    /* 0x14 */ Vec2_16 unk14;
-} SITaskB; /* size: 0x18 */
+    /* 0x10 */ Vec2_16 colorsPos1;
+    /* 0x14 */ Vec2_16 colorsPos2;
+} IntroBackgrounds; /* size: 0x18 */
 
 typedef struct {
-    /* 0x00 */ SITaskA *parent;
+    /* 0x00 */ IntroController *controller;
     /* 0x04 */ Sprite sprUnlockedIcons[9];
     /* 0x1B4 */ Sprite sprCharacterLogo;
     /* 0x1E4 */ Sprite sprZoneName[4];
     /* 0x2A4 */ Sprite sprLoadingWheel;
     /* 0x2D4 */ Sprite sprLoadingWheelIcon;
     /* 0x304 */ SpriteTransform transform;
-} SITaskD; /* size: 0x310 */
+} IntroUI; /* size: 0x310 */
 
 typedef struct {
-    /* 0x00 */ SITaskA *parent;
+    /* 0x00 */ IntroController *controller;
     /* 0x04 */ Sprite sprZoneNames[4];
-} SITaskE; /* size: 0xC4 */
+} IntroActLetters; /* size: 0xC4 */
 
-static void Task_802F75C(void);
+static void Task_IntroControllerMain(void);
 static void Task_802F9F8(void);
 static void Task_IntroColorAnimation(void);
 static void Task_IntroZoneNameAndIconAnimations(void);
 static void Task_IntroActLettersAnimations(void);
 static void Task_UpdateStageLoadingScreen(void);
-static void TaskDestructor_StageIntroParent(struct Task *);
-static void TaskDestructor_nop_8030458(struct Task *);
+static void TaskDestructor_IntroController(struct Task *);
+static void TaskDestructor_Dummy(struct Task *);
 static void TaskDestructor_803045C(struct Task *);
 static void TaskDestructor_8030474(struct Task *);
 
 struct Task *SetupStageIntro(void)
 {
     struct Task *t; // sp04
-    SITaskA *sit_a; // sp08
+    IntroController *introController; // sp08
     struct Task *t2;
     ScreenFade *fade;
-    SITaskB *sit_b;
+    IntroBackgrounds *introBackgrounds;
     // SITaskC *sit_c;
-    SITaskD *sit_d; // r8
-    SITaskE *sit_e;
+    IntroUI *introUI; // r8
+    IntroActLetters *introActLetters;
     // SITaskF *sit_f;
     Vec2_16 *vec;
     void *tilesCursor;
@@ -256,46 +348,53 @@ struct Task *SetupStageIntro(void)
     gStageFlags |= STAGE_FLAG__ACT_START;
     gStageFlags |= STAGE_FLAG__100;
 
-    gPlayer.unk90->s.frameFlags |= SPRITE_FLAG_MASK_18;
-    gPlayer.unk94->s.frameFlags |= SPRITE_FLAG_MASK_18;
+    // NOTE: null when Super Sonic
+#ifdef BUG_FIX
+    if (gPlayer.spriteInfoBody)
+#endif
+        gPlayer.spriteInfoBody->s.frameFlags |= SPRITE_FLAG_MASK_18;
+#ifdef BUG_FIX
+    if (gPlayer.spriteInfoLimbs)
+#endif
+        gPlayer.spriteInfoLimbs->s.frameFlags |= SPRITE_FLAG_MASK_18;
 
     gActiveBossTask = NULL;
 
-    t = TaskCreate(Task_802F75C, sizeof(SITaskA), 0x2200, 0, TaskDestructor_StageIntroParent);
-    sit_a = TASK_DATA(t);
-    sit_a->counter = 2;
-    sit_a->skippedIntro = FALSE;
+    t = TaskCreate(Task_IntroControllerMain, sizeof(IntroController), 0x2200, 0, TaskDestructor_IntroController);
+    introController = TASK_DATA(t);
+    introController->counter = 2;
+    introController->skippedIntro = FALSE;
 
     gPlayer.moveState |= MOVESTATE_100000;
 
-    t2 = TaskCreate(Task_802F9F8, sizeof(SITaskB), 0x2210, 0, TaskDestructor_nop_8030458);
-    sit_b = TASK_DATA(t2);
-    sit_b->parent = sit_a;
+    t2 = TaskCreate(Task_802F9F8, sizeof(IntroBackgrounds), 0x2210, 0, TaskDestructor_Dummy);
+    introBackgrounds = TASK_DATA(t2);
+    introBackgrounds->controller = introController;
 
-    fade = &sit_b->fade;
+    fade = &introBackgrounds->fade;
     fade->window = 0;
     fade->brightness = 0;
-    fade->flags = 2;
+    fade->flags = SCREEN_FADE_FLAG_2;
     fade->speed = 0;
-    fade->bldCnt = 0x3FFF;
+    fade->bldCnt = BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL | BLDCNT_EFFECT_LIGHTEN | BLDCNT_EFFECT_BLEND;
     fade->bldAlpha = 0;
     UpdateScreenFade(fade);
 
-    t2 = TaskCreate(Task_IntroColorAnimation, sizeof(SITaskB), 0x2220, 0, TaskDestructor_nop_8030458);
-    sit_b = TASK_DATA(t2);
-    sit_b->parent = sit_a;
+    t2 = TaskCreate(Task_IntroColorAnimation, sizeof(IntroBackgrounds), 0x2220, 0, TaskDestructor_Dummy);
+    introBackgrounds = TASK_DATA(t2);
+    introBackgrounds->controller = introController;
 
-    vec = &sit_b->unk10;
+    vec = &introBackgrounds->colorsPos1;
     vec->x = 0;
     vec->y = 0;
 
-    vec = &sit_b->unk14;
+    vec = &introBackgrounds->colorsPos2;
     vec->x = 0;
     vec->y = 0;
 
-    t2 = TaskCreate(Task_IntroZoneNameAndIconAnimations, sizeof(SITaskD), 0x2230, 0, TaskDestructor_803045C);
-    sit_d = TASK_DATA(t2);
-    sit_d->parent = sit_a;
+    t2 = TaskCreate(Task_IntroZoneNameAndIconAnimations, sizeof(IntroUI), 0x2230, 0, TaskDestructor_803045C);
+    introUI = TASK_DATA(t2);
+    introUI->controller = introController;
 
     if (IS_SINGLE_PLAYER) {
         tilesCursor = VramMalloc(
@@ -312,7 +411,7 @@ struct Task *SetupStageIntro(void)
     }
 
     /*     Init Character Logo     */
-    s = &sit_d->sprCharacterLogo;
+    s = &introUI->sprCharacterLogo;
     s->x = 0;
     s->y = 0;
     s->graphics.dest = tilesCursor;
@@ -341,7 +440,7 @@ struct Task *SetupStageIntro(void)
     for (i = 0; i < NUM_ZONE_NAME_PARTS; i++) {
         u32 nameIndex;
 
-        s = &sit_d->sprZoneName[i];
+        s = &introUI->sprZoneName[i];
         s->x = 0;
         s->y = 0;
 
@@ -378,7 +477,7 @@ struct Task *SetupStageIntro(void)
     }
 
     /*    Loading Wheel in upper-left corner    */
-    s = &sit_d->sprLoadingWheel;
+    s = &introUI->sprLoadingWheel;
     s->x = 0;
     s->y = 0;
     s->graphics.dest = tilesCursor;
@@ -398,7 +497,7 @@ struct Task *SetupStageIntro(void)
     UpdateSpriteAnimation(s);
 
     /*    Icon inside the loading wheel    */
-    s = &sit_d->sprLoadingWheelIcon;
+    s = &introUI->sprLoadingWheelIcon;
     s->x = 0;
     s->y = 0;
     s->graphics.dest = tilesCursor;
@@ -426,7 +525,7 @@ struct Task *SetupStageIntro(void)
     /*    The icons of all unlocked zones in the upper-right    */
     if (IS_SINGLE_PLAYER) {
         for (i = 0; i < NUM_INTRO_STAGE_ICONS; i++) {
-            s = &sit_d->sprUnlockedIcons[i];
+            s = &introUI->sprUnlockedIcons[i];
             s->x = 0;
             s->y = -32;
             s->graphics.dest = tilesCursor;
@@ -464,13 +563,13 @@ struct Task *SetupStageIntro(void)
     }
 
     /*    Act Names    */
-    t2 = TaskCreate(Task_IntroActLettersAnimations, sizeof(SITaskE), 0x2240, 0, TaskDestructor_8030474);
-    sit_e = TASK_DATA(t2);
-    sit_e->parent = sit_a;
+    t2 = TaskCreate(Task_IntroActLettersAnimations, sizeof(IntroActLetters), 0x2240, 0, TaskDestructor_8030474);
+    introActLetters = TASK_DATA(t2);
+    introActLetters->controller = introController;
     tilesCursor = VramMalloc(sZoneLoadingActLetters[0][0] * 4);
 
     for (i = 0; i < 4; i++) {
-        s = &sit_e->sprZoneNames[i];
+        s = &introActLetters->sprZoneNames[i];
         s->x = 0;
         s->y = -32;
 
@@ -478,7 +577,7 @@ struct Task *SetupStageIntro(void)
         s->variant = sZoneLoadingActLetters[i][2];
 
         // Set Act number anim (1 or 2)
-        if ((i == 3) && ((ACT_INDEX(gCurrentLevel) & 0x1) != ACT_1)) {
+        if ((i == 3) && ((ACT_INDEX(gCurrentLevel) & 1) != ACT_1)) {
             s->graphics.anim = sZoneLoadingActLetters[4][1];
             s->variant = sZoneLoadingActLetters[4][2];
         }
@@ -498,39 +597,39 @@ struct Task *SetupStageIntro(void)
         UpdateSpriteAnimation(s);
     }
 
-    t2 = TaskCreate(Task_UpdateStageLoadingScreen, sizeof(SITaskB), 0x22F0, 0, TaskDestructor_nop_8030458);
-    sit_b = TASK_DATA(t2);
-    sit_b->parent = sit_a;
+    t2 = TaskCreate(Task_UpdateStageLoadingScreen, sizeof(IntroBackgrounds), 0x22F0, 0, TaskDestructor_Dummy);
+    introBackgrounds = TASK_DATA(t2);
+    introBackgrounds->controller = introController;
 
     return t;
 }
 
-static void Task_802F75C(void)
+static void Task_IntroControllerMain(void)
 {
-    SITaskA *sit_a = TASK_DATA(gCurTask);
-    u32 frameCounter = sit_a->counter;
+    IntroController *introController = TASK_DATA(gCurTask);
+    u32 frameCounter = introController->counter;
     frameCounter++;
 
     /*    Allow player to skip the intro animation    */
     if ((IS_SINGLE_PLAYER) && !IS_BOSS_STAGE(gCurrentLevel)) {
         if (gPressedKeys & (A_BUTTON | B_BUTTON)) {
             gPlayer.moveState &= ~MOVESTATE_100000;
-            gPlayer.moveState &= ~MOVESTATE_400000;
+            gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
             frameCounter = 200;
-            sit_a->skippedIntro = TRUE;
+            introController->skippedIntro = TRUE;
         }
     }
-    sit_a->counter = frameCounter;
+    introController->counter = frameCounter;
 
-    gUnknown_03005AF0.s.frameFlags &= ~(SPRITE_FLAG_MASK_OBJ_MODE);
+    gPlayerBodyPSI.s.frameFlags &= ~(SPRITE_FLAG_MASK_OBJ_MODE);
 
     if (frameCounter < 150) {
         gPlayer.moveState |= MOVESTATE_100000;
-        gPlayer.moveState |= MOVESTATE_400000;
+        gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
     } else if (frameCounter == 151) {
         gPlayer.moveState &= ~MOVESTATE_100000;
     } else if (frameCounter >= 150 && frameCounter <= 166) {
-        gPlayer.moveState &= ~MOVESTATE_400000;
+        gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
     }
 
     /*    Set player animation to "Getting Ready" and delay until it is finished    */
@@ -540,13 +639,26 @@ static void Task_802F75C(void)
         p->anim = characterAnimsGettingReady[gSelectedCharacter].anim;
         p->variant = characterAnimsGettingReady[gSelectedCharacter].variant;
         p->unk6C = TRUE;
-        p->unk90->s.frameFlags |= MOVESTATE_40000;
-        p->unk94->s.frameFlags |= MOVESTATE_40000;
 
-        if (IS_MULTI_PLAYER) {
-            p->unk90->s.palId = SIO_MULTI_CNT->id;
-        } else {
-            p->unk90->s.palId = 0;
+        // NOTE: null when Super Sonic
+#ifdef BUG_FIX
+        if (p->spriteInfoBody != NULL)
+#endif
+        {
+            p->spriteInfoBody->s.frameFlags |= MOVESTATE_40000;
+
+#ifdef BUG_FIX
+            if (p->spriteInfoLimbs != NULL)
+#endif
+            {
+                p->spriteInfoLimbs->s.frameFlags |= MOVESTATE_40000;
+            }
+
+            if (IS_MULTI_PLAYER) {
+                p->spriteInfoBody->s.palId = SIO_MULTI_CNT->id;
+            } else {
+                p->spriteInfoBody->s.palId = 0;
+            }
         }
     }
 
@@ -571,7 +683,7 @@ static void Task_802F75C(void)
             gStageFlags &= ~STAGE_FLAG__ACT_START;
         } else {
             if (gBossIndex == 0) {
-                CreateCourseStartCountdown(sit_a->skippedIntro);
+                CreateCourseStartCountdown(introController->skippedIntro);
             } else {
                 gPlayer.moveState &= ~MOVESTATE_IGNORE_INPUT;
                 gStageFlags &= ~STAGE_FLAG__ACT_START;
@@ -580,22 +692,22 @@ static void Task_802F75C(void)
         if (IS_MULTI_PLAYER) {
             sub_8018818();
         } else {
-            gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_18;
+            gPlayerBodyPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_18;
         }
         CreateStageUI();
         TaskDestroy(gCurTask);
-        sub_801583C();
+        CreateBoostEffectTasks();
     }
 }
 
-// (85.25%) https://decomp.me/scratch/zMdSN
-NONMATCH("asm/non_matching/game/stage/intro/Task_802F9F8.inc", void Task_802F9F8(void))
+static void Task_802F9F8(void)
 {
-    SITaskB *sit_b = TASK_DATA(gCurTask);
-    SITaskA *parent = sit_b->parent; // sp00
-    ScreenFade *fade = &sit_b->fade;
-    s32 frameCounter = parent->counter;
+    IntroBackgrounds *introBackgrounds = TASK_DATA(gCurTask);
+    IntroController *controller = introBackgrounds->controller; // sp00
+    ScreenFade *fade = &introBackgrounds->fade;
+    s32 frameCounter = controller->counter;
     u8 i;
+    u8 r, g, b;
 
     gDispCnt &= ~(DISPCNT_WIN0_ON | DISPCNT_WIN1_ON | DISPCNT_OBJWIN_ON);
 
@@ -615,51 +727,47 @@ NONMATCH("asm/non_matching/game/stage/intro/Task_802F9F8.inc", void Task_802F9F8
         if (IS_SINGLE_PLAYER) {
             // _0802FA4C+8
             for (i = 0; i < 16; i++) {
-                const u8 *colors = &gUnknown_080D6FF5[0][0];
-                s32 index = (gSelectedCharacter * 16) + i;
-                u8 r = (gUnknown_080D6FF5[index][0] * frameCounter) / 16u;
-                u8 g = ((gUnknown_080D6FF5[index][1] * frameCounter) / 16u);
-                u8 b = ((gUnknown_080D6FF5[index][2] * frameCounter) / 16u);
+                r = gUnknown_080D6FF5[gSelectedCharacter][i][0];
+                r = (r * frameCounter) / 16u;
+                g = ((gUnknown_080D6FF5[gSelectedCharacter][i][1] * frameCounter) / 16u);
+                b = ((gUnknown_080D6FF5[gSelectedCharacter][i][2] * frameCounter) / 16u);
 
-                gObjPalette[i] = RGB16(r, g, b);
+                gObjPalette[i] = RGB16_REV(r, g, b);
 
                 if (gCheese != NULL) {
-                    r = (gUnknown_080D6FF5[index + 80][0] * frameCounter) / 16u;
-                    g = ((gUnknown_080D6FF5[index + 80][1] * frameCounter) / 16u);
-                    b = ((gUnknown_080D6FF5[index + 80][2] * frameCounter) / 16u);
+                    r = gUnknown_080D6FF5[5][i][0];
+                    r = (r * frameCounter) / 16u;
+                    g = ((gUnknown_080D6FF5[5][i][1] * frameCounter) / 16u);
+                    b = ((gUnknown_080D6FF5[5][i][2] * frameCounter) / 16u);
 
-                    gObjPalette[i + 0xE0] = RGB16(r, g, b);
+                    gObjPalette[14 * 16 + i] = RGB16_REV(r, g, b);
                 }
             }
         } else {
             // _0802FB28
             u8 sid;
-            for (sid = 0; sid < MULTI_SIO_PLAYERS_MAX; sid++) {
-                if ((gMultiplayerConnections >> sid) & 0x1) {
-                    for (i = 0; i < 16; i++) {
-                        s32 index = (sid * 48) + i * 3;
-                        u8 r = (gUnknown_080D6FF5[index][0] * frameCounter) / 16u;
-                        u8 g = ((gUnknown_080D6FF5[index][1] * frameCounter) / 16u);
-                        u8 b = ((gUnknown_080D6FF5[index][2] * frameCounter) / 16u);
 
-                        gObjPalette[i] = RGB16(r, g, b);
+            for (sid = 0; sid < MULTI_SIO_PLAYERS_MAX; sid++) {
+                if (GetBit(gMultiplayerConnections, sid)) {
+                    for (i = 0; i < 16; i++) {
+                        r = gUnknown_080D6FF5[(gMultiplayerCharacters)[sid]][i][0];
+                        r = (r * frameCounter) / 16u;
+                        g = ((gUnknown_080D6FF5[(gMultiplayerCharacters)[sid]][i][1] * frameCounter) / 16u);
+                        b = ((gUnknown_080D6FF5[(gMultiplayerCharacters)[sid]][i][2] * frameCounter) / 16u);
+
+                        gObjPalette[sid * 16 + i] = RGB16_REV(r, g, b);
                     }
                 }
             }
-        }
-        if (gCheese != NULL) {
-            for (i = 0; i < 16; i++) {
-                s32 index;
-                u8 r, b, g;
-                {
-                    const u8 *colors = &gUnknown_080D6FF5[0][0];
-                    index = (0 * 48) + i;
-                    colors = &gUnknown_080D6FF5[index + 80][0];
-                    r = (colors[0] * frameCounter) / 16u;
-                    g = ((gUnknown_080D6FF5[index + 80][1] * frameCounter) / 16u);
-                    b = ((gUnknown_080D6FF5[index + 80][2] * frameCounter) / 16u);
 
-                    gObjPalette[i + 0xE0] = RGB16(r, g, b);
+            if (gCheese != NULL) {
+                for (i = 0; i < 16; i++) {
+                    r = gUnknown_080D6FF5[5][i][0];
+                    r = (r * frameCounter) / 16u;
+                    g = ((gUnknown_080D6FF5[5][i][1] * frameCounter) / 16u);
+                    b = ((gUnknown_080D6FF5[5][i][2] * frameCounter) / 16u);
+
+                    gObjPalette[14 * 16 + i] = RGB16_REV(r, g, b);
                 }
             }
         }
@@ -687,7 +795,7 @@ NONMATCH("asm/non_matching/game/stage/intro/Task_802F9F8.inc", void Task_802F9F8
     // _0802FC86
 
     /* Setup window registers and destroy this Task */
-    if (parent->counter >= 200) {
+    if (controller->counter >= 200) {
         gBldRegs.bldY = 0;
         gBldRegs.bldCnt = 0;
         gBldRegs.bldAlpha = 0;
@@ -709,24 +817,26 @@ NONMATCH("asm/non_matching/game/stage/intro/Task_802F9F8.inc", void Task_802F9F8
 
             gBldRegs.bldCnt
                 = (BLDCNT_TGT2_OBJ | BLDCNT_TGT2_BG0 | BLDCNT_TGT2_BG1 | BLDCNT_EFFECT_BLEND | BLDCNT_TGT1_BG1 | BLDCNT_TGT1_BG2);
-            gBldRegs.bldAlpha = 0x404;
-            gBldRegs.bldY = 0x404;
+            gBldRegs.bldAlpha = 1028;
+#ifdef BUG_FIX
+            gBldRegs.bldY = SCREEN_FADE_BLEND_MAX;
+#else
+            gBldRegs.bldY = 1028;
+#endif
         }
 
         TaskDestroy(gCurTask);
-        return;
     }
 }
-END_NONMATCH
 
 static void Task_IntroColorAnimation(void)
 {
-    SITaskB *sit_b = TASK_DATA(gCurTask);
+    IntroBackgrounds *introBackgrounds = TASK_DATA(gCurTask);
 
-    SITaskA *parent = sit_b->parent;
-    Vec2_16 *p0 = &sit_b->unk10;
-    Vec2_16 *p1 = &sit_b->unk14;
-    u32 counter = parent->counter;
+    IntroController *controller = introBackgrounds->controller;
+    Vec2_16 *p0 = &introBackgrounds->colorsPos1;
+    Vec2_16 *p1 = &introBackgrounds->colorsPos2;
+    u32 counter = controller->counter;
 
     if (counter > INTROFRAME_VISIBLE) {
         u32 innerCount = counter - INTROFRAME_VISIBLE;
@@ -738,8 +848,8 @@ static void Task_IntroColorAnimation(void)
 
         if (innerCount < INTROFRAME_NAME_AND_BANNER) {
             /* Bottom left */
-            p0->y = -(innerCount * 24) + 256;
-            p0->x = 88;
+            p0->y = -(innerCount * (DISPLAY_WIDTH / INTROFRAME_NAME_AND_BANNER)) + (DISPLAY_WIDTH + 16);
+            p0->x = (DISPLAY_HEIGHT / 2) + 8;
 
             if (innerCount >= INTROFRAME_BANNER_APPEARS) {
                 /* Top Banner */
@@ -752,7 +862,7 @@ static void Task_IntroColorAnimation(void)
             /* Keep the Bottom-Left Triangle and Banner on-screen until 2 seconds have
              * passed (and stage name + all icons left the screen) */
             p0->y = 542;
-            p0->x = 137;
+            p0->x = DISPLAY_HEIGHT - 23;
             p1->y = 512;
             p1->x = 16;
         } else if (counter < INTROFRAME_CLEAR_BANNER) {
@@ -760,12 +870,12 @@ static void Task_IntroColorAnimation(void)
             innerCount = counter - INTROFRAME_PAUSE_ON_BANNER;
 
             p0->y = 542 - (innerCount * 18);
-            p0->x = -(innerCount * 2) + 137;
+            p0->x = -(innerCount * 2) + (DISPLAY_HEIGHT - 23);
             p1->y = 512 - (innerCount * 16);
             p1->x = counter - 104;
         } else if (counter >= INTROFRAME_FADE_GAMEPLAY) {
             /* Clean up after the animation finished */
-            gFlags &= ~FLAGS_4;
+            gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
 
             TaskDestroy(gCurTask);
             return;
@@ -775,20 +885,20 @@ static void Task_IntroColorAnimation(void)
              * highlights the Act's name */
             innerCount = counter - INTROFRAME_CLEAR_BANNER;
             p0->y = 544 - (innerCount * 6);
-            p0->x = (innerCount * 7);
+            p0->x = innerCount * ((DISPLAY_HEIGHT - 62) / 14);
             p1->y = 0;
             // p1->x = 0;
         }
     }
 
-    gUnknown_03002A80 = 2;
-    gUnknown_03002878 = (void *)&REG_WIN0H;
+    gHBlankCopySize = 2 * sizeof(int_vcount);
+    gHBlankCopyTarget = (void *)&REG_WIN0H;
 
-    gFlags |= FLAGS_4;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
 
     InitHBlankBgOffsets(DISPLAY_WIDTH);
 
-    if (counter > 10) {
+    if (counter > INTROFRAME_NAME_AND_BANNER) {
         sub_802DDC4(p0->x, p0->y);
         sub_802DF18(p1->x, p1->y);
     } else {
@@ -799,20 +909,20 @@ static void Task_IntroColorAnimation(void)
 
 static void StageIntroUpdateIcons(void)
 {
-    SITaskD *sit_d = TASK_DATA(gCurTask);
-    u32 counter = sit_d->parent->counter;
+    IntroUI *introUI = TASK_DATA(gCurTask);
+    u32 counter = introUI->controller->counter;
     Sprite *s;
     SpriteTransform *transform;
     s32 i;
     s32 sineVal;
 
     /* Colored Character Logo */
-    s = &sit_d->sprCharacterLogo;
+    s = &introUI->sprCharacterLogo;
     DisplaySprite(s);
 
     /* Zone Name */
-    for (i = 0; i < ARRAY_COUNT(sit_d->sprZoneName); i++) {
-        s = &sit_d->sprZoneName[i];
+    for (i = 0; i < ARRAY_COUNT(introUI->sprZoneName); i++) {
+        s = &introUI->sprZoneName[i];
         s->prevVariant = -1;
         UpdateSpriteAnimation(s);
         DisplaySprite(s);
@@ -820,14 +930,14 @@ static void StageIntroUpdateIcons(void)
 
     /* Icons of unlocked Zones */
     if (IS_SINGLE_PLAYER) {
-        for (i = 0; i < ARRAY_COUNT(sit_d->sprUnlockedIcons); i++) {
-            s = &sit_d->sprUnlockedIcons[i];
+        for (i = 0; i < ARRAY_COUNT(introUI->sprUnlockedIcons); i++) {
+            s = &introUI->sprUnlockedIcons[i];
             DisplaySprite(s);
         }
     }
 
     /* The top-left Loading Wheel */
-    s = &sit_d->sprLoadingWheel;
+    s = &introUI->sprLoadingWheel;
     if (counter >= 30) {
         if (counter == 30) {
             s->graphics.anim = SA2_ANIM_STAGE_INTRO_LOADING_WHEEL;
@@ -839,8 +949,8 @@ static void StageIntroUpdateIcons(void)
     DisplaySprite(s);
 
     /* The Zone's icon inside the Loading Wheel */
-    s = &sit_d->sprLoadingWheelIcon;
-    transform = &sit_d->transform;
+    s = &introUI->sprLoadingWheelIcon;
+    transform = &introUI->transform;
     sineVal = SIN_24_8((counter * 24) & ONE_CYCLE);
 
     if (sineVal == Q(1.0)) {
@@ -851,8 +961,8 @@ static void StageIntroUpdateIcons(void)
     }
 
     transform->rotation = 0;
-    transform->width = sineVal;
-    transform->height = Q(1.0);
+    transform->qScaleX = sineVal;
+    transform->qScaleY = Q(1.0);
     transform->x = s->x;
     transform->y = s->y;
 
@@ -860,23 +970,25 @@ static void StageIntroUpdateIcons(void)
     DisplaySprite(s);
 }
 
-// (88.38%) https://decomp.me/scratch/la7O4
-NONMATCH("asm/non_matching/game/stage/intro/Task_IntroZoneNameAndIconAnimations.inc", void Task_IntroZoneNameAndIconAnimations(void))
+static inline int InlineIconsCalc(u8 arg0, int arg1) { return (arg0 * arg1) - 22; }
+
+static void Task_IntroZoneNameAndIconAnimations(void)
 {
-    SITaskD *sit_d = TASK_DATA(gCurTask);
-    u32 counter = sit_d->parent->counter;
+    IntroUI *introUI = TASK_DATA(gCurTask);
+    u32 counter = introUI->controller->counter;
     Sprite *s;
-    u8 sp08;
-    s32 sl;
     u32 i;
+    u8 counterByte;
 
     if (counter - 10 > 124) {
         if (counter >= 200) {
             TaskDestroy(gCurTask);
             return;
-        } else if (counter >= 150) {
+        }
+
+        if (counter >= 150) {
             // _0802FFD2
-            s = &sit_d->sprCharacterLogo;
+            s = &introUI->sprCharacterLogo;
 
             if (counter == 150) {
                 s->graphics.anim = sColoredTriangle[gSelectedCharacter].anim;
@@ -894,143 +1006,154 @@ NONMATCH("asm/non_matching/game/stage/intro/Task_IntroZoneNameAndIconAnimations.
             UpdateSpriteAnimation(s);
             DisplaySprite(s);
         }
-    } else {
-        // _0803004E
-        counter -= 9;
+        return;
+    }
 
-        s = &sit_d->sprCharacterLogo;
+    // _0803004E
+    counter -= 9;
+
+    s = &introUI->sprCharacterLogo;
+
+    if (counter <= 12) {
+        s->x = 254 - (((counter * 75) << 6) >> 8);
+        s->y = ((DISPLAY_HEIGHT / 2) + 41) - (((counter * 123) << 3) >> 8);
+
+    } else if (counter <= 100) {
+        // _08030078
+        s->x = 254 - (((13 * 75) << 6) >> 8) + 13;
+        s->y = ((DISPLAY_HEIGHT / 2) + 41) - (((13 * 123) << 3) >> 8) + 2;
+    } else {
+        // _08030086
+        u32 innerCount = counter - (100 - 12);
+        s->x = 254 - (((innerCount * 75) << 6) >> 8);
+        s->y = ((DISPLAY_HEIGHT / 2) + 41) - (((innerCount * 123) << 3) >> 8);
+    }
+
+    // _080300AE
+    for (i = 0; i < ARRAY_COUNT(introUI->sprZoneName); i++) {
+        s = &introUI->sprZoneName[i];
 
         if (counter <= 12) {
-            s->x = 254 - (((counter * 75) << 6) >> 8);
-            s->y = 121 - (((counter * 123) << 3) >> 8);
+            s->x = 284 - (((counter * 75) << 6) >> 8);
+            s->y = ((DISPLAY_HEIGHT / 2) + 47) - (((counter * 123) << 3) >> 8);
         } else if (counter <= 100) {
-            // _08030078
-            s->x = 24;
-            s->y = 74;
+            s->x = 284 - (((13 * 75) << 6) >> 8) + 13;
+            s->y = ((DISPLAY_HEIGHT / 2) + 47) - (((13 * 123) << 3) >> 8) + 2;
         } else {
-            // _08030086
-            u32 innerCount = counter - (100 - 12);
-            s->x = 254 - (((innerCount * 75) << 6) >> 8);
-            s->y = 121 - (((innerCount * 123) << 3) >> 8);
+            s->x = 284 - ((((counter - (100 - 12)) * 75) << 6) >> 8);
+            s->y = ((DISPLAY_HEIGHT / 2) + 47) - ((((counter - (100 - 12)) * 123) << 3) >> 8);
         }
-        // _080300AE
-        i = 0;
-        sp08 = counter;
+        // _0803012A
 
-        for (i = 0; i < ARRAY_COUNT(sit_d->sprZoneName); i++) {
-            s = &sit_d->sprZoneName[i];
-
-            if (counter <= 12) {
-                s->x = 284 - (((counter * 75) << 6) >> 8);
-                s->y = 127 - (((counter * 123) << 3) >> 8);
-            } else if (counter <= 100) {
-                s->x = 54;
-                s->y = DISPLAY_HEIGHT / 2;
-            } else {
-                s->x = 284 - ((((counter - (100 - 12)) * 75) << 6) >> 8);
-                s->y = 127 - ((((counter - (100 - 12)) * 123) << 3) >> 8);
-            }
-            // _0803012A
-
-            // TODO: This looks like a programmer added a @HACK here?
-            if (i == 3) {
-                s->x -= 24;
-            }
+        // TODO: This looks like a programmer added a @HACK here?
+        if (i == 3) {
+            s->x -= 24;
         }
-        // _08030134+8
+    }
+    // _08030134+8
 
-        for (i = 0; i < ARRAY_COUNT(sit_d->sprUnlockedIcons); i++) {
-            // _08030170
-            u32 lastIconIndex = ((ARRAY_COUNT(sit_d->sprUnlockedIcons) - 1) - i);
-            s = &sit_d->sprUnlockedIcons[lastIconIndex];
-            s->x = 67 + lastIconIndex * 17;
-            s->y = -22;
+    counterByte = counter;
+    for (i = 0; i < ARRAY_COUNT(introUI->sprUnlockedIcons); i++) {
+        s32 x, y;
+// _08030170
+#ifndef NON_MATCHING
+        register u32 lastIconIndex asm("r0");
+#else
+        u32 lastIconIndex;
+#endif
+        lastIconIndex = ((ARRAY_COUNT(introUI->sprUnlockedIcons) - 1) - i);
+        s = &introUI->sprUnlockedIcons[lastIconIndex];
 
-            if (sp08 < 50) {
-                if (sp08 >= i * 2) {
-                    if (!(i & 0x1)) {
-                        if (sp08 < 5) {
-                            s->y = (sp08 * 10 - 22) - i * 20;
-                        } else {
-                            s->y = 20;
-                            asm(""); // TEMP?
-                        }
+        x = (DISPLAY_WIDTH - (ARRAY_COUNT(introUI->sprUnlockedIcons) * 17) - ((ARRAY_COUNT(introUI->sprUnlockedIcons) + 1) * 2))
+            + lastIconIndex * 17;
+        s->x = x;
+
+        y = -22;
+        s->y = y;
+
+        if (counterByte < 50) {
+            if (counterByte >= i * 2) {
+                if (!(i & 1)) {
+                    s32 offset = i * -20;
+                    if (counterByte + (i * -2) < 5) {
+                        s->y = InlineIconsCalc(counterByte, 10) + offset;
                     } else {
-                        // _080301B2
-                        u32 yVal = (sp08 - i * 2);
-                        if (yVal < 5) {
-                            s->y = (yVal * 6) - 22;
-                        } else {
-                            // _080301C2
-                            s->y = 12;
-                            asm(""); // TEMP
-                        }
+                        s->y = 20;
+                    }
+                } else {
+                    // _080301B2
+                    if ((counterByte + (i * -2)) < 5) {
+                        s->y = ((counterByte + (i * -2)) * 6) - 22;
+                    } else {
+                        s->y = 12;
                     }
                 }
-            } else if (counter < 100) {
-                // _080301C8+4
-                if (!(i & 0x1)) {
-                    s->y = 20;
-                } else {
-                    s->y = 12;
-                }
+            }
+        } else if (counter < 100) {
+            // _080301C8+4
+            if (!(i & 1)) {
+                s->y = 20;
             } else {
-                // _080301E0
-                if (!(i & 0x1)) {
-                    s->y = 20 - (counter - 100) * 6;
-                } else {
-                    s->y = 12 - (counter - 100) * 6;
-                }
+                s->y = 12;
+            }
+        } else {
+            // _080301E0
+            if (!(i & 1)) {
+                s->y = 20 - (counter - 100) * 6;
+
+            } else {
+                s->y = 12 - (counter - 100) * 6;
             }
         }
-
-        /* Loading Wheel */
-        s = &sit_d->sprLoadingWheel;
-        s->x = 36;
-
-        if (counter <= 16) {
-            s->y = -48;
-        } else if (counter <= 25) {
-            u8 xw = counter - 16;
-            s->y = (xw * 8) - 40;
-        } else if (counter <= 100) {
-            s->y = 32;
-        } else {
-            s->y = 32 - ((u8)(counter - 100) * 8u);
-        }
-
-        // _08030240
-        /* Loading Wheel Icon */
-        s = &sit_d->sprLoadingWheelIcon;
-
-        s->frameFlags = (gUnknown_030054B8++ | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE);
-        s->x = 35;
-
-        if (counter <= 16) {
-            s->y = -49;
-        } else if (counter <= 25) {
-            s->y = ((u8)(counter - 16) * 8u) - 41;
-        } else if (counter <= 100) {
-            s->x = 35;
-            s->y = 32;
-        } else {
-            s->y = 32 - ((u8)(counter - 100) * 8u);
-        }
-
-        StageIntroUpdateIcons();
     }
+
+    /* Loading Wheel */
+    s = &introUI->sprLoadingWheel;
+    s->x = 36;
+
+    if (counter <= 16) {
+        s->y = -48;
+    } else if (counter <= 25) {
+        counterByte = counter - 16;
+        s->y = (counterByte * 8) - 40;
+    } else if (counter <= 100) {
+        s->y = 32;
+    } else {
+        counterByte = counter - 100;
+        s->y = 32 - (counterByte * 8);
+    }
+
+    // _08030240
+    /* Loading Wheel Icon */
+    s = &introUI->sprLoadingWheelIcon;
+    s->frameFlags = (gUnknown_030054B8++ | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE);
+    s->x = 35;
+
+    if (counter <= 16) {
+        s->y = -49;
+    } else if (counter <= 25) {
+        counterByte = counter - 16;
+        s->y = (counterByte * 8) - 41;
+    } else if (counter <= 100) {
+        s->x = 35;
+        s->y = 32;
+    } else {
+        counterByte = counter - 100;
+        s->y = 32 - (counterByte * 8);
+    }
+
+    StageIntroUpdateIcons();
 }
-END_NONMATCH
 
 static inline void sub_8030488_inline()
 {
     if ((ACT_INDEX(gCurrentLevel) != ACT_BOSS) && (LEVEL_TO_ZONE(gCurrentLevel) != ZONE_FINAL)) {
-        SITaskE *sit_e = TASK_DATA(gCurTask);
+        IntroActLetters *introActLetters = TASK_DATA(gCurTask);
         u8 i;
 
-        for (i = 0; i < ARRAY_COUNT(sit_e->sprZoneNames); i++) {
-            if ((i * 3) < (sit_e->parent->counter - 150)) {
-                Sprite *s = &sit_e->sprZoneNames[i];
+        for (i = 0; i < ARRAY_COUNT(introActLetters->sprZoneNames); i++) {
+            if ((i * 3) < (introActLetters->controller->counter - 150)) {
+                Sprite *s = &introActLetters->sprZoneNames[i];
                 DisplaySprite(s);
             }
         }
@@ -1039,8 +1162,8 @@ static inline void sub_8030488_inline()
 
 void Task_IntroActLettersAnimations(void)
 {
-    SITaskE *sit_e = TASK_DATA(gCurTask);
-    u32 counter = sit_e->parent->counter;
+    IntroActLetters *introActLetters = TASK_DATA(gCurTask);
+    u32 counter = introActLetters->controller->counter;
     Sprite *s;
     u32 i;
     s32 y;
@@ -1054,8 +1177,8 @@ void Task_IntroActLettersAnimations(void)
         counter -= 150;
 
         if (counter < 14) {
-            for (i = 0; i < ARRAY_COUNT(sit_e->sprZoneNames); i++) {
-                s = &sit_e->sprZoneNames[i];
+            for (i = 0; i < ARRAY_COUNT(introActLetters->sprZoneNames); i++) {
+                s = &introActLetters->sprZoneNames[i];
 
                 y = counter - i * 3;
                 if (y >= 4)
@@ -1073,14 +1196,14 @@ void Task_IntroActLettersAnimations(void)
 
             y = gUnknown_080D7130[counter];
 
-            for (i = 0; i < ARRAY_COUNT(sit_e->sprZoneNames); i++) {
-                s = &sit_e->sprZoneNames[i];
+            for (i = 0; i < ARRAY_COUNT(introActLetters->sprZoneNames); i++) {
+                s = &introActLetters->sprZoneNames[i];
                 s->x = sScreenPositions_ZoneLoadingActLetters[i][0];
                 s->y = sScreenPositions_ZoneLoadingActLetters[i][1] + y;
             }
         } else {
-            for (i = 0; i < ARRAY_COUNT(sit_e->sprZoneNames); i++) {
-                s = &sit_e->sprZoneNames[i];
+            for (i = 0; i < ARRAY_COUNT(introActLetters->sprZoneNames); i++) {
+                s = &introActLetters->sprZoneNames[i];
                 s->x = sScreenPositions_ZoneLoadingActLetters[i][0];
                 s->y = sScreenPositions_ZoneLoadingActLetters[i][1];
             }
@@ -1090,7 +1213,7 @@ void Task_IntroActLettersAnimations(void)
     }
 }
 
-static void TaskDestructor_StageIntroParent(struct Task *t)
+static void TaskDestructor_IntroController(struct Task *t)
 {
     if (gCurrentLevel == LEVEL_INDEX(ZONE_1, ACT_1)) {
         InitWaterPalettes();
@@ -1103,8 +1226,8 @@ static void TaskDestructor_StageIntroParent(struct Task *t)
 
 static void Task_UpdateStageLoadingScreen(void)
 {
-    SITaskB *sit_b = TASK_DATA(gCurTask);
-    u32 counter = sit_b->parent->counter;
+    IntroBackgrounds *introBackgrounds = TASK_DATA(gCurTask);
+    u32 counter = introBackgrounds->controller->counter;
 
     gBgPalette[0] = sZoneLoadingCharacterColors[gSelectedCharacter];
 
@@ -1116,18 +1239,18 @@ static void Task_UpdateStageLoadingScreen(void)
     }
 }
 
-static void TaskDestructor_nop_8030458(struct Task *t) { }
+static void TaskDestructor_Dummy(struct Task *t) { }
 
 static void TaskDestructor_803045C(struct Task *t)
 {
-    SITaskD *sit_d = TASK_DATA(t);
-    VramFree(sit_d->sprCharacterLogo.graphics.dest);
+    IntroUI *introUI = TASK_DATA(t);
+    VramFree(introUI->sprCharacterLogo.graphics.dest);
 }
 
 static void TaskDestructor_8030474(struct Task *t)
 {
-    SITaskE *sit_e = TASK_DATA(t);
-    VramFree(sit_e->sprZoneNames[0].graphics.dest);
+    IntroActLetters *introActLetters = TASK_DATA(t);
+    VramFree(introActLetters->sprZoneNames[0].graphics.dest);
 }
 
 // NOTE: This only matches with the code being copy-pasted,
@@ -1135,15 +1258,19 @@ static void TaskDestructor_8030474(struct Task *t)
 //       defined above for some reason...
 static void sub_8030488(void)
 {
+#ifndef NON_MATCHING
     if ((ACT_INDEX(gCurrentLevel) != ACT_BOSS) && (LEVEL_TO_ZONE(gCurrentLevel) != ZONE_FINAL)) {
-        SITaskE *sit_e = TASK_DATA(gCurTask);
+        IntroActLetters *introActLetters = TASK_DATA(gCurTask);
         u8 i;
 
-        for (i = 0; i < ARRAY_COUNT(sit_e->sprZoneNames); i++) {
-            if ((i * 3) < (sit_e->parent->counter - 150)) {
-                Sprite *s = &sit_e->sprZoneNames[i];
+        for (i = 0; i < ARRAY_COUNT(introActLetters->sprZoneNames); i++) {
+            if ((i * 3) < (introActLetters->controller->counter - 150)) {
+                Sprite *s = &introActLetters->sprZoneNames[i];
                 DisplaySprite(s);
             }
         }
     }
+#else
+    sub_8030488_inline();
+#endif
 }

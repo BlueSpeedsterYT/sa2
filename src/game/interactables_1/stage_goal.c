@@ -4,16 +4,16 @@
 
 #include "malloc_vram.h"
 
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 #include "game/entity.h"
-#include "game/stage/player.h"
 #include "game/stage/camera.h"
-#include "game/stage/game_2.h"
+#include "game/stage/mp_sprite_task.h"
+#include "game/stage/player.h"
 
 #include "game/interactables_1/stage_goal.h"
 
 #include "game/multiplayer/mp_player.h"
-#include "game/multiplayer/player_unk_1.h"
+#include "game/multiplayer/multiplayer_event_mgr.h"
 #include "game/multiplayer/finish.h"
 
 #include "sprite.h"
@@ -32,16 +32,16 @@ typedef struct {
 } Sprite_StageGoalToggle;
 
 static void Task_StageGoalMain(void);
-static void TaskDestructor_8062E7C(struct Task *);
+static void TaskDestructor_StageGoal(struct Task *);
 static void Task_StageGoalAnimate(void);
-static void sub_8062D44(void);
+static void StageGoalToggle_PlayerReachedGoal(void);
 static void StageGoalToggle_HandleMultiplayerFinish(void);
 
 #define GOAL_LEVER_TILES 4
 
 void CreateEntity_StageGoal(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_StageGoalMain, sizeof(Sprite_StageGoal), 0x2010, 0, TaskDestructor_8062E7C);
+    struct Task *t = TaskCreate(Task_StageGoalMain, sizeof(Sprite_StageGoal), 0x2010, 0, TaskDestructor_StageGoal);
     Sprite_StageGoal *stageGoal = TASK_DATA(t);
     Sprite *s = &stageGoal->s;
 
@@ -88,8 +88,8 @@ static void Task_StageGoalMain(void)
         return;
     }
 
-    if (PLAYER_IS_ALIVE && !(gPlayer.moveState & MOVESTATE_400000)) {
-        if (sub_800C204(s, x, y, 0, &gPlayer, 0) == 1) {
+    if (PLAYER_IS_ALIVE && !(gPlayer.moveState & MOVESTATE_IA_OVERRIDE)) {
+        if (Coll_Player_Entity_HitboxN(s, x, y, 0, &gPlayer, 0) == 1) {
             s->graphics.anim = SA2_ANIM_GOAL_LEVER;
             s->variant = 0;
             s->prevVariant = -1;
@@ -133,23 +133,23 @@ static void Task_StageGoalToggleMain(void)
     s32 y = TO_WORLD_POS(me->y, regionY);
 
     if (IS_MULTI_PLAYER) {
-        if (x <= I(gPlayer.x) && !(gPlayer.moveState & (MOVESTATE_GOAL_REACHED | MOVESTATE_8))) {
+        if (x <= I(gPlayer.qWorldX) && !(gPlayer.moveState & (MOVESTATE_GOAL_REACHED | MOVESTATE_STOOD_ON_OBJ))) {
             gPlayer.transition = PLTRANS_REACHED_GOAL;
             gStageGoalX = x;
             StageGoalToggle_HandleMultiplayerFinish();
         }
-    } else if (x <= I(gPlayer.x) && !(gPlayer.moveState & MOVESTATE_GOAL_REACHED)) {
+    } else if (x <= I(gPlayer.qWorldX) && !(gPlayer.moveState & MOVESTATE_GOAL_REACHED)) {
         gPlayer.transition = PLTRANS_REACHED_GOAL;
         gStageFlags |= STAGE_FLAG__DISABLE_PAUSE_MENU | STAGE_FLAG__ACT_START;
         gStageGoalX = x;
 
-        if (gGameMode == GAME_MODE_SINGLE_PLAYER && !(gPlayer.moveState & MOVESTATE_IN_AIR) && gPlayer.speedGroundX > Q(2.5)) {
+        if (gGameMode == GAME_MODE_SINGLE_PLAYER && !(gPlayer.moveState & MOVESTATE_IN_AIR) && gPlayer.qSpeedGround > Q(2.5)) {
             u32 extraScore;
-            if (gPlayer.speedGroundX <= Q(4.0)) {
+            if (gPlayer.qSpeedGround <= Q(4.0)) {
                 extraScore = 200;
-            } else if (gPlayer.speedGroundX <= Q(9.0)) {
+            } else if (gPlayer.qSpeedGround <= Q(9.0)) {
                 extraScore = 300;
-            } else if (gPlayer.speedGroundX <= Q(10.0)) {
+            } else if (gPlayer.qSpeedGround <= Q(10.0)) {
                 extraScore = 500;
             } else {
                 extraScore = 800;
@@ -158,16 +158,16 @@ static void Task_StageGoalToggleMain(void)
             if (extraScore != 0) {
                 INCREMENT_SCORE(extraScore);
 
-                CreateStageGoalBonusPointsAnim(I(gPlayer.x), I(gPlayer.y), extraScore);
+                CreateStageGoalBonusPointsAnim(I(gPlayer.qWorldX), I(gPlayer.qWorldY), extraScore);
             }
         }
 
 #if TAS_TESTING && TAS_TESTING_WIDESCREEN_HACK && DISPLAY_WIDTH > 240
         if (gCurrentLevel == LEVEL_INDEX(ZONE_3, ACT_1)) {
-            gPlayer.speedGroundX = 0;
+            gPlayer.qSpeedGround = 0;
             gInputRecorder.playbackHead += 1;
         } else if (gCurrentLevel == LEVEL_INDEX(ZONE_6, ACT_2)) {
-            gPlayer.speedAirX = 0;
+            gPlayer.qSpeedAirX = 0;
             gInputRecorder.playbackHead += 1;
         }
 #endif
@@ -183,11 +183,11 @@ static void Task_StageGoalToggleMain(void)
 
 static void StageGoalToggle_HandleMultiplayerFinish(void)
 {
-    struct UNK_3005510 *unk5510;
+    RoomEvent *roomEvent;
     u32 count = 0;
     MultiplayerPlayer *player = TASK_DATA(gMultiplayerPlayerTasks[SIO_MULTI_CNT->id]);
     gPlayer.itemEffect &= ~PLAYER_ITEM_EFFECT__CONFUSION;
-    gPlayer.unk32 = 0;
+    gPlayer.confusionTimer = 0;
 
     if (!(player->unk5C & 1)) {
         u32 j;
@@ -198,7 +198,7 @@ static void StageGoalToggle_HandleMultiplayerFinish(void)
             }
         }
 
-        sub_8019CCC(SIO_MULTI_CNT->id, count);
+        CreateMultiplayerFinishResult(SIO_MULTI_CNT->id, count);
         player->unk5C |= 1;
 
         if (count == 0) {
@@ -206,25 +206,26 @@ static void StageGoalToggle_HandleMultiplayerFinish(void)
             gCourseTime = 3600;
         }
 
-        unk5510 = sub_8019224();
-        unk5510->unk0 = 7;
-        gCurTask->main = sub_8062D44;
+        roomEvent = CreateRoomEvent();
+        roomEvent->type = ROOMEVENT_TYPE_REACHED_STAGE_GOAL;
+
+        gCurTask->main = StageGoalToggle_PlayerReachedGoal;
         gCamera.unk50 |= CAM_MODE_SPECTATOR;
     }
 }
 
-static UNUSED void sub_8062BD0(void)
+static UNUSED void StageGoalToggle_ForceMultiplayerFinish(void)
 {
     u32 thing = 0;
     struct Task **mpTasks = gMultiplayerPlayerTasks;
-    struct UNK_3005510 *unk5510;
+    RoomEvent *roomEvent;
     u32 j;
 
     // Required for match
-    *SIO_MULTI_CNT;
+    u32 id = SIO_MULTI_CNT->id;
 
     gPlayer.itemEffect &= ~PLAYER_ITEM_EFFECT__CONFUSION;
-    gPlayer.unk32 = 0;
+    gPlayer.confusionTimer = 0;
 
     for (j = 0; j < ARRAY_COUNT(gMultiplayerPlayerTasks) && mpTasks[j] != NULL; j++) {
         // TODO: make this a macro? What does it even mean
@@ -240,22 +241,22 @@ static UNUSED void sub_8062BD0(void)
         if (gUnknown_030054B4[j] == -1) {
             if ((gMultiplayerConnections & (0x10 << (j))) >> ((j + 4))
                 == (gMultiplayerConnections & (0x10 << (SIO_MULTI_CNT->id))) >> (SIO_MULTI_CNT->id + 4)) {
-                sub_8019CCC(j, thing);
+                CreateMultiplayerFinishResult(j, thing);
             } else {
-                sub_8019CCC(j, thing ^ 1);
+                CreateMultiplayerFinishResult(j, thing ^ 1);
             }
         }
     }
 
     gStageFlags |= 4;
     gCourseTime = 3600;
-    unk5510 = sub_8019224();
-    unk5510->unk0 = 7;
-    gCurTask->main = sub_8062D44;
+    roomEvent = CreateRoomEvent();
+    roomEvent->type = ROOMEVENT_TYPE_REACHED_STAGE_GOAL;
+    gCurTask->main = StageGoalToggle_PlayerReachedGoal;
     gCamera.unk50 |= CAM_MODE_SPECTATOR;
 }
 
-static void sub_8062D44(void)
+static void StageGoalToggle_PlayerReachedGoal(void)
 {
 
     u32 id = SIO_MULTI_CNT->id;
@@ -286,7 +287,7 @@ static void sub_8062D44(void)
                 }
             }
 
-            sub_8019F08();
+            CreateMultiplayerFinishHandler();
             TaskDestroy(gCurTask);
         }
     }
@@ -304,7 +305,7 @@ void CreateEntity_Toggle_StageGoal(MapEntity *me, u16 spriteRegionX, u16 spriteR
     SET_MAP_ENTITY_INITIALIZED(me);
 }
 
-static void TaskDestructor_8062E7C(struct Task *t)
+static void TaskDestructor_StageGoal(struct Task *t)
 {
     Sprite_StageGoal *stageGoal = TASK_DATA(t);
     VramFree(stageGoal->s.graphics.dest);

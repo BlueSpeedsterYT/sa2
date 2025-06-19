@@ -216,10 +216,10 @@ static void sub_805ADAC(void)
         if (!(gMultiSioStatusFlags & MULTI_SIO_RECV_ID(SIO_MULTI_CNT->id))) {
             if (gMultiplayerMissingHeartbeats[SIO_MULTI_CNT->id]++ > 180) {
                 TasksDestroyAll();
-                gUnknown_03002AE4 = gUnknown_0300287C;
+                PAUSE_BACKGROUNDS_QUEUE();
                 gUnknown_03005390 = 0;
                 PAUSE_GRAPHICS_QUEUE();
-                MultiPakCommunicationError();
+                LinkCommunicationError();
                 return;
             }
         } else {
@@ -235,10 +235,10 @@ static void sub_805ADAC(void)
     if (gMultiSioStatusFlags & MULTI_SIO_HARD_ERROR || (r4 && !(gMultiSioStatusFlags & MULTI_SIO_RECV_ID0) && recv->unk0 != 0)) {
         if (++connectScreen->unkFD >= 9) {
             TasksDestroyAll();
-            gUnknown_03002AE4 = gUnknown_0300287C;
+            PAUSE_BACKGROUNDS_QUEUE();
             gUnknown_03005390 = 0;
             PAUSE_GRAPHICS_QUEUE();
-            MultiPakCommunicationError();
+            LinkCommunicationError();
             return;
         }
     } else {
@@ -296,10 +296,10 @@ static void sub_805ADAC(void)
     if (connectScreen->unkFA == 0) {
         if (!(gMultiSioStatusFlags & MULTI_SIO_PARENT) && gMultiSioStatusFlags & MULTI_SIO_RECV_ID0 && recv->unk0 > 0x4010) {
             TasksDestroyAll();
-            gUnknown_03002AE4 = gUnknown_0300287C;
+            PAUSE_BACKGROUNDS_QUEUE();
             gUnknown_03005390 = 0;
             PAUSE_GRAPHICS_QUEUE();
-            MultiPakCommunicationError();
+            LinkCommunicationError();
             return;
         }
         connectScreen->unkFA = 1;
@@ -356,10 +356,10 @@ static void sub_805ADAC(void)
 
     if (recv->unk0 >= 0x4013) {
         TasksDestroyAll();
-        gUnknown_03002AE4 = gUnknown_0300287C;
+        PAUSE_BACKGROUNDS_QUEUE();
         gUnknown_03005390 = 0;
         PAUSE_GRAPHICS_QUEUE();
-        MultiPakCommunicationError();
+        LinkCommunicationError();
         return;
     }
 
@@ -490,10 +490,10 @@ static void sub_805B4C0(void)
             gUnknown_03002280[0][2] = 0xFF;
             gUnknown_03002280[0][3] = 32;
             TasksDestroyAll();
-            gUnknown_03002AE4 = gUnknown_0300287C;
+            PAUSE_BACKGROUNDS_QUEUE();
             gUnknown_03005390 = 0;
             PAUSE_GRAPHICS_QUEUE();
-            MultiPakCommunicationError();
+            LinkCommunicationError();
             return;
         }
 
@@ -551,18 +551,18 @@ static void sub_805B4C0(void)
         gUnknown_03002280[0][2] = 0xFF;
         gUnknown_03002280[0][3] = 32;
         TasksDestroyAll();
-        gUnknown_03002AE4 = gUnknown_0300287C;
+        PAUSE_BACKGROUNDS_QUEUE();
         gUnknown_03005390 = 0;
         PAUSE_GRAPHICS_QUEUE();
-        MultiPakCommunicationError();
+        LinkCommunicationError();
         return;
     } else {
         if (gMultiSioStatusFlags & MULTI_SIO_PARENT && connectScreen->unkFB++ >= 0x3D) {
             TasksDestroyAll();
-            gUnknown_03002AE4 = gUnknown_0300287C;
+            PAUSE_BACKGROUNDS_QUEUE();
             gUnknown_03005390 = 0;
             PAUSE_GRAPHICS_QUEUE();
-            MultiPakCommunicationError();
+            LinkCommunicationError();
             return;
         }
 
@@ -652,11 +652,10 @@ UNUSED static void sub_805B98C(struct MultiPakConnectScreen *connectScreen)
     DisplaySprite(s);
 }
 
-// HandleLinkCommunicationError
-void MultiPakCommunicationError(void)
+void LinkCommunicationError(void)
 {
     m4aMPlayAllStop();
-    gFlags &= ~0x4;
+    gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
     gDispCnt = 0x40;
     gMultiSioEnabled = FALSE;
     MultiSioStop();

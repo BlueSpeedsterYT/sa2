@@ -2,7 +2,7 @@
 #include "malloc_vram.h"
 #include "flags.h"
 
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 #include "game/multiboot/collect_rings/time_display.h"
 
 #include "constants/animations.h"
@@ -25,6 +25,12 @@ const u8 gUnknown_080E0234[] = {
 
 const u16 gUnknown_080E0270[] = INCBIN_U16("graphics/80E0270.gbapal");
 
+#ifndef COLLECT_RINGS_ROM
+#define NUM_TILES 9
+#else
+#define NUM_TILES 0xC
+#endif
+
 void CreateCollectRingsTimeDisplay(void)
 {
     u32 i;
@@ -44,8 +50,11 @@ void CreateCollectRingsTimeDisplay(void)
     s->palId = 0;
     s->frameFlags = 0x40000;
 
-    if (gGameMode == GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) {
-        s->graphics.dest = VramMalloc(9);
+#ifndef COLLECT_RINGS_ROM
+    if (gGameMode == GAME_MODE_MULTI_PLAYER_COLLECT_RINGS)
+#endif
+    {
+        s->graphics.dest = VramMalloc(NUM_TILES);
         s->graphics.anim = SA2_ANIM_MULTIPLAYER_UI_RING;
         s->variant = 0;
     }
@@ -59,7 +68,7 @@ void CreateCollectRingsTimeDisplay(void)
         s->oamFlags = SPRITE_OAM_ORDER(4);
         s->graphics.size = 0;
         s->graphics.anim = SA2_ANIM_ASCII;
-        s->variant = i + SA2_ANIM_ASCII_CHAR('1');
+        s->variant = i + SA2_ANIM_ASCII_CHAR('0');
         s->animCursor = 0;
         s->qAnimDelay = 0;
         s->prevVariant = -1;

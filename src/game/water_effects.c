@@ -4,13 +4,11 @@
 #include "malloc_vram.h"
 #include "task.h"
 
-#include "game/sa1_leftovers/globals.h"
 #include "game/boost_effect.h"
-
+#include "game/sa1_sa2_shared/globals.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
-#include "game/stage/game_2.h"
-
+#include "game/stage/mp_sprite_task.h"
 #include "data/sprite_data.h"
 #include "game/water_effects.h"
 
@@ -182,14 +180,14 @@ static void Task_StageWaterTask(void)
     u8 unk2_2;
 #endif
 
-    if ((gCurrentLevel == LEVEL_INDEX(ZONE_1, ACT_1)) && (I(gPlayer.x) > 6665) && (I(gPlayer.x) <= 10650)) {
+    if ((gCurrentLevel == LEVEL_INDEX(ZONE_1, ACT_1)) && (I(gPlayer.qWorldX) > 6665) && (I(gPlayer.qWorldX) <= 10650)) {
         water->isActive = TRUE;
     } else {
         water->isActive = FALSE;
     }
 
     if (water->isActive != TRUE) {
-        gFlags &= ~MOVESTATE_40;
+        gFlags &= ~MOVESTATE_IN_WATER;
         return;
     }
 
@@ -210,7 +208,7 @@ static void Task_StageWaterTask(void)
         water->unk2 = 0xFF;
     }
 
-    gUnknown_03001870[gUnknown_03004D50++] = sub_8011A4C;
+    gVBlankCallbacks[gNumVBlankCallbacks++] = sub_8011A4C;
     gFlags |= FLAGS_10;
 
     unk1 = water->unk1 - 1;
@@ -237,10 +235,10 @@ static void Task_StageWaterTask(void)
     if ((unk2_2 = unk2_0 - 1) < DISPLAY_HEIGHT - 1) {
         gIntrTable[INTR_INDEX_VCOUNT] = VCountIntr_8011ACC;
         gUnknown_03002874 = unk2_2;
-        gFlags |= FLAGS_40;
+        gFlags |= FLAGS_EXECUTE_HBLANK_COPY0;
     } else {
         gIntrTable[INTR_INDEX_VCOUNT] = gIntrTableTemplate[INTR_INDEX_VCOUNT];
-        gFlags &= ~FLAGS_40;
+        gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY0;
     }
 }
 
@@ -273,7 +271,7 @@ static void Task_RunOnWaterEffect(void)
         return;
     }
 
-    effect->x = I(p->x);
+    effect->x = I(p->qWorldX);
     effect->y = gWater.currentWaterLevel;
 
     s->x = effect->x - gCamera.x;
@@ -291,8 +289,8 @@ static void Task_RunOnWaterEffect(void)
 
 struct Task *CreateWaterfallSurfaceHitEffect(s32 x, s32 y)
 {
-    struct Task *t = sub_801F15C(x, y, 0x10, 0, Task_801F214, TaskDestructor_801F550);
-    TaskStrc_801F15C *ts = TASK_DATA(t);
+    struct Task *t = CreateMultiplayerSpriteTask(x, y, 0x10, 0, Task_UpdateMpSpriteTaskSprite, TaskDestructor_MultiplayerSpriteTask);
+    MultiplayerSpriteTask *ts = TASK_DATA(t);
     Sprite *s = &ts->s;
 
     s->graphics.dest = VramMalloc(12);
@@ -327,7 +325,7 @@ static void TaskDestructor_WaterSurface(struct Task *t)
 {
     Water *water = &gWater;
 
-    gFlags &= ~FLAGS_40;
+    gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY0;
     gIntrTable[INTR_INDEX_VCOUNT] = gIntrTableTemplate[INTR_INDEX_VCOUNT];
     water->t = NULL;
 }
@@ -361,7 +359,7 @@ static void VCountIntr_8011ACC(void)
 {
     Water *water = &gWater;
 #ifdef BUG_FIX
-    if (!water || !water->t)
+    if (water && water->t)
 #endif
     {
         WaterData *wd = TASK_DATA(water->t);

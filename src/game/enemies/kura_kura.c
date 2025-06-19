@@ -4,7 +4,7 @@
 #include "malloc_vram.h"
 #include "trig.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/kura_kura.h"
@@ -109,7 +109,7 @@ void sub_805213C(Sprite_KuraKura *kk)
 
     s2->x = pos.x - gCamera.x;
     s2->y = pos.y - gCamera.y;
-    sub_800C84C(s2, pos.x, pos.y);
+    Coll_Player_Projectile(s2, pos.x, pos.y);
 
     UpdateSpriteAnimation(s2);
     DisplaySprite(s2);

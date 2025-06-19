@@ -1,9 +1,9 @@
 #include "global.h"
 #include "malloc_vram.h"
 
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 
-#include "game/stage/collision.h"
+#include "game/stage/terrain_collision.h"
 #include "game/stage/player.h"
 
 #include "game/entity.h"
@@ -69,7 +69,7 @@ static void Task_PikoPiko(void)
     ENEMY_CLAMP_TO_GROUND(piko, piko->clampParam);
     ENEMY_UPDATE_POSITION(piko, s, pos.x, pos.y);
 
-    if (!(sub_800CA20(s, pos.x, pos.y, 1, &gPlayer) == TRUE)) {
+    if (!(Coll_Player_Enemy(s, pos.x, pos.y, 1, &gPlayer) == TRUE)) {
         ENEMY_DESTROY_IF_PLAYER_HIT(s, pos);
     }
 

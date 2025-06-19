@@ -1,11 +1,11 @@
 #include "core.h"
 #include "malloc_vram.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 
 #include "game/entity.h"
 #include "game/mystery_item_box.h"
-#include "game/multiplayer/player_unk_1.h"
-#include "game/sa1_leftovers/dust_cloud.h"
+#include "game/multiplayer/multiplayer_event_mgr.h"
+#include "game/sa1_sa2_shared/dust_cloud.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "lib/m4a/m4a.h"
@@ -15,6 +15,9 @@
 #include "constants/player_transitions.h"
 #include "constants/songs.h"
 #include "constants/zones.h"
+
+#define ITEM_ICON_DISPLAY_TIME  (1 * GBA_FRAMES_PER_SECOND)
+#define ITEM_ICON_DISPLAY_DELAY (int)(0.5 * GBA_FRAMES_PER_SECOND)
 
 typedef struct {
     SpriteBase base; /* 0x00 */
@@ -49,12 +52,9 @@ static const u8 sRingBonuses[] = { 1, 5, 10, 30, 50 };
 
 static const u16 gUnknown_080E029A[] = { 0, 1, 1, 0, 1, 1, 0, 1 };
 
-static const u16 gUnknown_080E02AA[][3] = { { SA2_ANIM_ITEMBOX_TYPE, 9, 4 }, { SA2_ANIM_ITEMBOX_TYPE, 12, 4 } };
-
-static const u16 unused = 0;
-
-#define ITEM_ICON_DISPLAY_TIME  (1 * GBA_FRAMES_PER_SECOND)
-#define ITEM_ICON_DISPLAY_DELAY (int)(0.5 * GBA_FRAMES_PER_SECOND)
+static const u16 gUnknown_080E02AA[][3] = { { SA2_ANIM_ITEMBOX_TYPE, SA2_ANIM_VARIANT_ITEM_BOX_MYSTERY_1, 4 },
+                                            { SA2_ANIM_ITEMBOX_TYPE, SA2_ANIM_VARIANT_ITEM_BOX_MYSTERY_2, 4 } };
+static const u8 unused = 0;
 
 void CreateEntity_MysteryItemBox(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
@@ -132,8 +132,8 @@ static void sub_808616C(void)
 
     transform = &itemBox->transform;
     transform->rotation = 0;
-    transform->width = 0x100;
-    transform->height = 0;
+    transform->qScaleX = Q(1);
+    transform->qScaleY = 0;
     transform->x = 0;
     transform->y = 0;
     gCurTask->main = sub_808623C;
@@ -176,14 +176,14 @@ static void sub_808623C(void)
     transform->x = itemBox->x - gCamera.x;
     transform->y = itemBox->y - gCamera.y;
 
-    transform->height += 8;
+    transform->qScaleY += 8;
 
-    if (transform->height >= 0x100) {
+    if (transform->qScaleY >= 0x100) {
         MapEntity *me;
         Sprite_MysteryItemBox *itemBox2;
         itemBox->box.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
         itemBox->identifier.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
-        transform->height = 0x100;
+        transform->qScaleY = Q(1);
         itemBox->iconOffsetY = Q(0.0);
         gCurTask->main = sub_80865E4;
 
@@ -229,14 +229,14 @@ static void sub_808636C(void)
     transform->x = itemBox->x - gCamera.x;
     transform->y = itemBox->y - gCamera.y;
 
-    transform->height -= 8;
+    transform->qScaleY -= 8;
 
-    if (transform->height < 1) {
+    if (transform->qScaleY < 1) {
         MapEntity *me;
         Sprite_MysteryItemBox *itemBox2;
         itemBox->box.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
         itemBox->identifier.frameFlags &= ~SPRITE_FLAG_MASK_ROT_SCALE_ENABLE;
-        transform->height = 0x100;
+        transform->qScaleY = Q(1);
         gCurTask->main = sub_808673C;
 
         sub_808673C_inline();
@@ -257,13 +257,13 @@ static void sub_808636C(void)
 
 static void sub_8086474(Sprite_MysteryItemBox *itemBox)
 {
-    struct UNK_3005510 *unk5510;
+    RoomEvent_MysteryItemBoxBreak *roomEvent;
     MapEntity *me;
     if (itemBox->unk84 != 1 || gPlayer.moveState & 2) {
-        gPlayer.speedAirY = -Q(3); // default itembox-hit y-accel
+        gPlayer.qSpeedAirY = -Q(3); // default itembox-hit y-accel
         gPlayer.charState = CHARSTATE_SPRING_B;
         gPlayer.prevCharState = CHARSTATE_INVALID;
-        gPlayer.transition = PLTRANS_PT5;
+        gPlayer.transition = PLTRANS_UNCURL;
     }
 
     itemBox->base.me->d.sData[1] += 1;
@@ -271,13 +271,13 @@ static void sub_8086474(Sprite_MysteryItemBox *itemBox)
     m4aSongNumStart(SE_ITEM_BOX_2);
     CreateDustCloud(itemBox->x, itemBox->y);
     itemBox->framesSinceOpened = 0;
-    unk5510 = sub_8019224();
 
-    unk5510->unk0 = 5;
-    unk5510->unk1 = itemBox->base.regionX;
-    unk5510->unk2 = itemBox->base.regionY;
-    unk5510->unk3 = itemBox->base.id;
-    unk5510->unk4 = itemBox->base.me->d.sData[1];
+    roomEvent = CreateRoomEvent();
+    roomEvent->type = ROOMEVENT_TYPE_MYSTERY_ITEMBOX_BREAK;
+    roomEvent->x = itemBox->base.regionX;
+    roomEvent->y = itemBox->base.regionY;
+    roomEvent->id = itemBox->base.id;
+    roomEvent->unk4 = itemBox->base.me->d.sData[1];
 
     gCurTask->main = sub_808665C;
 }
@@ -292,8 +292,14 @@ static void sub_8086504(Sprite_MysteryItemBox *itemBox)
 
             if (!IS_EXTRA_STAGE(gCurrentLevel)) {
                 if (Div(gRingCount, 100) != Div(prevRingCount, 100) && gGameMode == GAME_MODE_SINGLE_PLAYER) {
+#ifndef COLLECT_RINGS_ROM
                     gNumLives = MIN(gNumLives + 1, 255u);
-                    gUnknown_030054A8.unk3 = 0x10;
+                    gMusicManagerState.unk3 = 0x10;
+#else
+                    if (gNumLives < 255) {
+                        gNumLives++;
+                    }
+#endif
                 }
             }
 
@@ -305,10 +311,10 @@ static void sub_8086504(Sprite_MysteryItemBox *itemBox)
             break;
         }
         case 1: {
-            struct UNK_3005510 *unk5510 = sub_8019224();
+            RoomEvent_ItemEffect *roomEvent = CreateRoomEvent();
 
-            unk5510->unk0 = 6;
-            unk5510->unk1 = 4;
+            roomEvent->type = ROOMEVENT_TYPE_ITEMEFFECT_APPLIED;
+            roomEvent->effect = 4;
             break;
         }
     }
@@ -408,8 +414,8 @@ static inline void sub_808679C_inline(void)
 
     transform = &itemBox->transform;
     transform->rotation = 0;
-    transform->width = 0x100;
-    transform->height = 0x100;
+    transform->qScaleX = Q(1);
+    transform->qScaleY = Q(1);
     transform->x = 0;
     transform->y = 0;
     gCurTask->main = sub_808636C;
@@ -425,8 +431,8 @@ static void sub_808679C(void)
 
     transform = &itemBox->transform;
     transform->rotation = 0;
-    transform->width = 0x100;
-    transform->height = 0x100;
+    transform->qScaleX = Q(1);
+    transform->qScaleY = Q(1);
     transform->x = 0;
     transform->y = 0;
     gCurTask->main = sub_808636C;
@@ -490,10 +496,10 @@ static bool32 sub_80868F4(Sprite_MysteryItemBox *itemBox)
 static bool32 sub_808693C(Sprite_MysteryItemBox *itemBox)
 {
     if (PLAYER_IS_ALIVE) {
-        if (sub_800C944(&itemBox->box, itemBox->x, itemBox->y) != 0) {
+        if (Coll_Player_ItemBox(&itemBox->box, itemBox->x, itemBox->y) != 0) {
             itemBox->unk84 = 1;
             return TRUE;
-        } else if (sub_800C204(&itemBox->box, itemBox->x, itemBox->y, 0, &gPlayer, 0) == 0) {
+        } else if (Coll_Player_Entity_HitboxN(&itemBox->box, itemBox->x, itemBox->y, 0, &gPlayer, 0) == 0) {
 #ifndef NON_MATCHING
         ret0:
 #endif

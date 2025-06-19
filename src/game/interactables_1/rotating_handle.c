@@ -9,8 +9,8 @@
 #include "game/stage/camera.h"
 #include "game/stage/player_controls.h"
 #include "game/interactables_1/rotating_handle.h"
-#include "game/sa1_leftovers/collision.h"
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/collision.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "malloc_vram.h"
 #include "sprite.h"
@@ -25,14 +25,14 @@
 typedef struct {
     /* 0x00 */ SpriteBase base;
     Sprite s;
-    s16 unk3C;
-    s16 unk3E;
-    u8 unk40;
+    s16 rot;
+    s16 rotSpeed;
+    u8 quartile;
 } Sprite_RotatingHandle;
 
 static void Task_AfterJump(void);
 static void Task_Idle(void);
-static void Task_Rotating(void);
+void Task_Rotating(void);
 
 void CreateEntity_RotatingHandle(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
@@ -45,9 +45,9 @@ void CreateEntity_RotatingHandle(MapEntity *me, u16 spriteRegionX, u16 spriteReg
         rotatingHandle->base.me = me;
         rotatingHandle->base.spriteX = me->x;
         rotatingHandle->base.id = spriteY;
-        rotatingHandle->unk3C = 0;
-        rotatingHandle->unk3E = 0;
-        rotatingHandle->unk40 = 0;
+        rotatingHandle->rot = 0;
+        rotatingHandle->rotSpeed = 0;
+        rotatingHandle->quartile = 0;
 
         s->x = TO_WORLD_POS(me->x, spriteRegionX);
         s->y = TO_WORLD_POS(me->y, spriteRegionY);
@@ -80,57 +80,57 @@ static void Task_Idle(void)
     s->x = x - gCamera.x;
     s->y = y - gCamera.y;
 
-    if (!(gPlayer.moveState & (MOVESTATE_400000 | MOVESTATE_DEAD)) && sub_800C204(s, x, y, 0, &gPlayer, 0) == 1) {
+    if (!(gPlayer.moveState & (MOVESTATE_IA_OVERRIDE | MOVESTATE_DEAD)) && Coll_Player_Entity_HitboxN(s, x, y, 0, &gPlayer, 0) == 1) {
 #ifndef NON_MATCHING
         register s32 temp1 asm("r0"), temp2;
 #else
         s32 temp1, temp2;
 #endif
         Player_TransitionCancelFlyingAndBoost(&gPlayer);
-        rotatingHandle->unk3C = 0;
+        rotatingHandle->rot = 0;
 
-        temp1 = abs(gPlayer.speedAirX);
-        temp2 = abs(gPlayer.speedAirY);
-        rotatingHandle->unk3E = temp1 + temp2;
-        if (rotatingHandle->unk3E < 0xE0) {
-            rotatingHandle->unk3E = 0xE0;
+        temp1 = abs(gPlayer.qSpeedAirX);
+        temp2 = abs(gPlayer.qSpeedAirY);
+        rotatingHandle->rotSpeed = temp1 + temp2;
+        if (rotatingHandle->rotSpeed < 0xE0) {
+            rotatingHandle->rotSpeed = 0xE0;
         }
 
-        if (rotatingHandle->unk3E > 0x180) {
-            rotatingHandle->unk3E = 0x180;
+        if (rotatingHandle->rotSpeed > 0x180) {
+            rotatingHandle->rotSpeed = 0x180;
         }
 
-        if (gPlayer.speedAirX > 0) {
+        if (gPlayer.qSpeedAirX > 0) {
             gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
-            if (I(gPlayer.y) > y) {
+            if (I(gPlayer.qWorldY) > y) {
                 s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
                 gPlayer.charState = CHARSTATE_GRABBING_HANDLE_A;
-                rotatingHandle->unk40 = 0;
+                rotatingHandle->quartile = 0;
             } else {
                 s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
                 gPlayer.charState = CHARSTATE_GRABBING_HANDLE_B;
-                rotatingHandle->unk40 = 1;
+                rotatingHandle->quartile = 1;
             }
         } else {
             gPlayer.moveState |= 1;
-            if (I(gPlayer.y) > y) {
+            if (I(gPlayer.qWorldY) > y) {
                 s->frameFlags &= ~SPRITE_FLAG_MASK_X_FLIP;
                 gPlayer.charState = CHARSTATE_GRABBING_HANDLE_A;
-                rotatingHandle->unk40 = 2;
+                rotatingHandle->quartile = 2;
             } else {
                 s->frameFlags |= SPRITE_FLAG_MASK_X_FLIP;
                 gPlayer.charState = CHARSTATE_GRABBING_HANDLE_B;
-                rotatingHandle->unk40 = 3;
+                rotatingHandle->quartile = 3;
             }
         }
 
-        gPlayer.x = Q(x);
-        gPlayer.y = Q(y);
+        gPlayer.qWorldX = Q(x);
+        gPlayer.qWorldY = Q(y);
         gPlayer.variant = 0;
         gPlayer.unk6C = 1;
         m4aSongNumStart(SE_SPEED_BOOSTER);
         gPlayer.unk62 = 0;
-        gPlayer.moveState |= MOVESTATE_400000;
+        gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
         gCurTask->main = Task_Rotating;
     } else {
         if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
@@ -144,129 +144,149 @@ static void Task_Idle(void)
     DisplaySprite(s);
 }
 
-// (95.57%) https://decomp.me/scratch/RaPDV
-NONMATCH("asm/non_matching/game/interactables_1/Task_Rotating.inc", static void Task_Rotating())
+// (95.52%) https://decomp.me/scratch/RaPDV
+// (99.80%) https://decomp.me/scratch/zEnJP
+NONMATCH("asm/non_matching/game/interactables_1/Task_Rotating.inc", void Task_Rotating())
 {
-    Sprite_RotatingHandle *rotatingHandle = TASK_DATA(gCurTask);
-    Sprite *s = &rotatingHandle->s;
-    MapEntity *me = rotatingHandle->base.me;
-    u64 temp;
-    u32 cycle;
-    s32 x, y;
+    MapEntity *me;
+    Sprite *sprite;
+    Sprite_RotatingHandle *rotatingHandle;
+    u16 temp;
+    u16 temp2;
+    u16 temp3;
+
+    s32 posX, posY;
 
     s32 cos;
     s32 sin;
 
-    x = TO_WORLD_POS(rotatingHandle->base.spriteX, rotatingHandle->base.regionX);
-    y = TO_WORLD_POS(me->y, rotatingHandle->base.regionY);
+    rotatingHandle = TASK_DATA(gCurTask);
+    // asm("":::"r8", "r9");
+    sprite = &rotatingHandle->s;
+    me = rotatingHandle->base.me;
 
-    rotatingHandle->unk3C = (rotatingHandle->unk3C + rotatingHandle->unk3E) & 0x3FF0;
-    cycle = ONE_CYCLE;
-    temp = rotatingHandle->unk3C >> 4;
+    posX = TO_WORLD_POS(rotatingHandle->base.spriteX, rotatingHandle->base.regionX);
+    posY = TO_WORLD_POS(me->y, rotatingHandle->base.regionY);
 
-    s->x = x - gCamera.x;
-    s->y = y - gCamera.y;
+    rotatingHandle->rot = (rotatingHandle->rot + rotatingHandle->rotSpeed) & 0x3FF0;
+    // unused but required for match
+    temp3 = CLAMP_SIN_PERIOD(rotatingHandle->rot) + 0;
+    // asm("":::"r8", "r9");
+    temp2 = rotatingHandle->rot >> 4;
+    temp = temp2;
+
+    sprite->x = posX - gCamera.x;
+    sprite->y = posY - gCamera.y;
 
     if (!PLAYER_IS_ALIVE) {
         gCurTask->main = Task_AfterJump;
-        DisplaySprite(s);
+        DisplaySprite(sprite);
         return;
     }
 
     if (gPlayer.frameInput & gPlayerControls.jump) {
-#ifndef NON_MATCHING
-        register u32 temp2 asm("r4");
-#else
-        u32 temp2;
-#endif
-        gPlayer.transition = PLTRANS_PT5;
+        s16 r4;
+        gPlayer.transition = PLTRANS_UNCURL;
         me->x = rotatingHandle->base.spriteX;
         Player_TransitionCancelFlyingAndBoost(&gPlayer);
-        sub_8023B5C(&gPlayer, 9);
-        gPlayer.spriteOffsetX = 6;
-        gPlayer.spriteOffsetY = 9;
-        gPlayer.moveState &= ~MOVESTATE_400000;
+        PLAYERFN_CHANGE_SHIFT_OFFSETS(&gPlayer, 6, 9);
+        gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
         gCurTask->main = Task_AfterJump;
 
-        switch (rotatingHandle->unk40) {
+        switch (rotatingHandle->quartile) {
             case 0:
-                temp2 = (0x20 - temp) & cycle;
+                r4 = CLAMP_SIN_PERIOD(0x20 - temp) + 0;
                 sin = SIN(temp);
-                gPlayer.x += sin >> 1;
+                gPlayer.qWorldX += sin >> 1;
                 cos = COS(temp);
-                gPlayer.y += cos >> 1;
+                gPlayer.qWorldY += cos >> 1;
                 break;
             case 1:
-                temp2 = (temp + 0x20) & cycle;
-                sin = SIN(temp);
-                gPlayer.x += sin >> 1;
+#ifndef NON_MATCHING
+                do {
+#endif
+                    r4 = CLAMP_SIN_PERIOD(temp + 0x20) + 0;
+                    sin = SIN(temp);
+#ifndef NON_MATCHING
+                } while (0);
+#endif
+                gPlayer.qWorldX += sin >> 1;
                 cos = COS(temp);
-                gPlayer.y -= cos >> 1;
+                gPlayer.qWorldY -= cos >> 1;
                 break;
             case 2:
-                temp2 = (temp + 0x1E0) & cycle;
+                r4 = CLAMP_SIN_PERIOD(temp + 0x1E0) + 0;
                 sin = SIN(temp);
-                gPlayer.x -= sin >> 1;
+                gPlayer.qWorldX -= sin >> 1;
                 cos = COS(temp);
-                gPlayer.y += cos >> 1;
-
+#ifndef NON_MATCHING
+                asm("" ::: "r0");
+#endif
+                gPlayer.qWorldY += cos >> 1;
                 break;
             case 3: {
-#ifndef NON_MATCHING
-                register s32 r1 asm("r1") = 0x220;
-#else
-                s32 r1 = 0x220;
-#endif
-                temp2 = (r1 - temp) & cycle;
+                r4 = CLAMP_SIN_PERIOD(0x220 - temp) + 0;
                 sin = SIN(temp);
-                gPlayer.x -= sin >> 1;
+                gPlayer.qWorldX -= sin >> 1;
                 cos = COS(temp);
-                gPlayer.y -= cos >> 1;
+                gPlayer.qWorldY -= cos >> 1;
                 break;
             }
             default:
-                temp2 = 0;
+                r4 = 0;
                 break;
         }
-        gPlayer.speedAirX = Div(COS(temp2) << 1, 0x11);
-        gPlayer.speedAirY = Div(SIN(temp2) << 1, 0x11);
+        gPlayer.qSpeedAirX = Div(COS(r4) << 1, 0x11);
+        gPlayer.qSpeedAirY = Div(SIN(r4) << 1, 0x11);
         gPlayer.charState = CHARSTATE_CURLED_IN_AIR;
         gPlayer.unk6C = 1;
     } else {
         u8 r2;
         if (gPlayer.charState == CHARSTATE_GRABBING_HANDLE_A) {
-            s32 new_var;
             r2 = Div(temp, 0x56);
-            new_var = 0xB;
-            if (r2 > new_var) {
+            if (r2 > 0xB) {
                 r2 = 0xB;
             }
+            sprite->graphics.anim = SA2_ANIM_ROTATING_HANDLE;
+            sprite->variant = r2;
+            sprite->prevVariant = 0xFF;
+            gPlayer.variant = r2;
+            gPlayer.unk6C = 1;
+            gPlayer.qWorldX = Q_24_8(posX);
+            gPlayer.qWorldY = Q_24_8(posY);
+            gPlayer.qSpeedAirX = 0;
+            gPlayer.qSpeedAirY = 0;
         } else {
             r2 = Div(temp, 0x56);
             if (r2 > 0xB) {
                 r2 = 0xB;
             }
+            sprite->graphics.anim = SA2_ANIM_ROTATING_HANDLE;
+            sprite->variant = r2;
+            sprite->prevVariant = 0xFF;
+            gPlayer.variant = r2;
+            gPlayer.unk6C = 1;
+            gPlayer.qWorldX = Q_24_8(posX);
+            gPlayer.qWorldY = Q_24_8(posY);
+            gPlayer.qSpeedAirX = 0;
+            gPlayer.qSpeedAirY = 0;
         }
-
-        s->graphics.anim = SA2_ANIM_ROTATING_HANDLE;
-        s->variant = r2;
-        s->prevVariant = -1;
-        gPlayer.variant = r2;
-        gPlayer.unk6C = 1;
-        gPlayer.x = Q(x);
-        gPlayer.y = Q(y);
-        gPlayer.speedAirX = 0;
-        gPlayer.speedAirY = 0;
     }
 
-    if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
-        me->x = rotatingHandle->base.spriteX;
-        TaskDestroy(gCurTask);
+    if (IS_OUT_OF_CAM_RANGE(sprite->x, sprite->y)) {
+#ifndef NON_MATCHING
+        do {
+#endif
+            me->x = rotatingHandle->base.spriteX;
+            TaskDestroy(gCurTask);
+#ifndef NON_MATCHING
+        } while (0);
+#endif
         return;
     }
 
-    UpdateSpriteAnimation(s);
-    DisplaySprite(s);
+    UpdateSpriteAnimation(sprite);
+    DisplaySprite(sprite);
 }
 END_NONMATCH
 
@@ -280,14 +300,14 @@ static void Task_AfterJump(void)
 
     u8 temp3;
 
-    rotatingHandle->unk3E--;
-    if (rotatingHandle->unk3E < 0xE0) {
-        rotatingHandle->unk3E = 0xE0;
+    rotatingHandle->rotSpeed--;
+    if (rotatingHandle->rotSpeed < 0xE0) {
+        rotatingHandle->rotSpeed = 0xE0;
     }
 
-    rotatingHandle->unk3C = (rotatingHandle->unk3C + rotatingHandle->unk3E) & 0x3FF0;
+    rotatingHandle->rot = (rotatingHandle->rot + rotatingHandle->rotSpeed) & 0x3FF0;
 
-    temp3 = Div(rotatingHandle->unk3C >> 4, 85);
+    temp3 = Div(rotatingHandle->rot >> 4, 85);
     if (temp3 > 0xB) {
         temp3 = 0xB;
     }
@@ -306,8 +326,8 @@ static void Task_AfterJump(void)
     }
 
     if (temp3 == 0) {
-        rotatingHandle->unk3C = 0;
-        rotatingHandle->unk3E = 0;
+        rotatingHandle->rot = 0;
+        rotatingHandle->rotSpeed = 0;
         gCurTask->main = Task_Idle;
     }
     UpdateSpriteAnimation(s);

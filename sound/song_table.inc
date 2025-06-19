@@ -229,7 +229,7 @@ mAlignWord
 mAlignWord
 	song C_DECL(se_sonic_insta_shield), 2, 2
 mAlignWord
-	song C_DECL(se_114), 2, 2
+	song C_DECL(se_grinding), 2, 2
 mAlignWord
 	song C_DECL(se_brake), 2, 2
 mAlignWord
@@ -649,7 +649,7 @@ mAlignWord
 mAlignWord
 	song C_DECL(se_music_plant_horn3), 2, 2
 mAlignWord
-	song C_DECL(se_music_plant_guitar_string), 2, 2
+	song C_DECL(se_music_plant_chord), 2, 2
 mAlignWord
 	song C_DECL(se_music_plant_piano), 2, 2
 mAlignWord

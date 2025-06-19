@@ -1,28 +1,38 @@
-#include "game/title_screen.h"
 #include "core.h"
 #include "flags.h"
 #include "global.h"
+#include "malloc_vram.h"
 #include "core.h"
-#include "lib/m4a/m4a.h"
+#include "trig.h"
 #include "task.h"
 #include "sprite.h"
-#include "game/save.h"
-#include "game/stage/screen_fade.h"
+#include "lib/m4a/m4a.h"
 #include "input_recorder.h"
-#include "game/math.h"
-#include "game/math.h"
-#include "game/options_screen.h"
-#include "game/stage/stage.h"
-#include "game/time_attack/lobby.h"
-#include "constants/zones.h"
-#include "data/recordings.h"
-#include "trig.h"
-#include "game/backgrounds.h"
-#include "game/multiplayer/mode_select.h"
+
+#include "game/title_screen.h"
+#include "game/bg_palette_effects.h"
 #include "game/character_select.h"
-#include "malloc_vram.h"
+#include "game/math.h"
+#include "game/multiplayer/mode_select.h"
+#include "game/options_screen.h"
+#include "game/sa1_sa2_shared/demo_manager.h"
+#include "game/save.h"
+#include "game/stage/stage.h"
+#include "game/stage/screen_fade.h"
+#include "game/time_attack/lobby.h"
 #include "game/time_attack/mode_select.h"
-#include "game/sa1_leftovers/demo_manager.h"
+
+#include "data/recordings.h"
+
+// Temp hack to allow playing the special stages from the chao garden
+#if PORTABLE
+#include "game/sa1_sa2_shared/unused_level_select.h"
+#endif
+
+#if (GAME == GAME_SA1)
+#include "constants/songs.h"
+#endif
+#include "constants/zones.h"
 
 #include "game/assets/compressed/roms.h"
 
@@ -49,12 +59,12 @@ typedef struct {
     // fade s
     ScreenFade unk270;
 
-    struct UNK_3005B80_UNK4 unk27C;
+    BgPaletteEffectState bgEffect;
 
     // Something to do with the wave effects
-    u16 wavesTranslationX[DISPLAY_HEIGHT];
-    u32 unk3F4[DISPLAY_HEIGHT][4];
-    u16 wavesTranslationY[DISPLAY_HEIGHT];
+    u16 wavesTransformX[DISPLAY_HEIGHT];
+    BgAffineReg unk3F4[DISPLAY_HEIGHT];
+    u16 wavesTransformY[DISPLAY_HEIGHT];
 
     u16 unkF34;
     u16 unkF36;
@@ -107,7 +117,7 @@ typedef struct {
     u8 unk207;
 } LensFlare; /* size 0x208 */
 
-static void sub_808D874(void);
+static void ResetWavesPalette(void);
 
 static void InitTitleScreenBackgrounds(TitleScreen *);
 static void InitTitleScreenUI(TitleScreen *);
@@ -235,7 +245,7 @@ static const TileInfo sMenuTiles[] = {
     { 0x28, SA2_ANIM_SOME_JAPANESE_TXT, SA2_ANIM_VARIANT_SOME_JAPANESE_TXT_7 },
 };
 
-static const u8 sUnknown_080E0EF4[] = INCBIN_U8("graphics/80E0EF4.gbapal");
+static const u16 sWavesBrightnessPalette[] = INCBIN_U16("graphics/80E0EF4.gbapal");
 
 // Each value is scan line which the brightness should be increased
 // 0 being top 160 being bottom
@@ -285,7 +295,7 @@ void CreateTitleScreen(void)
     struct Task *t;
     TitleScreen *titleScreen;
     ScreenFade *fade;
-    struct UNK_3005B80_UNK4 *config27C;
+    BgPaletteEffectState *bgEffect;
     s32 i, val;
     s16 denom;
 
@@ -309,14 +319,13 @@ void CreateTitleScreen(void)
     for (i = 0; i < DISPLAY_HEIGHT; i++) {
         denom = Div(65536, (i + 1) * 8);
 
-        // I.E: (512 * demon) - Not sure why it uses this when it's constant
         val = (titleScreen->unkF34 * denom) >> 8;
 
         // Goes from 16384 -> 102 in an log curve \_
-        titleScreen->wavesTranslationX[i] = val;
+        titleScreen->wavesTransformX[i] = val;
         // Goes from 4 -> 642 in steps of 4 but becomes
         // a slightly more jagged line as i increases
-        titleScreen->wavesTranslationY[i] = Div(65536, val);
+        titleScreen->wavesTransformY[i] = Div(65536, val);
     };
 
     fade = &titleScreen->unk270;
@@ -327,17 +336,17 @@ void CreateTitleScreen(void)
     fade->bldCnt = (BLDCNT_EFFECT_LIGHTEN | BLDCNT_TGT1_ALL | BLDCNT_TGT2_ALL);
     fade->bldAlpha = 0;
 
-    config27C = &titleScreen->unk27C;
-    config27C->unk0 = 0;
-    config27C->unk2 = 0;
-    config27C->unk34 = titleScreen->wavesTopOffset;
-    config27C->unk1 = 0xE;
-    config27C->unk4 = sWavesVerticalBrightnessGradiant;
-    config27C->unk8 = sUnknown_080E0EF4;
-    config27C->unk36 = 0;
+    bgEffect = &titleScreen->bgEffect;
+    bgEffect->unk0 = 0;
+    bgEffect->cursor = 0;
+    bgEffect->offset = titleScreen->wavesTopOffset;
+    bgEffect->bgPalId = 14;
+    bgEffect->pattern = sWavesVerticalBrightnessGradiant;
+    bgEffect->palette = sWavesBrightnessPalette;
+    bgEffect->unk36 = 0;
 
-    gUnknown_03005B80.unk0 = config27C;
-    gUnknown_03005B80.unk4 = &titleScreen->unk0;
+    gBgPaletteEffects.state = bgEffect;
+    gBgPaletteEffects.background = &titleScreen->unk0;
 
     InitTitleScreenBackgrounds(titleScreen);
     m4aSongNumStart(MUS_INTRO);
@@ -553,7 +562,13 @@ static void InitTitleScreenUI(TitleScreen *titleScreen)
     s->graphics.anim = SA2_ANIM_TITLE_COPYRIGHT;
     s->variant = SA2_ANIM_VARIANT_COPYRIGHT_2003;
     s->prevVariant = -1;
+#if PLATFORM_GBA
     s->x = 0;
+#else
+    // Only display the COPYRIGHT message, not the "Licensed by ***" msg
+    // TODO: Split the graphics properly.
+    s->x = DISPLAY_WIDTH - 136;
+#endif
     s->y = DISPLAY_HEIGHT - 30; // set to the screen's bottom
     s->graphics.size = 0;
     s->oamFlags = SPRITE_OAM_ORDER(4);
@@ -946,7 +961,7 @@ static void Task_IntroSkyAnim(void)
         bg0->unk20 = 0;
         bg0->unk22 = 0;
         bg0->unk24 = 0;
-        bg0->targetTilesX = 0x1A;
+        bg0->targetTilesX = 26;
         bg0->targetTilesY = 10;
         bg0->paletteOffset = 0;
         bg0->flags = BACKGROUND_FLAG_4 | BACKGROUND_FLAGS_BG_ID(2);
@@ -1270,7 +1285,11 @@ static void Task_HandleTitleScreenExit(void)
                 CreateOptionsScreen(0);
                 break;
             case SinglePlayerMenuIndex(MENU_ITEM_TINY_CHAO_GARDEN):
+#if PORTABLE
+                CreateUnusedLevelSelect();
+#else
                 LoadTinyChaoGarden();
+#endif
                 break;
             case SPECIAL_MENU_INDEX_MULTI_PLAYER:
                 gGameMode = GAME_MODE_MULTI_PLAYER;
@@ -1440,30 +1459,30 @@ static void WavesBackgroundAnim(TitleScreen *titleScreen)
         titleScreen->unkF3A = 7680;
     }
 
-    gUnknown_03001870[gUnknown_03004D50++] = sub_808D874;
+    gVBlankCallbacks[gNumVBlankCallbacks++] = ResetWavesPalette;
     gFlags |= FLAGS_10;
 
-    titleScreen->unk27C.unk34 = (titleScreen->wavesTopOffset - 2);
+    titleScreen->bgEffect.offset = (titleScreen->wavesTopOffset - 2);
 
-    gHBlankCallbacks[gNumHBlankCallbacks++] = sub_808DB2C;
+    gHBlankCallbacks[gNumHBlankCallbacks++] = BgPaletteEffectGradient;
 
     gFlags |= FLAGS_EXECUTE_HBLANK_CALLBACKS;
-    gFlags |= FLAGS_4;
-    gUnknown_03002A80 = 16;
-    gUnknown_03002878 = (void *)REG_ADDR_BG2PA;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
+    gHBlankCopySize = 16;
+    gHBlankCopyTarget = (void *)REG_ADDR_BG2PA;
 
     // TODO: not sure unk3F4 is the correct type
-    gBgOffsetsHBlank = &titleScreen->unk3F4[0][0];
-    pointer = &titleScreen->unk3F4[0][0];
+    gBgOffsetsHBlank = titleScreen->unk3F4;
+    pointer = (void *)titleScreen->unk3F4;
     for (i = 0, j = 0; i < DISPLAY_HEIGHT; i++) {
         s32 temp, r3;
         if (titleScreen->wavesTopOffset <= i) {
-            r3 = titleScreen->wavesTranslationX[i - titleScreen->wavesTopOffset];
+            r3 = titleScreen->wavesTransformX[i - titleScreen->wavesTopOffset];
             *pointer++ = r3;
             *pointer++ = 0;
 
             // * DISPLAY_WIDTH
-            temp = (titleScreen->wavesTranslationY[i - titleScreen->wavesTopOffset] * 0xF000) >> 8;
+            temp = (titleScreen->wavesTransformY[i - titleScreen->wavesTopOffset] * 0xF000) >> 8;
             temp = (0xF000 - (temp)) >> 1;
             temp = ((temp)*r3) >> 8;
 
@@ -1674,7 +1693,7 @@ static void CreateLensFlareAnimation(void)
         s->frameFlags = i | (SPRITE_FLAG_MASK_ROT_SCALE_DOUBLE_SIZE | SPRITE_FLAG_MASK_ROT_SCALE_ENABLE);
 
         transform->rotation = 0;
-        transform->height = transform->width = posX * 2 + 0xB0;
+        transform->qScaleY = transform->qScaleX = posX * 2 + 0xB0;
         transform->x = lensFlare->posSequenceX[i];
         transform->y = lensFlare->posSequenceY[i];
 
@@ -1723,44 +1742,53 @@ static void Task_LensFlareAnim(void)
     };
 }
 
-#define TinyChaoGardenConfig ((u32 *)(EWRAM_START + 0x8))
-
+#include "../chao_garden/include/language.h"
+#include "../chao_garden/include/program_params.h"
 static void LoadTinyChaoGarden(void)
 {
     u32 chaoGardenLang;
-    u32 unk374 = gLoadedSaveGame->score;
+#if (GAME == GAME_SA2)
+    u32 score = gLoadedSaveGame->score;
 
     switch (gLoadedSaveGame->language) {
         case LANG_JAPANESE:
-            chaoGardenLang = 0;
+            chaoGardenLang = TCGLANG_JAPANESE;
             break;
         case LANG_GERMAN:
-            chaoGardenLang = 3;
+            chaoGardenLang = TCGLANG_GERMAN;
             break;
         case LANG_FRENCH:
-            chaoGardenLang = 2;
+            chaoGardenLang = TCGLANG_FRENCH;
             break;
         case LANG_SPANISH:
-            chaoGardenLang = 4;
+            chaoGardenLang = TCGLANG_SPANISH;
             break;
         case LANG_ENGLISH:
         case LANG_ITALIAN:
-            chaoGardenLang = 1;
+            chaoGardenLang = TCGLANG_ENGLISH;
             break;
         default:
             chaoGardenLang = gLoadedSaveGame->language & 1;
             break;
     }
+#endif
 
     gFlags |= FLAGS_8000;
+#if (GAME == GAME_SA1)
+    m4aSongNumStop(MUS_CHARACTER_SELECTION);
+#else
     m4aMPlayAllStop();
+#endif
     m4aSoundVSyncOff();
     LZ77UnCompWram(gMultiBootProgram_TinyChaoGarden, (void *)EWRAM_START);
 
-    // TODO: what is going on here, doesn't work as a struct
-    // TODO: what's unk374
-    TinyChaoGardenConfig[0] = unk374;
+#if (GAME == GAME_SA1)
+    TinyChaoGardenConfig[0] = gLoadedSaveGame.score;
+    TinyChaoGardenConfig[1] = gLoadedSaveGame.language;
+#elif (GAME == GAME_SA2)
+    TinyChaoGardenConfig[0] = score;
     TinyChaoGardenConfig[1] = chaoGardenLang;
+#endif
     // sessionId?
     TinyChaoGardenConfig[2] = ((Random() + gFrameCount) << 8) + Random();
     SoftResetExram(0);
@@ -1796,7 +1824,7 @@ void CreateTitleScreenAtSinglePlayerMenu(void)
 static void SkipIntro(TitleScreen *titleScreen)
 {
     ScreenFade *fade = &titleScreen->unk270;
-    gFlags &= ~FLAGS_4;
+    gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
 
     fade->window = 1;
     fade->brightness = 0;
@@ -1874,7 +1902,7 @@ static void Task_IntroWaitUntilTitleScreenFanfare(void)
     // Wait for the fanfare to start on the intro music
     // before playing annoucement
     if (titleScreen->animFrame > FRAME_TIME_SECONDS(1)) {
-        gFlags &= ~FLAGS_4;
+        gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
         titleScreen->animFrame = 0;
         m4aSongNumStart(VOICE__ANNOUNCER__SONIC_ADVANCE_2);
         gCurTask->main = Task_PressStartMenuMain;
@@ -1892,9 +1920,7 @@ static void Task_StartTitleScreenDemo(void)
     gSelectedCharacter = CHARACTER_SONIC;
     gCurrentLevel = sDemoLevels[0];
 
-    gDemoPlayCounter++;
-    // Don't count higher than 3
-    gDemoPlayCounter &= 3;
+    gDemoPlayCounter = (gDemoPlayCounter + 1) % 4u;
 
     gGameMode = GAME_MODE_SINGLE_PLAYER;
 
@@ -1970,9 +1996,8 @@ UNUSED void sub_808D824(void)
     TaskDestroy(gCurTask);
 }
 
-// Might not in game/title_screen
-static void sub_808D874(void)
+static void ResetWavesPalette(void)
 {
-    CpuFastSet(sUnknown_080E0EF4, (void *)(BG_PLTT + 0x1C0), 1);
+    CpuFastSet(sWavesBrightnessPalette, (u16 *)BG_PLTT + 224, 1);
     REG_SIOCNT |= SIO_INTR_ENABLE;
 }

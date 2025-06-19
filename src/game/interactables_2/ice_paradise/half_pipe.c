@@ -76,8 +76,8 @@ static void Task_HalfPipeSequenceMain(void)
     } else {
         u16 posWithinHalfPipe;
         gPlayer.moveState |= MOVESTATE_8000;
-        posWithinHalfPipe = halfPipe->direction == HALF_PIPE_DIRECTION_FORWARD ? I(gPlayer.x) - (halfPipe->x + halfPipe->offsetX)
-                                                                               : (halfPipe->x + halfPipe->width) - I(gPlayer.x);
+        posWithinHalfPipe = halfPipe->direction == HALF_PIPE_DIRECTION_FORWARD ? I(gPlayer.qWorldX) - (halfPipe->x + halfPipe->offsetX)
+                                                                               : (halfPipe->x + halfPipe->width) - I(gPlayer.qWorldX);
         UpdatePlayerPosOnHalfPipe(halfPipe, posWithinHalfPipe);
     }
 }
@@ -92,9 +92,9 @@ static void UpdatePlayerPosOnHalfPipe(Sprite_IceParadiseHalfPipe *halfPipe, u16 
 
     {
 #ifndef NON_MATCHING
-        register s16 temp asm("r0") = abs(gPlayer.speedAirX);
+        register s16 temp asm("r0") = abs(gPlayer.qSpeedAirX);
 #else
-        s16 temp = abs(gPlayer.speedAirX);
+        s16 temp = abs(gPlayer.qSpeedAirX);
 #endif
         temp = temp << 0x10 >> 0x10;
         airSpeed = temp;
@@ -112,8 +112,8 @@ static void UpdatePlayerPosOnHalfPipe(Sprite_IceParadiseHalfPipe *halfPipe, u16 
     sin += Q(r3);
     sin = I(sin * temp2);
 
-    gPlayer.y = halfPipe->basePlayerY - sin;
-    gPlayer.speedAirY = 0;
+    gPlayer.qWorldY = halfPipe->basePlayerY - sin;
+    gPlayer.qSpeedAirY = 0;
     gPlayer.moveState &= ~MOVESTATE_IN_AIR;
 
     if (!(gPlayer.moveState & MOVESTATE_4)) {
@@ -135,8 +135,8 @@ static bool32 PlayerWithinHalfPipe(Sprite_IceParadiseHalfPipe *halfPipe)
 {
     s16 posX = halfPipe->x - gCamera.x;
     s16 posY = halfPipe->y - gCamera.y;
-    s16 playerX = I(gPlayer.x) - gCamera.x;
-    s16 playerY = I(gPlayer.y) - gCamera.y;
+    s16 playerX = I(gPlayer.qWorldX) - gCamera.x;
+    s16 playerY = I(gPlayer.qWorldY) - gCamera.y;
 
     if ((posX + halfPipe->offsetX) <= playerX && (posX + halfPipe->offsetX) + (halfPipe->width - halfPipe->offsetX) >= playerX) {
         if (posY + halfPipe->offsetY <= playerY && (posY + halfPipe->offsetY) + (halfPipe->height - halfPipe->offsetY) >= playerY) {
@@ -167,7 +167,7 @@ static void TaskDestructor_HalfPipe(struct Task *t)
 
 static void StartHalfPipeSequence(Sprite_IceParadiseHalfPipe *halfPipe)
 {
-    halfPipe->basePlayerY = gPlayer.y;
+    halfPipe->basePlayerY = gPlayer.qWorldY;
     gCurTask->main = Task_HalfPipeSequenceMain;
 }
 
@@ -175,7 +175,7 @@ static void EndHalfPipeSequence(Sprite_IceParadiseHalfPipe *halfPipe) { gCurTask
 
 static bool32 sub_80789AC(Sprite_IceParadiseHalfPipe *halfPipe)
 {
-    if (gPlayer.speedAirX <= -Q(2) || gPlayer.speedAirX >= Q(2.25)) {
+    if (gPlayer.qSpeedAirX <= -Q(2) || gPlayer.qSpeedAirX >= Q(2.25)) {
         if (gPlayer.frameInput & gPlayerControls.jump) {
             gPlayer.transition = PLTRANS_INIT_JUMP;
         } else {
@@ -213,12 +213,12 @@ static bool32 ShouldTriggerHalfPipe(Sprite_IceParadiseHalfPipe *halfPipe)
 
     switch (halfPipe->direction) {
         case HALF_PIPE_DIRECTION_FORWARD:
-            if (gPlayer.speedAirX < Q(2.25)) {
+            if (gPlayer.qSpeedAirX < Q(2.25)) {
                 return FALSE;
             }
             break;
         case HALF_PIPE_DIRECTION_REVERSE:
-            if (gPlayer.speedAirX > -Q(2.25)) {
+            if (gPlayer.qSpeedAirX > -Q(2.25)) {
                 return FALSE;
             }
             break;

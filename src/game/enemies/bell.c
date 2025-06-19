@@ -7,7 +7,7 @@
 #include "game/entity.h"
 #include "game/enemies/bell.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "constants/animations.h"
 
@@ -93,7 +93,7 @@ void sub_8054D20(void)
 
     ENEMY_UPDATE_POSITION_STATIC(bell, s, pos.x, pos.y);
 
-    sub_800C84C(s, pos.x, pos.y);
+    Coll_Player_Projectile(s, pos.x, pos.y);
 
     if (IS_OUT_OF_CAM_RANGE(s->x, s->y)) {
         SET_MAP_ENTITY_NOT_INITIALIZED(me, bell->base.spriteX);

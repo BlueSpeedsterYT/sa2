@@ -19,6 +19,10 @@
 #include "multi_boot.h"
 #include "sio32_multi_load.h"
 
+#if COLLECT_RINGS_ROM
+#include "game/multiplayer/mp_player.h"
+#endif
+
 #include "data/collect_rings.h"
 
 #include "constants/animations.h"
@@ -47,20 +51,31 @@ struct MultiplayerSinglePakResultsScreen {
     u32 unk43C;
 }; /* size 0x440 */
 
-struct MultiplayerSinglePakResultsScreen *sub_8082B1C(s16);
+struct MultiplayerSinglePakResultsScreen *InitAndGetResultsScreenObject(s16);
 
 void sub_8081FB0(void);
+void sub_80823FC(void);
+void sub_8082AA8(void);
+void Task_8082630(void);
+void sub_8082788(void);
+void sub_808267C(void);
+void sub_8082788(void);
 void sub_8082038(struct MultiplayerSinglePakResultsScreen *);
 void sub_8082B80(struct MultiplayerSinglePakResultsScreen *);
 void sub_8082C58(struct MultiplayerSinglePakResultsScreen *);
 void sub_8082CB4(struct MultiplayerSinglePakResultsScreen *);
 void sub_8082BF8(struct MultiplayerSinglePakResultsScreen *);
 
+void sub_8082CEC(Sprite *s, void *vramAddr, u16 animId, u8 variant, s16 x, s16 y, u16 oamFlags, u8 unk25, u32 unk10);
+
+// TODO: Maybe rename because this is also called before the 1st round?
 void CreateMultiplayerSinglePakResultsScreen(u32 a)
 {
     struct MultiplayerSinglePakResultsScreen *resultsScreen;
+#ifndef COLLECT_RINGS_ROM
     const u8 *tilemaps = gCollectRingsTilemaps;
     const u8 *bgStageTileset = gCollectRingsBgStageTileset;
+#endif
 
     gMultiplayerMissingHeartbeats[3] = 0;
     gMultiplayerMissingHeartbeats[2] = 0;
@@ -78,14 +93,21 @@ void CreateMultiplayerSinglePakResultsScreen(u32 a)
     m4aSoundVSyncOn();
     gGameMode = GAME_MODE_MULTI_PLAYER_COLLECT_RINGS;
 
+#ifndef COLLECT_RINGS_ROM
     CpuFastCopy(bgStageTileset, (void *)BG_VRAM, SIO32ML_BLOCK_SIZE);
     CpuFastCopy(tilemaps, (void *)EWRAM_START + 0x33000, EWRAM_SIZE - 0x33000);
+#endif
 
     gTilemapsRef = *((Tilemap ***)(EWRAM_START + 0x33000));
+#if COLLECT_RINGS_ROM
+    gRefSpriteTables = (const struct SpriteTables *)(EWRAM_START + 0x20000);
+    gMultiplayerLanguage = 0;
+#else
     gMultiplayerLanguage = gLoadedSaveGame->language;
+#endif
 
     sub_8081FB0();
-    resultsScreen = sub_8082B1C(a);
+    resultsScreen = InitAndGetResultsScreenObject(a);
     sub_8082038(resultsScreen);
     sub_8082B80(resultsScreen);
     sub_8082BF8(resultsScreen);
@@ -143,9 +165,23 @@ void sub_8082038(struct MultiplayerSinglePakResultsScreen *screen)
     DrawBackground(background);
 }
 
-void sub_80823FC(void);
+#if COLLECT_RINGS_ROM
+void sub_8082B80(struct MultiplayerSinglePakResultsScreen *resultsScreen)
+{
+    s16 i;
+    for (i = 0; i < 4; i++) {
+        u16 val;
+        if (i == SIO_MULTI_CNT->id) {
+            val = 0;
+        } else {
+            val = gUnknown_02015B18[i];
+        }
+        sub_8082CEC(&resultsScreen->unk80[i].unk0, OBJ_VRAM0 + (i * 0x800), val, 0, 0x78, i * 40 + 20, SPRITE_OAM_ORDER(16), i, 0x1000);
+    }
+}
+#endif
 
-void sub_808207C(void)
+void Task_MultiplayerSinglePakResultsScreenInit(void)
 {
     u32 i;
     Sprite *s;
@@ -158,6 +194,11 @@ void sub_808207C(void)
     if (gMultiSioStatusFlags & MULTI_SIO_PARENT) {
         gMultiSioSend.pat0.unk3 = gMultiplayerLanguage;
     }
+#if COLLECT_RINGS_ROM
+    else if (gMultiSioRecv->pat0.unk0 == 0x4010) {
+        gMultiplayerLanguage = gMultiSioRecv->pat0.unk3;
+    }
+#endif
 
     resultsScreen = TASK_DATA(gCurTask);
 #ifndef NON_MATCHING
@@ -168,13 +209,12 @@ void sub_808207C(void)
     gBldRegs.bldY = 0;
 
     if (++resultsScreen->unk430 > 0xF0) {
+#ifndef COLLECT_RINGS_ROM
         gFlags &= ~0x8000;
+#endif
 
         if (resultsScreen->unk434) {
             for (i = 0; i < 3; i++) {
-#ifndef NON_MATCHING
-                s32 var;
-#endif
                 s = &resultsScreen->unk370[i];
                 s->graphics.dest = (void *)(OBJ_VRAM0 + 0x2500 + (i * 0x180));
 
@@ -182,9 +222,20 @@ void sub_808207C(void)
                 s->y = 0;
                 s->oamFlags = SPRITE_OAM_ORDER(4);
                 s->graphics.size = 0;
+
 #ifndef NON_MATCHING
-                var = 0x44c;
-                asm("" ::"r"(var));
+#if COLLECT_RINGS_ROM
+                do
+#endif
+                {
+
+                    s16 var = SA2_ANIM_MP_SINGLE_PAK_RESULTS_ROUND;
+                    asm("" ::"r"(var));
+                }
+#if COLLECT_RINGS_ROM
+
+                while (0);
+#endif
 #endif
                 switch (gMultiplayerLanguage) {
 #ifdef JAPAN
@@ -215,7 +266,7 @@ void sub_808207C(void)
                 UpdateSpriteAnimation(s);
             }
         }
-
+#ifndef COLLECT_RINGS_ROM
         if (gMultiSioStatusFlags & MULTI_SIO_PARENT) {
             s = &resultsScreen->unk400;
             s->x = (DISPLAY_WIDTH / 2);
@@ -256,6 +307,7 @@ void sub_808207C(void)
             s->frameFlags = 0;
             UpdateSpriteAnimation(s);
         }
+#endif
         resultsScreen->unk430 = 0;
         gCurTask->main = sub_80823FC;
         sub_80823FC();
@@ -288,10 +340,6 @@ void sub_808207C(void)
     }
 }
 
-void sub_8082AA8(void);
-void sub_8082630(void);
-void sub_8082788(void);
-
 void sub_80823FC(void)
 {
     Background *background;
@@ -304,7 +352,11 @@ void sub_80823FC(void)
     gMultiplayerConnections = ((gMultiSioStatusFlags & MULTI_SIO_ALL_CONNECTED) >> 8);
     packet = &gMultiSioRecv[0];
     if (packet->pat0.unk0 == 0x4012) {
+#if COLLECT_RINGS_ROM
+        gSelectedCharacter = 0;
+#else
         gSelectedCharacter = SIO_MULTI_CNT->id;
+#endif
         if (!resultsScreen->unk434) {
             background = &resultsScreen->unk40;
             gBgScrollRegs[2][0] = 0;
@@ -343,8 +395,8 @@ void sub_80823FC(void)
         resultsScreen->unk430 = 0;
         if (resultsScreen->unk434) {
             gBldRegs.bldCnt = 0xFF;
-            gCurTask->main = sub_8082630;
-            sub_8082630();
+            gCurTask->main = Task_8082630;
+            Task_8082630();
         } else {
             gCurTask->main = sub_8082AA8;
             sub_8082AA8();
@@ -352,9 +404,11 @@ void sub_80823FC(void)
     } else {
         sub_8082788();
 
+#ifndef COLLECT_RINGS_ROM
         if (gMultiSioStatusFlags & MULTI_SIO_PARENT) {
             DisplaySprite(&resultsScreen->unk400);
         }
+#endif
 
         for (i = 0; i < 4 && GetBit(gMultiplayerConnections, i); i++) {
             if (!(MULTI_SIO_RECV_ID(i) & gMultiSioStatusFlags)) {
@@ -379,10 +433,7 @@ void sub_80823FC(void)
     }
 }
 
-void sub_808267C(void);
-void sub_8082788(void);
-
-void sub_8082630(void)
+void Task_8082630(void)
 {
     struct MultiplayerSinglePakResultsScreen *resultsScreen = TASK_DATA(gCurTask);
     resultsScreen->unk430 += 0x20;
@@ -508,10 +559,10 @@ void sub_8082788(void)
                 UpdateSpriteAnimation(s);
                 DisplaySprite(s);
 
-                if (gUnknown_03005428[i] > 99) {
+                if (gMPRingCollectWins[i] > 99) {
                     temp = 99;
                 } else {
-                    temp = Base10DigitsToHexNibbles(gUnknown_03005428[i]);
+                    temp = Base10DigitsToHexNibbles(gMPRingCollectWins[i]);
                 }
 
                 s = &resultsScreen->unk160[((temp) >> 4)];
@@ -547,13 +598,14 @@ void sub_8082AA8(void)
         m4aMPlayFadeOut(&gMPlayInfo_SE2, 8);
         m4aMPlayFadeOut(&gMPlayInfo_SE3, 8);
         gBldRegs.bldCnt = 0xFF;
-        gCurTask->main = sub_8082630;
+        gCurTask->main = Task_8082630;
     }
 }
 
-struct MultiplayerSinglePakResultsScreen *sub_8082B1C(s16 mode)
+struct MultiplayerSinglePakResultsScreen *InitAndGetResultsScreenObject(s16 mode)
 {
-    struct Task *t = TaskCreate(sub_808207C, sizeof(struct MultiplayerSinglePakResultsScreen), 0x2000, 0, NULL);
+    struct Task *t
+        = TaskCreate(Task_MultiplayerSinglePakResultsScreenInit, sizeof(struct MultiplayerSinglePakResultsScreen), 0x2000, 0, NULL);
     struct MultiplayerSinglePakResultsScreen *resultsScreen = TASK_DATA(t);
 
     resultsScreen->unk434 = mode;
@@ -564,24 +616,25 @@ struct MultiplayerSinglePakResultsScreen *sub_8082B1C(s16 mode)
     return resultsScreen;
 }
 
-void sub_8082CEC(Sprite *, void *, u16, u8, s16, s16, u16, u8, u32);
-
+#ifndef COLLECT_RINGS_ROM
 void sub_8082B80(struct MultiplayerSinglePakResultsScreen *resultsScreen)
 {
     s16 i;
 
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < (s32)ARRAY_COUNT(resultsScreen->unk80); i++) {
         u16 anim = gPlayerCharacterIdleAnims[i];
         sub_8082CEC(&resultsScreen->unk80[i].unk0, OBJ_VRAM0 + (i * 0x800), anim, 0, 0x78, (i * 40) + 20, SPRITE_OAM_ORDER(16), i, 0x1000);
     }
 }
+#endif
 
 void sub_8082BF8(struct MultiplayerSinglePakResultsScreen *resultsScreen)
 {
     s16 i;
 
-    for (i = 0; i < 10; i++) {
-        sub_8082CEC(&resultsScreen->unk160[i], OBJ_VRAM0 + (i * 4 + 0x100) * 0x20, 0x451, i, 0, 0, SPRITE_OAM_ORDER(4), 0, 0x1000);
+    for (i = 0; i < (s32)ARRAY_COUNT(resultsScreen->unk160); i++) {
+        sub_8082CEC(&resultsScreen->unk160[i], OBJ_VRAM0 + (i * 4 + 0x100) * 0x20, SA2_ANIM_DIGITS, i, 0, 0, SPRITE_OAM_ORDER(4), 0,
+                    0x1000);
     }
 }
 
@@ -589,14 +642,23 @@ void sub_8082C58(struct MultiplayerSinglePakResultsScreen *resultsScreen)
 {
     s16 i;
 
-    for (i = 0; i < 3; i++) {
-        sub_8082CEC(&resultsScreen->unk370[i], OBJ_VRAM0 + 0x2500 + i * 0xC0, 1099, i, 0, 0, SPRITE_OAM_ORDER(4), 0, 0x1000);
+    for (i = 0; i < (s32)ARRAY_COUNT(resultsScreen->unk370); i++) {
+        sub_8082CEC(&resultsScreen->unk370[i], OBJ_VRAM0 + 0x2500 + i * 0xC0, SA2_ANIM_MP_SINGLE_PAK_RESULTS_CUMULATIVE, i, 0, 0,
+                    SPRITE_OAM_ORDER(4), 0, 0x1000);
     }
 }
 
 void sub_8082CB4(struct MultiplayerSinglePakResultsScreen *resultsScreen)
 {
-    sub_8082CEC(&resultsScreen->unk340, OBJ_VRAM0 + 0x2F00, 1099, 3, 0, 0, SPRITE_OAM_ORDER(4), 0, 0x1000);
+    sub_8082CEC(&resultsScreen->unk340,
+                OBJ_VRAM0 +
+#if COLLECT_RINGS_ROM
+                    0x2C80
+#else
+                    0x2F00
+#endif
+                ,
+                SA2_ANIM_MP_SINGLE_PAK_RESULTS_CUMULATIVE, 3, 0, 0, SPRITE_OAM_ORDER(4), 0, 0x1000);
 }
 
 void sub_8082CEC(Sprite *s, void *vramAddr, u16 animId, u8 variant, s16 x, s16 y, u16 oamFlags, u8 unk25, u32 unk10)

@@ -2,7 +2,7 @@
 #include "malloc_vram.h"
 #include "trig.h"
 
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/globals.h"
 #include "game/cheese.h"
 #include "game/stage/camera.h"
 #include "game/multiplayer/mp_player.h"
@@ -96,8 +96,8 @@ void CreateCheese(Player *player)
         cheese = TASK_DATA(t);
         s = &cheese->s;
         gCheese = cheese;
-        cheese->posX = gPlayer.x;
-        cheese->posY = gPlayer.y;
+        cheese->posX = gPlayer.qWorldX;
+        cheese->posY = gPlayer.qWorldY;
     } else {
         MultiplayerPlayer *mpp = NULL;
         u8 i;
@@ -1024,7 +1024,7 @@ bool8 sub_8015118(Cheese *cheese)
             unk54->unk60 |= 0x100000;
         }
 
-        if (gSelectedCharacter == CHARACTER_CREAM && gPlayer.moveState & MOVESTATE_400000) {
+        if (gSelectedCharacter == CHARACTER_CREAM && gPlayer.moveState & MOVESTATE_IA_OVERRIDE) {
             thing = TRUE;
         }
 
@@ -1045,14 +1045,14 @@ bool8 sub_8015118(Cheese *cheese)
             sub_8014EFC(cheese, 0, 0x10, 0);
         }
     } else {
-        unk54->unk54 = gPlayer.x;
-        unk54->unk58 = gPlayer.y;
-        unk54->unk5C = gPlayer.speedAirX;
-        unk54->unk5E = gPlayer.speedAirY;
-        unk54->unk68 = &gPlayer.unk90->s;
+        unk54->unk54 = gPlayer.qWorldX;
+        unk54->unk58 = gPlayer.qWorldY;
+        unk54->unk5C = gPlayer.qSpeedAirX;
+        unk54->unk5E = gPlayer.qSpeedAirY;
+        unk54->unk68 = &gPlayer.spriteInfoBody->s;
         unk54->unk60 = gPlayer.moveState;
 
-        if (!(gPlayer.moveState & MOVESTATE_400000)) {
+        if (!(gPlayer.moveState & MOVESTATE_IA_OVERRIDE)) {
             unk54->unk64 = gPlayer.rotation;
             if (gPlayer.moveState & MOVESTATE_IN_AIR) {
                 unk54->unk64 = 0;

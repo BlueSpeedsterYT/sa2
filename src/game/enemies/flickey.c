@@ -1,8 +1,8 @@
 #include "global.h"
 #include "malloc_vram.h"
 #include "game/entity.h"
-#include "game/sa1_leftovers/collision.h"
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/collision.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
 #include "task.h"
@@ -113,11 +113,11 @@ static void Task_FlickeyMain(void)
         index = (flickey->unk2A4 - ((i + 1) * 16)) & 0x3F;
         s->x = flickey->positions[index].x - gCamera.x;
         s->y = flickey->positions[index].y - gCamera.y;
-        sub_800C84C(s, flickey->positions[index].x, flickey->positions[index].y);
+        Coll_Player_Projectile(s, flickey->positions[index].x, flickey->positions[index].y);
     }
 
     s = &flickey->s;
-    if (sub_800C4FC(s, pos.x, pos.y, 0)) {
+    if (Coll_Player_Enemy_Attack(s, pos.x, pos.y, 0)) {
         flickey->unkA0 = 0x78;
         s = &flickey->s2;
         UpdateSpriteAnimation(s);
@@ -203,11 +203,11 @@ static void sub_8058EDC(void)
         index = (flickey->unk2A4 - ((i + 1) * 16)) & 0x3F;
         s->x = flickey->positions[index].x - gCamera.x;
         s->y = flickey->positions[index].y - gCamera.y;
-        sub_800C84C(s, flickey->positions[index].x, flickey->positions[index].y);
+        Coll_Player_Projectile(s, flickey->positions[index].x, flickey->positions[index].y);
     }
 
     s = &flickey->s;
-    if (sub_800C4FC(s, pos.x, pos.y, 0)) {
+    if (Coll_Player_Enemy_Attack(s, pos.x, pos.y, 0)) {
         flickey->unkA0 = 0x78;
         gCurTask->main = sub_80591FC;
 

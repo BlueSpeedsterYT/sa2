@@ -36,7 +36,7 @@ void sub_806D740(void);
 static const struct UNK_80DF670 gUnknown_080DF668 = {
     .anim = SA2_ANIM_SP_STAGE_HOLE,
     .variant = 0,
-    .unk4 = 2,
+    .size = 2,
     .animSpeed = SPRITE_ANIM_SPEED(1.0),
     .unk7 = 0,
 };
@@ -57,7 +57,7 @@ static PlayerStateHandler const sPlayerStateHandlers[] = {
 struct Task *CreateSpecialStagePlayer(struct SpecialStage *stage)
 {
     const struct UNK_80DF670 *characterSprites[NUM_CHARACTERS];
-    u8 lang;
+    u8 zone;
     s16 result;
     u32 unk5B5C;
     void *ram;
@@ -67,17 +67,17 @@ struct Task *CreateSpecialStagePlayer(struct SpecialStage *stage)
     struct SpecialStagePlayer *player;
 
     memcpy(&characterSprites, &gUnknown_080DF670, sizeof(characterSprites));
-    lang = stage->zone;
+    zone = stage->zone;
 
     t = TaskCreate(sub_806D2C8, sizeof(struct SpecialStagePlayer), 0x9000, 0, NULL);
     player = TASK_DATA(t);
     player->unk0 = stage;
     player->unk4 = NULL;
-    player->x = Q_16_16(gUnknown_080DF9D8[lang][0]);
-    player->y = Q_16_16(gUnknown_080DF9D8[lang][1]);
+    player->q16WorldX = Q_16_16(gUnknown_080DF9D8[zone][0]);
+    player->q16WorldY = Q_16_16(gUnknown_080DF9D8[zone][1]);
 
     player->unkB0 = 0;
-    player->bearing = gUnknown_080DF9D8[lang][2];
+    player->bearing = gUnknown_080DF9D8[zone][2];
     player->state = 0;
     player->unkB6 = 0x96;
     player->unkBC = 0;
@@ -96,8 +96,8 @@ struct Task *CreateSpecialStagePlayer(struct SpecialStage *stage)
 
     gUnknown_03005B5C += 0xC0;
 
-    sub_806D548(&player->unk8, player->unk98, stage->unk5CC, 9, player->sprites);
-    sub_806D548(&player->unk38, player->unk9C, stage->unk5CC, 10, &gUnknown_080DF668);
+    sub_806D548(&player->unk8, player->unk98, stage->cameraHeight, 9, player->sprites);
+    sub_806D548(&player->unk38, player->unk9C, stage->cameraHeight, 10, &gUnknown_080DF668);
 
     {
         Sprite *s = &player->roboArrow;
@@ -106,7 +106,8 @@ struct Task *CreateSpecialStagePlayer(struct SpecialStage *stage)
         s->graphics.dest = player->unkA0;
         s->graphics.size = 0;
         s->graphics.anim = SA2_ANIM_SP_STAGE_ARROW;
-        s->frameFlags = 0x107E;
+        s->frameFlags = SPRITE_FLAG(PRIORITY, 1) | SPRITE_FLAG(ROT_SCALE_DOUBLE_SIZE, 1) | SPRITE_FLAG(ROT_SCALE_ENABLE, 1)
+            | SPRITE_FLAG(ROT_SCALE, 30);
         s->x = (DISPLAY_WIDTH / 2);
         s->y = (DISPLAY_HEIGHT / 2);
         s->oamFlags = SPRITE_OAM_ORDER(0);
@@ -135,8 +136,8 @@ struct Task *CreateSpecialStagePlayer(struct SpecialStage *stage)
     if (stage->unk5B7 == FALSE) {
         player->speed = 0;
         player->rotateSpeed = 6;
-        player->unkD0 = 0x10000;
-        player->unkD4 = 0x10000;
+        player->q16SpeedX = 0x10000;
+        player->q16SpeedY = 0x10000;
         player->acceleration = 40;
         player->coastResistence = -43;
         player->deceleration = -350;
@@ -157,8 +158,8 @@ struct Task *CreateSpecialStagePlayer(struct SpecialStage *stage)
     } else {
         player->speed = 0;
         player->rotateSpeed = 0;
-        player->unkD0 = 0xC00;
-        player->unkD4 = 0x7FFF;
+        player->q16SpeedX = 0xC00;
+        player->q16SpeedY = 0x7FFF;
         player->acceleration = 256;
         player->coastResistence = 0x800;
     }
@@ -223,11 +224,11 @@ void sub_806D388(void)
     unkC4 = &player->sprites[index];
     unk8 = &player->unk8;
 
-    sub_806D7D0(unk8, -1, stage->unk5CC, unkC4);
+    sub_806D7D0(unk8, -1, stage->cameraHeight, unkC4);
 
     if (stage->state == 8) {
         DisplaySprite(unk8);
-        sub_806D830(unk8, -1, stage->unk5CC, unkC4);
+        sub_806D830(unk8, -1, stage->cameraHeight, unkC4);
     }
 }
 
@@ -249,7 +250,7 @@ void sub_806D424(void)
 
     unkC4 = &player->sprites[index];
     unk8 = &player->unk8;
-    sub_806D7D0(unk8, player->animSpeed, stage->unk5CC, unkC4);
+    sub_806D7D0(unk8, player->animSpeed, stage->cameraHeight, unkC4);
 }
 
 // Running?
@@ -270,7 +271,7 @@ void sub_806D484(void)
 
     unkC4 = &player->sprites[index];
     unk8 = &player->unk8;
-    sub_806D7D0(unk8, player->animSpeed, stage->unk5CC, unkC4);
+    sub_806D7D0(unk8, player->animSpeed, stage->cameraHeight, unkC4);
 }
 
 // Sprinting?
@@ -291,26 +292,26 @@ void sub_806D4E4(void)
 
     unkC4 = &player->sprites[index];
     unk8 = &player->unk8;
-    sub_806D7D0(unk8, player->animSpeed >> 1, stage->unk5CC, unkC4);
+    sub_806D7D0(unk8, player->animSpeed >> 1, stage->cameraHeight, unkC4);
 }
 
-void sub_806D548(Sprite *s, void *vram, s16 a, u8 b, const struct UNK_80DF670 *c4)
+void sub_806D548(Sprite *s, void *vram, s16 y, u8 b, const struct UNK_80DF670 *c4)
 {
-    u32 unk10 = 0x1000;
+    u32 frameFlags = SPRITE_FLAG(PRIORITY, 1);
     if (c4->unk7 & 1) {
-        unk10 |= 0x400;
+        frameFlags |= SPRITE_FLAG(X_FLIP, 1);
     }
 
     if (c4->unk7 & 2) {
-        unk10 |= 0x800;
+        frameFlags |= SPRITE_FLAG(Y_FLIP, 1);
     }
 
     s->graphics.dest = vram;
     s->graphics.size = 0;
     s->graphics.anim = c4->anim;
-    s->frameFlags = unk10;
+    s->frameFlags = frameFlags;
     s->x = (DISPLAY_WIDTH / 2);
-    s->y = a;
+    s->y = y;
     s->oamFlags = SPRITE_OAM_ORDER(b);
     s->qAnimDelay = 0;
     s->prevAnim = -1;
@@ -334,7 +335,7 @@ void sub_806D5D0(void)
     const struct UNK_80DF670 *unkC4 = &player->sprites[12];
     player->unkB0 += player->unkB8 >> 4;
 
-    sub_806D7D0(&player->unk8, -1, stage->unk5CC - Macro_806D4E(player->unkB0, 0xF), unkC4);
+    sub_806D7D0(&player->unk8, -1, stage->cameraHeight - Macro_806D4E(player->unkB0, 0xF), unkC4);
 }
 
 void sub_806D634(void)
@@ -345,7 +346,7 @@ void sub_806D634(void)
 
     player->unkB0 += player->unkB8 >> 4;
 
-    sub_806D7D0(&player->unk8, -1, stage->unk5CC - Macro_806D4E(player->unkB0, 10), unkC4);
+    sub_806D7D0(&player->unk8, -1, stage->cameraHeight - Macro_806D4E(player->unkB0, 10), unkC4);
 }
 
 void sub_806D698(void)
@@ -354,7 +355,7 @@ void sub_806D698(void)
     struct SpecialStage *stage = player->unk0;
     const struct UNK_80DF670 *unkC4 = &player->sprites[18];
 
-    sub_806D7D0(&player->unk8, -1, stage->unk5CC, unkC4);
+    sub_806D7D0(&player->unk8, -1, stage->cameraHeight, unkC4);
 }
 
 void sub_806D6DC(void)
@@ -365,7 +366,7 @@ void sub_806D6DC(void)
 
     player->unkB0 += player->unkB8 >> 4;
 
-    sub_806D7D0(&player->unk8, -1, stage->unk5CC - Macro_806D4E(player->unkB0, 10), unkC4);
+    sub_806D7D0(&player->unk8, -1, stage->cameraHeight - Macro_806D4E(player->unkB0, 10), unkC4);
 }
 
 void sub_806D740(void)
@@ -374,7 +375,7 @@ void sub_806D740(void)
     struct SpecialStage *stage = player->unk0;
     const struct UNK_80DF670 *unkC4 = &player->sprites[20];
 
-    sub_806D7D0(&player->unk8, -1, stage->unk5CC - 0xC, unkC4);
+    sub_806D7D0(&player->unk8, -1, stage->cameraHeight - 0xC, unkC4);
 }
 
 void sub_806D788(void)

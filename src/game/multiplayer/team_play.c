@@ -256,12 +256,12 @@ static void sub_805CB34(void)
     gWinRegs[5] = 0x3F;
     gBldRegs.bldCnt = 0x3F48;
     gBldRegs.bldAlpha = 0x810;
-    gWinRegs[2] = 0xA0;
+    gWinRegs[2] = DISPLAY_HEIGHT;
 
-    if (gBgScrollRegs[1][1] < 0xA0) {
+    if (gBgScrollRegs[1][1] < DISPLAY_HEIGHT) {
         gBgScrollRegs[1][1] += 4;
     } else {
-        gBgScrollRegs[1][1] = 0xA0;
+        gBgScrollRegs[1][1] = DISPLAY_HEIGHT;
         gCurTask->main = sub_805CC34;
     }
 
@@ -359,7 +359,7 @@ static void sub_805CC34(void)
                     return;
                 } else {
                     TaskDestroy(gCurTask);
-                    gFlags &= ~0x4;
+                    gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
                     gGameMode = GAME_MODE_MULTI_PLAYER;
                     CreateCourseSelectionScreen(0, gMultiplayerUnlockedLevels, COURSE_SELECT_CUT_SCENE_NONE);
                     gMultiSioSend.pat0.unk0 = 0x4035;
@@ -404,7 +404,7 @@ static void sub_805CC34(void)
             } else {
                 m4aSongNumStart(SE_SELECT);
                 TaskDestroy(gCurTask);
-                gFlags &= ~0x4;
+                gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
                 gGameMode = GAME_MODE_MULTI_PLAYER;
                 CreateCourseSelectionScreen(0, gMultiplayerUnlockedLevels, COURSE_SELECT_CUT_SCENE_NONE);
                 return;
@@ -467,9 +467,9 @@ static void sub_805D118(struct MultiplayerTeamPlayScreen *teamPlayScreen)
     unk310 = teamPlayScreen->unk310 >> 8;
     unk312 = teamPlayScreen->unk312 >> 8;
 
-    gFlags |= 0x4;
-    gUnknown_03002A80 = 4;
-    gUnknown_03002878 = (void *)REG_ADDR_BG3HOFS;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
+    gHBlankCopySize = 4;
+    gHBlankCopyTarget = (void *)REG_ADDR_BG3HOFS;
 
     for (i = 0; i < 160; i++) {
         *unk1884++ = (gSineTable[(gFrameCount + i * 4) & 1023] >> 0xB) + unk310;
@@ -592,10 +592,10 @@ static void sub_805D1F8(void)
             packet = &gMultiSioRecv[i];
             if (packet->pat0.unk0 > 0x4041) {
                 TasksDestroyAll();
-                gUnknown_03002AE4 = gUnknown_0300287C;
+                PAUSE_BACKGROUNDS_QUEUE();
                 gUnknown_03005390 = 0;
                 PAUSE_GRAPHICS_QUEUE();
-                MultiPakCommunicationError();
+                LinkCommunicationError();
                 return;
             }
         }
@@ -614,7 +614,7 @@ static void sub_805D5C8(void)
 static void sub_805D610(void)
 {
     TaskDestroy(gCurTask);
-    gFlags &= ~0x4;
+    gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
     CreateCourseSelectionScreen(0, gMultiplayerUnlockedLevels, COURSE_SELECT_CUT_SCENE_NONE);
 }
 

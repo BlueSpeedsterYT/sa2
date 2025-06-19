@@ -1,8 +1,10 @@
 #ifndef GUARD_GBA_DEFINES
 #define GUARD_GBA_DEFINES
 
+#ifndef GEN_CTX
 #include <stddef.h>
 #include <stdint.h> // for uint16_t
+#endif
 
 #define TRUE  1
 #define FALSE 0
@@ -37,8 +39,8 @@
 #define OAM_ENTRY_COUNT 128
 #if PORTABLE
 // NOTE: Used in gba/types.h, so they have to be defined before the #include
-#define DISPLAY_WIDTH  240
-#define DISPLAY_HEIGHT 160
+#define DISPLAY_WIDTH  426
+#define DISPLAY_HEIGHT 240
 
 //#include "gba/types.h"
 // TODO: Fix #define OAM_SIZE (OAM_ENTRY_COUNT*sizeof(OamData))

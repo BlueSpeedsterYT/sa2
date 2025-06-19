@@ -3,7 +3,7 @@
 #include "trig.h"
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/interactables_2/sky_canyon/propeller_spring.h"
 #include "game/interactables_2/sky_canyon_init.h"
@@ -119,14 +119,14 @@ static void sub_807C3DC(Sprite_IA85 *ia85)
 static bool32 sub_807C424(Sprite_IA85 *ia85)
 {
     s16 temp, temp2, temp3, temp4;
-    if (gPlayer.moveState & 0x80 || gPlayer.speedAirY <= 0) {
+    if (gPlayer.moveState & 0x80 || gPlayer.qSpeedAirY <= 0) {
         return 0;
     }
 
     temp = ia85->unk3C - gCamera.x;
     temp3 = ia85->unk40 - gCamera.y;
-    temp2 = I(gPlayer.x) - gCamera.x;
-    temp4 = I(gPlayer.y) - gCamera.y;
+    temp2 = I(gPlayer.qWorldX) - gCamera.x;
+    temp4 = I(gPlayer.qWorldY) - gCamera.y;
     if (temp - 0x14 <= temp2 && temp + 0x14 >= temp2) {
         if (temp3 - 0xC <= temp4 && temp3 + 0xC >= temp4) {
             return 1;
@@ -140,9 +140,9 @@ static void sub_807C4A0(Sprite_IA85 *ia85)
 {
     gPlayer.transition = PLTRANS_PROPELLER_SPRING;
     if (ia85->unk48 & 1)
-        gPlayer.speedAirY = -Q(5.5);
+        gPlayer.qSpeedAirY = -Q(5.5);
     else
-        gPlayer.speedAirY = -Q(5.5);
+        gPlayer.qSpeedAirY = -Q(5.5);
     ia85->unk49 = 0;
     ia85->unk48 = 0;
     m4aSongNumStart(SE_284);

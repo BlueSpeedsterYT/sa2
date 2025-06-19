@@ -4,7 +4,7 @@
 #include "task.h"
 #include "trig.h"
 #include "lib/m4a/m4a.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 #include "game/entity.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -162,7 +162,7 @@ static void sub_807A560(void)
     }
 
     if (gPlayer.timerInvulnerability == 120 && ia75->unk90) {
-        gPlayer.moveState &= ~MOVESTATE_400000;
+        gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
         ia75->unk90 = 0;
     }
 
@@ -181,14 +181,14 @@ static void sub_807A560(void)
 static void sub_807A688(Sprite_IA75 *ia75)
 {
     Sprite *s;
-    ia75->unk7C = gPlayer.x - (Q(ia75->x) + ia75->unk74);
-    ia75->unk80 = gPlayer.y - (Q(ia75->y) + ia75->unk78);
+    ia75->unk7C = gPlayer.qWorldX - (Q(ia75->x) + ia75->unk74);
+    ia75->unk80 = gPlayer.qWorldY - (Q(ia75->y) + ia75->unk78);
 
     gPlayer.transition = PLTRANS_TOUCH_GROUND;
     gPlayer.charState = CHARSTATE_IDLE;
-    gPlayer.speedAirX = 0;
-    gPlayer.speedAirY = 0;
-    gPlayer.speedGroundX = 0;
+    gPlayer.qSpeedAirX = 0;
+    gPlayer.qSpeedAirY = 0;
+    gPlayer.qSpeedGround = 0;
     gPlayer.rotation = 0;
     ia75->unk90 = 1;
 
@@ -221,16 +221,16 @@ static void sub_807A73C(Sprite_IA75 *ia75)
     UpdateSpriteAnimation(s);
 
     if (PLAYER_IS_ALIVE && ia75->unk90) {
-        gPlayer.moveState &= ~MOVESTATE_400000;
+        gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
         ia75->unk90 = 0;
         switch (ia75->unk94) {
             case 0:
-                gPlayer.speedGroundX = -Q_8_8(7.5);
+                gPlayer.qSpeedGround = -Q_8_8(7.5);
                 gPlayer.moveState |= 1;
                 gPlayer.transition = PLTRANS_TOUCH_GROUND;
                 break;
             case 1:
-                gPlayer.speedGroundX = Q_8_8(7.5);
+                gPlayer.qSpeedGround = Q_8_8(7.5);
                 gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
                 gPlayer.transition = PLTRANS_TOUCH_GROUND;
                 break;
@@ -306,30 +306,30 @@ static bool32 sub_807A920(Sprite_IA75 *ia75)
 static u32 sub_807A99C(Sprite_IA75 *ia75)
 {
     if (PLAYER_IS_ALIVE) {
-        u32 temp = sub_800CCB8(&ia75->s2, ia75->x + I(ia75->unk74), ia75->y + I(ia75->unk78), &gPlayer);
+        u32 temp = Coll_Player_Platform(&ia75->s2, ia75->x + I(ia75->unk74), ia75->y + I(ia75->unk78), &gPlayer);
         if (temp != 0) {
             if (temp & 0x10000) {
-                gPlayer.y += Q_8_8(temp);
-                gPlayer.speedAirY = 0;
+                gPlayer.qWorldY += Q_8_8(temp);
+                gPlayer.qSpeedAirY = 0;
                 return 2;
             }
             if (temp & 0x40000) {
-                gPlayer.x += (s16)(temp & 0xFF00);
-                gPlayer.speedAirX = 0;
-                gPlayer.speedGroundX = 0;
+                gPlayer.qWorldX += (s16)(temp & 0xFF00);
+                gPlayer.qSpeedAirX = 0;
+                gPlayer.qSpeedGround = 0;
                 gPlayer.moveState |= MOVESTATE_20;
                 return 1;
             }
             if (temp & 0x80000) {
-                gPlayer.x += (s16)(temp & 0xFF00);
-                gPlayer.speedAirX = 0;
-                gPlayer.speedGroundX = 0;
+                gPlayer.qWorldX += (s16)(temp & 0xFF00);
+                gPlayer.qSpeedAirX = 0;
+                gPlayer.qSpeedGround = 0;
                 gPlayer.moveState |= MOVESTATE_20;
                 return 3;
             }
             if (temp & 0x20000) {
-                gPlayer.y += Q_8_8(temp);
-                gPlayer.speedAirY = 0;
+                gPlayer.qWorldY += Q_8_8(temp);
+                gPlayer.qSpeedAirY = 0;
                 return 4;
             }
         }
@@ -382,9 +382,9 @@ static void sub_807AB04(struct Task *t)
 
 static void sub_807AB18(Sprite_IA75 *ia75)
 {
-    gPlayer.moveState |= MOVESTATE_400000;
-    gPlayer.x = ia75->unk7C + Q(ia75->x) + ia75->unk74;
-    gPlayer.y = ia75->unk80 + Q(ia75->y) + ia75->unk78;
+    gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
+    gPlayer.qWorldX = ia75->unk7C + Q(ia75->x) + ia75->unk74;
+    gPlayer.qWorldY = ia75->unk80 + Q(ia75->y) + ia75->unk78;
     sub_807A99C(ia75);
 }
 

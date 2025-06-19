@@ -30,13 +30,14 @@ static void Task_GappedLoopForwardsMain(void)
     s32 y = TO_WORLD_POS(me->y, regionY);
 
     if (PLAYER_IS_ALIVE) {
-        if (x <= I(gPlayer.x) && (x + me->d.uData[2] * 8) >= I(gPlayer.x)) {
-            if (y <= I(gPlayer.y) && (y + me->d.uData[3] * 8) >= I(gPlayer.y)) {
-                if (y <= I(gPlayer.y) && (y + me->d.uData[3] * 8) >= I(gPlayer.y)) {
-                    if (gPlayer.speedGroundX > Q(3) && !(gPlayer.moveState & (MOVESTATE_FACING_LEFT | MOVESTATE_IN_AIR))) {
+        if (x <= I(gPlayer.qWorldX) && (x + me->d.uData[2] * 8) >= I(gPlayer.qWorldX)) {
+            if (y <= I(gPlayer.qWorldY) && (y + me->d.uData[3] * 8) >= I(gPlayer.qWorldY)) {
+                if (y <= I(gPlayer.qWorldY) && (y + me->d.uData[3] * 8) >= I(gPlayer.qWorldY)) {
+                    if (gPlayer.qSpeedGround > Q(3) && !(gPlayer.moveState & (MOVESTATE_FACING_LEFT | MOVESTATE_IN_AIR))) {
                         gCurTask->main = Task_JumpSequenceForwards;
-                        gPlayer.moveState |= MOVESTATE_400000;
-                        gappedLoop->playerAngle = sub_8004418(I(gPlayer.y - gappedLoop->unk10), I(gPlayer.x - gappedLoop->unkC));
+                        gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
+                        gappedLoop->playerAngle
+                            = sub_8004418(I(gPlayer.qWorldY - gappedLoop->unk10), I(gPlayer.qWorldX - gappedLoop->unkC));
                         gappedLoop->spinSpeed = -8;
                     }
                 }
@@ -73,15 +74,15 @@ static void Task_JumpSequenceForwards(void)
     gPlayer.rotation += gappedLoop->spinSpeed;
 
     r3 = ABS(Q(3) - gappedLoop->playerAngle) >> 4;
-    gPlayer.y = gappedLoop->unk10 + Q_2_14_TO_Q_24_8(SIN(gappedLoop->playerAngle) * (r3 + 135));
-    gPlayer.x = gappedLoop->unkC + Q_2_14_TO_Q_24_8(COS(gappedLoop->playerAngle) * 135);
+    gPlayer.qWorldY = gappedLoop->unk10 + Q_2_14_TO_Q_24_8(SIN(gappedLoop->playerAngle) * (r3 + 135));
+    gPlayer.qWorldX = gappedLoop->unkC + Q_2_14_TO_Q_24_8(COS(gappedLoop->playerAngle) * 135);
 
     x -= gCamera.x;
     y -= gCamera.y;
 
     // Landed
     if (gappedLoop->playerAngle < 587) {
-        gPlayer.moveState &= ~MOVESTATE_400000;
+        gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
         gCurTask->main = Task_GappedLoopForwardsMain;
     }
 
@@ -102,14 +103,15 @@ static void Task_GappedLoopReverseMain(void)
     s32 y = TO_WORLD_POS(me->y, regionY);
     if (PLAYER_IS_ALIVE) {
         s32 base = (x + me->d.sData[0] * 8);
-        if (base <= I(gPlayer.x) && (base + me->d.uData[2] * 8) >= I(gPlayer.x)) {
-            if (y <= I(gPlayer.y) && (y + me->d.uData[3] * 8) >= I(gPlayer.y)) {
-                if (y <= I(gPlayer.y) && (y + me->d.uData[3] * 8) >= I(gPlayer.y)) {
-                    if (gPlayer.speedGroundX < -Q(3) && (gPlayer.moveState & MOVESTATE_FACING_LEFT)
+        if (base <= I(gPlayer.qWorldX) && (base + me->d.uData[2] * 8) >= I(gPlayer.qWorldX)) {
+            if (y <= I(gPlayer.qWorldY) && (y + me->d.uData[3] * 8) >= I(gPlayer.qWorldY)) {
+                if (y <= I(gPlayer.qWorldY) && (y + me->d.uData[3] * 8) >= I(gPlayer.qWorldY)) {
+                    if (gPlayer.qSpeedGround < -Q(3) && (gPlayer.moveState & MOVESTATE_FACING_LEFT)
                         && !(gPlayer.moveState & MOVESTATE_IN_AIR)) {
                         gCurTask->main = Task_JumpSequenceReverse;
-                        gPlayer.moveState |= MOVESTATE_400000;
-                        gappedLoop->playerAngle = sub_8004418(I(gPlayer.y - gappedLoop->unk10), I(gPlayer.x - gappedLoop->unkC));
+                        gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
+                        gappedLoop->playerAngle
+                            = sub_8004418(I(gPlayer.qWorldY - gappedLoop->unk10), I(gPlayer.qWorldX - gappedLoop->unkC));
                         gappedLoop->spinSpeed = 8;
                     }
                 }
@@ -146,14 +148,14 @@ static void Task_JumpSequenceReverse(void)
     gPlayer.rotation += gappedLoop->spinSpeed;
 
     r3 = ABS(Q(3) - gappedLoop->playerAngle) >> 4;
-    gPlayer.y = gappedLoop->unk10 + Q_2_14_TO_Q_24_8(SIN(gappedLoop->playerAngle) * (r3 + 135));
-    gPlayer.x = gappedLoop->unkC + Q_2_14_TO_Q_24_8(COS(gappedLoop->playerAngle) * 135);
+    gPlayer.qWorldY = gappedLoop->unk10 + Q_2_14_TO_Q_24_8(SIN(gappedLoop->playerAngle) * (r3 + 135));
+    gPlayer.qWorldX = gappedLoop->unkC + Q_2_14_TO_Q_24_8(COS(gappedLoop->playerAngle) * 135);
 
     x -= gCamera.x;
     y -= gCamera.y;
 
     if (gappedLoop->playerAngle > 950) {
-        gPlayer.moveState &= ~MOVESTATE_400000;
+        gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
         gCurTask->main = Task_GappedLoopReverseMain;
     }
 

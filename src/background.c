@@ -67,8 +67,7 @@ void DrawBackground(Background *background)
         background->mapHeight = mapHeader->mapHeight;
     }
 
-    gUnknown_03001800[gUnknown_0300287C] = background;
-    gUnknown_0300287C = (gUnknown_0300287C + 1) % ARRAY_COUNT(gUnknown_03001800);
+    ADD_TO_BACKGROUNDS_QUEUE(background);
 }
 
 // (85.37%) https://decomp.me/scratch/617Jb
@@ -89,7 +88,12 @@ NONMATCH("asm/non_matching/engine/sub_8002B20.inc", bool32 sub_8002B20(void))
     s32 j;
     u16 k;
 
-    while (gUnknown_03002AE4 != gUnknown_0300287C) {
+#if (RENDERER == RENDERER_OPENGL)
+    // TEMP
+    return TRUE;
+#endif
+
+    while (gBackgroundsCopyQueueCursor != gBackgroundsCopyQueueIndex) {
         Background *bg;
 
 #if !PORTABLE
@@ -101,10 +105,10 @@ NONMATCH("asm/non_matching/engine/sub_8002B20.inc", bool32 sub_8002B20(void))
         // _08002B64
         REG_VCOUNT;
         {
-            Background **backgrounds = &gUnknown_03001800[0];
-            s32 index = gUnknown_03002AE4;
+            Background **backgrounds = &gBackgroundsCopyQueue[0];
+            s32 index = gBackgroundsCopyQueueCursor;
             bg = backgrounds[index];
-            gUnknown_03002AE4 = (gUnknown_03002AE4 + 1) % ARRAY_COUNT(gUnknown_03001800);
+            gBackgroundsCopyQueueCursor = (gBackgroundsCopyQueueCursor + 1) % ARRAY_COUNT(gBackgroundsCopyQueue);
 
             if ((bg->flags & BACKGROUND_FLAG_20) && (bg->scrollX == bg->prevScrollX) && bg->scrollY == bg->prevScrollY)
                 continue;
@@ -574,8 +578,18 @@ NONMATCH("asm/non_matching/engine/sub_8002B20.inc", bool32 sub_8002B20(void))
                             yPos *= bg->mapWidth;
 
                             { // _0800355C
-                                s32 metatileIndex = *(&bg->metatileMap[yPos] + sp24) * bg->xTiles * bg->yTiles;
+                                s32 metatileIndex;
                                 s32 otherVal;
+                                s32 mtIndex = *(&bg->metatileMap[yPos] + sp24);
+#if NON_MATCHING
+                                // TEMP: Crash-Fix
+                                // 1024: 2^10, max. metatile num
+                                // the other 6 bits in a metatile index are used for tile flipping and the palette
+                                if (mtIndex >= 1024) {
+                                    mtIndex = 0;
+                                }
+#endif
+                                metatileIndex = mtIndex * bg->xTiles * bg->yTiles;
 
                                 otherVal = new_r4 * bg->xTiles;
                                 otherVal += sp28;
@@ -627,6 +641,7 @@ END_NONMATCH
 
 void UpdateBgAnimationTiles(Background *bg)
 {
+#if (RENDERER == RENDERER_SOFTWARE)
     Tilemap *tilemap = gTilemapsRef[bg->tilemapId];
     if (tilemap->animFrameCount > 0) {
         if (tilemap->animDelay <= ++bg->animDelayCounter) {
@@ -661,6 +676,7 @@ void UpdateBgAnimationTiles(Background *bg)
             }
         }
     }
+#endif
 }
 
 // Differences to UpdateSpriteAnimation:
@@ -728,6 +744,7 @@ s32 sub_80036E0(Sprite *s)
     return 1;
 }
 
+#ifndef COLLECT_RINGS_ROM
 // (-1)
 // No differences to animCmd_GetTiles
 static AnimCmdResult animCmd_GetTiles_BG(void *cursor, Sprite *s)
@@ -846,6 +863,7 @@ NONMATCH("asm/non_matching/engine/sub_80039E4.inc", bool32 sub_80039E4(void))
     return TRUE;
 #endif
 
+#if (RENDERER == RENDERER_SOFTWARE)
     if (gUnknown_03005390 != 0) {
         OamDataShort oam;
         s32 r5;
@@ -984,6 +1002,7 @@ NONMATCH("asm/non_matching/engine/sub_80039E4.inc", bool32 sub_80039E4(void))
 
         gUnknown_03005390 = 0;
     }
+#endif
 
     return TRUE;
 }
@@ -1013,6 +1032,7 @@ void sub_8003EE4(u16 p0, s16 p1, s16 p2, s16 p3, s16 p4, s16 p5, s16 p6, BgAffin
         affine->y = (r1 + r3) + p4 * 256;
     }
 }
+#endif
 
 // (57.61%) https://decomp.me/scratch/6Xm6S
 // (58.36%) https://decomp.me/scratch/ClyxP
@@ -1217,7 +1237,11 @@ s32 RenderText(void *dest, const void *font, u16 x, u16 y, u8 bg, const char *te
         u16 *copyDest = dest + (i * TILE_SIZE_4BPP);
         u16 tile;
         u16 *addr;
+#if COLLECT_RINGS_ROM
+        CpuFastCopy(font + ((text[i] - 0x30) * TILE_SIZE_4BPP), copyDest, TILE_SIZE_4BPP);
+#else
         CpuFastCopy(font + (text[i] * TILE_SIZE_4BPP), copyDest, TILE_SIZE_4BPP);
+#endif
 
         tile = (copyDest - vramTiles) / 16u;
 #ifndef NON_MATCHING
@@ -1232,6 +1256,15 @@ s32 RenderText(void *dest, const void *font, u16 x, u16 y, u8 bg, const char *te
 
     return i * TILE_SIZE_4BPP;
 }
+
+#if COLLECT_RINGS_ROM
+UNUSED AnimCmdResult animCmd_GetTiles_BG(void *cursor, Sprite *s)
+{
+    ACmd_GetTiles *cmd = (ACmd_GetTiles *)cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+    return 1;
+}
+#endif
 
 // (-2)
 // This is different to animCmd_GetPalette in that:
@@ -1277,11 +1310,13 @@ static AnimCmdResult animCmd_PlaySoundEffect_BG(void *cursor, Sprite *s)
     ACmd_PlaySoundEffect *cmd = cursor;
     s->animCursor += AnimCommandSizeInWords(*cmd);
 
+#ifndef COLLECT_RINGS_ROM
     m4aSongNumStart(cmd->songId);
-
+#endif
     return 1;
 }
 
+#ifndef COLLECT_RINGS_ROM
 // (-7)
 static AnimCmdResult animCmd_TranslateSprite_BG(void *cursor, Sprite *s)
 {
@@ -1342,3 +1377,55 @@ static AnimCmdResult animCmd_SetOamOrder_BG(void *cursor, Sprite *s)
     s->animCursor += AnimCommandSizeInWords(*cmd);
     return 1;
 }
+#else
+static AnimCmdResult animCmd_AddHitbox_BG(void *cursor, Sprite *s)
+{
+    ACmd_Hitbox *cmd = cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+
+    return 1;
+}
+
+static AnimCmdResult animCmd_TranslateSprite_BG(void *cursor, Sprite *s)
+{
+    ACmd_TranslateSprite *cmd = cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+
+    return 1;
+}
+static AnimCmdResult animCmd_8_BG(void *cursor, Sprite *s)
+{
+    ACmd_8 *cmd = cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+
+    return 1;
+}
+static AnimCmdResult animCmd_SetIdAndVariant_BG(void *cursor, Sprite *s)
+{
+    ACmd_SetIdAndVariant *cmd = cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+
+    return -1;
+}
+static AnimCmdResult animCmd_10_BG(void *cursor, Sprite *s)
+{
+    ACmd_10 *cmd = cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+
+    return (s32)cursor;
+}
+static AnimCmdResult animCmd_SetSpritePriority_BG(void *cursor, Sprite *s)
+{
+    ACmd_SetSpritePriority *cmd = cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+
+    return 1;
+}
+static AnimCmdResult animCmd_SetOamOrder_BG(void *cursor, Sprite *s)
+{
+    ACmd_SetOamOrder *cmd = cursor;
+    s->animCursor += AnimCommandSizeInWords(*cmd);
+
+    return 1;
+}
+#endif

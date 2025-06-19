@@ -1,7 +1,8 @@
 #ifndef GUARD_STAGE_PLAYER_H
 #define GUARD_STAGE_PLAYER_H
 
-#include "game/sa1_leftovers/player.h"
+// TODO: Merge this file with this one!!!
+#include "game/sa1_sa2_shared/player.h"
 
 // TODO: merge these
 #include "constants/characters.h"
@@ -18,14 +19,15 @@ void Player_SetMovestate_IsInScriptedSequence(void);
 void Player_ClearMovestate_IsInScriptedSequence(void);
 
 void InitializePlayer(Player *p);
+void DestroyPlayerTasks(Player *player);
 void Player_TransitionCancelFlyingAndBoost(Player *p);
-void sub_8023B5C(Player *, s32);
+void Player_HandleSpriteYOffsetChange(Player *, s32);
 void sub_8023260(Player *);
 void sub_80232D0(Player *);
-void sub_8023610(Player *);
+void Player_AirInputControls(Player *);
 void Player_TouchGround(Player *p);
-void Player_80261D8(Player *p);
-void sub_8027EF0(Player *p);
+void Player_Uncurl(Player *p);
+void Player_HandlePhysicsWithAirInput(Player *p);
 void sub_8028204(Player *p);
 void sub_80282EC(Player *p);
 void sub_80283C4(Player *p);
@@ -39,7 +41,7 @@ void Player_DisableInputAndBossTimer_FinalBoss(void);
 void SetStageSpawnPos(u32 character, u32 level, u32 p2, Player *player);
 void CallSetStageSpawnPos(u32 character, u32 level, u32 p2, Player *p);
 
-s32 sub_8029B88(Player *player, u8 *p1, int *out);
+s32 sub_8029B88(Player *player, u8 *p1, s32 *out);
 s32 sub_8029AC0(Player *player, u8 *p1, s32 *out);
 s32 sub_8029B0C(Player *player, u8 *p1, s32 *out);
 
@@ -49,7 +51,11 @@ type8029A28 sub_8029A74(Player *player, u8 *p1, type8029A28 *out);
 bool32 Player_TryJump(Player *);
 bool32 Player_TryAttack(Player *);
 
+#ifndef COLLECT_RINGS_ROM
 #define GET_CHARACTER_ANIM(player) (player->anim - gPlayerCharacterIdleAnims[player->character])
+#else
+#define GET_CHARACTER_ANIM(player) (player->anim - gPlayerCharacterIdleAnims[0])
+#endif
 
 #define PLAYERFN_SET(proc)          gPlayer.callback = proc;
 #define PLAYERFN_CALL(proc, player) proc(player);
@@ -61,18 +67,18 @@ bool32 Player_TryAttack(Player *);
 
 #define PLAYERFN_SET_SHIFT_OFFSETS(player, x, y)                                                                                           \
     {                                                                                                                                      \
-        player->spriteOffsetX = x;                                                                                                         \
-        player->spriteOffsetY = y;                                                                                                         \
+        (player)->spriteOffsetX = x;                                                                                                       \
+        (player)->spriteOffsetY = y;                                                                                                       \
     }
 #define PLAYERFN_CHANGE_SHIFT_OFFSETS(player, x, y)                                                                                        \
     {                                                                                                                                      \
-        sub_8023B5C(player, y);                                                                                                            \
+        Player_HandleSpriteYOffsetChange(player, y);                                                                                       \
         PLAYERFN_SET_SHIFT_OFFSETS(player, x, y)                                                                                           \
     }
 
 // TODO: This is unaligned in-ROM.
 //       Can we somehow change this to be using a struct instead?
 extern const u16 sCharStateAnimInfo[][2];
-extern const AnimId gPlayerCharacterIdleAnims[NUM_CHARACTERS];
+extern const AnimId gPlayerCharacterIdleAnims[];
 
 #endif // GUARD_STAGE_PLAYER_H

@@ -5,7 +5,7 @@
 
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/entity.h"
 
@@ -56,36 +56,36 @@ static void Task_PlayerFloating(void)
     } else {
         s32 temp;
         sub_807B8FC(propeller);
-        gPlayer.y -= Q(4);
-        if (I(gPlayer.y) <= propeller->y - 48) {
-            gPlayer.y = Q(propeller->y - 48);
+        gPlayer.qWorldY -= Q(4);
+        if (I(gPlayer.qWorldY) <= propeller->y - 48) {
+            gPlayer.qWorldY = Q(propeller->y - 48);
             sub_807B74C(propeller);
         }
 
         if (gPlayer.heldInput & DPAD_RIGHT) {
-            gPlayer.x += Q(0.5);
+            gPlayer.qWorldX += Q(0.5);
         }
 
         if (gPlayer.heldInput & DPAD_LEFT) {
-            gPlayer.x -= Q(0.5);
+            gPlayer.qWorldX -= Q(0.5);
         }
 
-        temp = sub_801F100(({ I(gPlayer.x) + 2; }) + gPlayer.spriteOffsetX, I(gPlayer.y), gPlayer.layer, +8, sub_801EB44);
+        temp = sub_801F100(({ I(gPlayer.qWorldX) + 2; }) + gPlayer.spriteOffsetX, I(gPlayer.qWorldY), gPlayer.layer, +8, sub_801EB44);
         if (temp < 0) {
-            gPlayer.x += Q(temp);
+            gPlayer.qWorldX += Q(temp);
         }
-        temp = sub_801F100(({ I(gPlayer.x) - 2; }) - gPlayer.spriteOffsetX, I(gPlayer.y), gPlayer.layer, -8, sub_801EB44);
+        temp = sub_801F100(({ I(gPlayer.qWorldX) - 2; }) - gPlayer.spriteOffsetX, I(gPlayer.qWorldY), gPlayer.layer, -8, sub_801EB44);
         if (temp < 0) {
-            gPlayer.x -= Q(temp);
+            gPlayer.qWorldX -= Q(temp);
         }
 
-        temp = sub_801F100(I(gPlayer.y) + gPlayer.spriteOffsetY, I(gPlayer.x), gPlayer.layer, 8, sub_801EC3C);
+        temp = sub_801F100(I(gPlayer.qWorldY) + gPlayer.spriteOffsetY, I(gPlayer.qWorldX), gPlayer.layer, 8, sub_801EC3C);
         if (temp < 0) {
-            gPlayer.y += Q(temp);
+            gPlayer.qWorldY += Q(temp);
         }
-        temp = sub_801F100(I(gPlayer.y) - gPlayer.spriteOffsetY, I(gPlayer.x), gPlayer.layer, -8, sub_801EC3C);
+        temp = sub_801F100(I(gPlayer.qWorldY) - gPlayer.spriteOffsetY, I(gPlayer.qWorldX), gPlayer.layer, -8, sub_801EC3C);
         if (temp < 0) {
-            gPlayer.y -= Q(temp);
+            gPlayer.qWorldY -= Q(temp);
         }
     }
 
@@ -126,31 +126,31 @@ static void sub_807B530(void)
             }
         }
 
-        gPlayer.x += propeller->unk44;
-        gPlayer.y -= propeller->unk46;
+        gPlayer.qWorldX += propeller->unk44;
+        gPlayer.qWorldY -= propeller->unk46;
 
         propeller->unk46 = SIN_24_8(propeller->unk48 * 4) * 16;
-        gPlayer.y += propeller->unk46;
+        gPlayer.qWorldY += propeller->unk46;
         propeller->unk48 -= 4;
 
-        temp = sub_801F100(({ I(gPlayer.x) + 2; }) + gPlayer.spriteOffsetX, I(gPlayer.y), gPlayer.layer, 8, sub_801EB44);
+        temp = sub_801F100(({ I(gPlayer.qWorldX) + 2; }) + gPlayer.spriteOffsetX, I(gPlayer.qWorldY), gPlayer.layer, 8, sub_801EB44);
         if (temp < 0) {
-            gPlayer.x += Q(temp);
+            gPlayer.qWorldX += Q(temp);
             propeller->unk44 = 32;
         }
-        temp = sub_801F100(({ I(gPlayer.x) - 2; }) - gPlayer.spriteOffsetX, I(gPlayer.y), gPlayer.layer, -8, sub_801EB44);
+        temp = sub_801F100(({ I(gPlayer.qWorldX) - 2; }) - gPlayer.spriteOffsetX, I(gPlayer.qWorldY), gPlayer.layer, -8, sub_801EB44);
         if (temp < 0) {
-            gPlayer.x -= Q(temp);
+            gPlayer.qWorldX -= Q(temp);
             propeller->unk44 = -32;
         }
 
-        temp = sub_801F100(I(gPlayer.y) + gPlayer.spriteOffsetY, I(gPlayer.x), gPlayer.layer, 8, sub_801EC3C);
+        temp = sub_801F100(I(gPlayer.qWorldY) + gPlayer.spriteOffsetY, I(gPlayer.qWorldX), gPlayer.layer, 8, sub_801EC3C);
         if (temp < 0) {
-            gPlayer.y += Q(temp);
+            gPlayer.qWorldY += Q(temp);
         }
-        temp = sub_801F100(I(gPlayer.y) - gPlayer.spriteOffsetY, I(gPlayer.x), gPlayer.layer, -8, sub_801EC3C);
+        temp = sub_801F100(I(gPlayer.qWorldY) - gPlayer.spriteOffsetY, I(gPlayer.qWorldX), gPlayer.layer, -8, sub_801EC3C);
         if (temp < 0) {
-            gPlayer.y -= Q(temp);
+            gPlayer.qWorldY -= Q(temp);
         }
 
         if (!IsPlayerInAirCurrent(propeller)) {
@@ -167,10 +167,10 @@ static void sub_807B74C(Sprite_Propeller *propeller)
 {
     propeller->unk48 = 0;
     propeller->unk46 = SIN_24_8(0) * 16;
-    propeller->unk44 = gPlayer.speedAirX;
-    if (gPlayer.speedAirX >= 1) {
+    propeller->unk44 = gPlayer.qSpeedAirX;
+    if (gPlayer.qSpeedAirX >= 1) {
         propeller->unk44 = 32;
-    } else if (gPlayer.speedAirX < 0) {
+    } else if (gPlayer.qSpeedAirX < 0) {
         propeller->unk44 = -32;
     } else {
         propeller->unk44 = gPlayer.moveState & MOVESTATE_FACING_LEFT ? -32 : 32;
@@ -180,21 +180,21 @@ static void sub_807B74C(Sprite_Propeller *propeller)
 
 static void sub_807B7BC(Sprite_Propeller *propeller)
 {
-    gPlayer.moveState &= ~MOVESTATE_400000;
-    gPlayer.transition = PLTRANS_PT5;
+    gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
+    gPlayer.transition = PLTRANS_UNCURL;
 
     if (propeller->unk48 <= (PROPELLER_HITBOX_HEIGHT / 2) || propeller->unk48 >= 192) {
         propeller->unk48 += (PROPELLER_HITBOX_HEIGHT / 2);
         propeller->unk48 = PROPELLER_HITBOX_HEIGHT - propeller->unk48;
-        gPlayer.speedAirY = -(propeller->unk48 * 1024) >> 7;
-        if (gPlayer.speedAirY >= 1) {
-            gPlayer.speedAirY = 0;
+        gPlayer.qSpeedAirY = -(propeller->unk48 * 1024) >> 7;
+        if (gPlayer.qSpeedAirY >= 1) {
+            gPlayer.qSpeedAirY = 0;
         }
     } else {
-        gPlayer.speedAirY = 0;
+        gPlayer.qSpeedAirY = 0;
     }
 
-    gPlayer.speedAirX = propeller->unk44 >> 1;
+    gPlayer.qSpeedAirX = propeller->unk44 >> 1;
     gCurTask->main = Task_GiantPropellerIdle;
 }
 
@@ -207,8 +207,8 @@ bool32 IsPlayerInteracting(Sprite_Propeller *propeller)
 
     x = propeller->x - gCamera.x;
     y = propeller->y - gCamera.y;
-    playerX = I(gPlayer.x) - gCamera.x;
-    playerY = I(gPlayer.y) - gCamera.y;
+    playerX = I(gPlayer.qWorldX) - gCamera.x;
+    playerY = I(gPlayer.qWorldY) - gCamera.y;
     if (x - (PROPELLER_HITBOX_WIDTH / 2) <= playerX && x + (PROPELLER_HITBOX_WIDTH / 2) >= playerX) {
         if (y - (PROPELLER_HITBOX_HEIGHT / 2) <= playerY && y + (PROPELLER_HITBOX_HEIGHT / 2) >= playerY) {
             return TRUE;
@@ -245,10 +245,8 @@ static void sub_807B8FC(Sprite_Propeller *propeller)
 {
 
     Player_TransitionCancelFlyingAndBoost(&gPlayer);
-    sub_8023B5C(&gPlayer, 14);
-    gPlayer.spriteOffsetX = 6;
-    gPlayer.spriteOffsetY = 14;
-    gPlayer.moveState |= MOVESTATE_400000;
+    PLAYERFN_CHANGE_SHIFT_OFFSETS(&gPlayer, 6, 14);
+    gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
     gPlayer.charState = CHARSTATE_IN_WHIRLWIND;
 }
 
@@ -276,7 +274,7 @@ static bool32 IsPlayerInAirCurrent(Sprite_Propeller *propeller)
 {
     if (PLAYER_IS_ALIVE) {
         s16 x = propeller->x - gCamera.x;
-        s16 playerX = I(gPlayer.x) - gCamera.x;
+        s16 playerX = I(gPlayer.qWorldX) - gCamera.x;
 
         if (x - (PROPELLER_HITBOX_WIDTH / 2) <= playerX && (x + (PROPELLER_HITBOX_WIDTH / 2) >= playerX)) {
             return TRUE;
@@ -290,7 +288,7 @@ static bool32 sub_807B9F0(Sprite_Propeller *propeller)
 {
     if (PLAYER_IS_ALIVE) {
         s16 y = propeller->y - gCamera.y;
-        s16 playerY = I(gPlayer.y) - gCamera.y;
+        s16 playerY = I(gPlayer.qWorldY) - gCamera.y;
 
         // TODO: A Metatile/Chunk is 96 pixels wide (12 * TILE_WIDTH)
         //       Is that the intended value here?

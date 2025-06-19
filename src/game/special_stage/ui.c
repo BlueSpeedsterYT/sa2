@@ -11,31 +11,42 @@
 #include "constants/songs.h"
 #include "constants/text.h"
 
-void sub_8070C58(void);
-void sub_806FFC8(void);
-void sub_8070D14(void);
-
-void sub_8070D80(struct SpecialStageUI *);
-void sub_8070DD0(struct SpecialStageUI *);
+void RenderTime(void);
+void RenderRingCounters(void);
+void RenderMultiplier(void);
+void CreateStartText(struct SpecialStageUI *);
+void RenderStartText(struct SpecialStageUI *);
 void sub_8070DE0(struct SpecialStageUI *);
 static void HandlePaused(struct SpecialStageUI *);
 static void HandleUnpaused(struct SpecialStageUI *);
 static void RenderPauseMenu(struct SpecialStageUI *);
+static void Task_ResultsScreenStartNewEmeraldSequence(void);
+static void CreateMultiplierValue(struct SpecialStageUI *);
+void sub_807061C(s16);
+void sub_8070680(s16);
+void sub_80706D8(s16);
+void sub_8070740(s16);
+void sub_80707A8(s16);
+static void RenderScoresAnim(void);
+void Task_ResultsScreenSequencePart2(void);
+void Task_ResultsScreenNewEmeraldSequencePart2(void);
+void UpdateRingCounters(void);
+void sub_8070BEC(struct Task *);
+static void CreateDisplays(struct SpecialStageUI *);
+void SpecialStageResultsScreenOnDestroy(struct Task *);
 
-static const struct UNK_80DF670 sDigitSprites[] = {
-    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('1'), 2, 0, 0 }, { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('2'), 2, 0, 0 },
-    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('3'), 2, 0, 0 }, { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('4'), 2, 0, 0 },
-    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('5'), 2, 0, 0 }, { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('6'), 2, 0, 0 },
-    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('7'), 2, 0, 0 }, { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('8'), 2, 0, 0 },
+static const struct UNK_80DF670 sValueSprites[] = {
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('0'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('1'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('2'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('3'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('4'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('5'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('6'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('7'), 2, 0, 0 },
+    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('8'), 2, 0, 0 },
     { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR('9'), 2, 0, 0 },
-};
-
-static const struct UNK_80DF670 gUnknown_080DF830[] = {
     { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR(':'), 2, 0, 0 },
-    { SA2_ANIM_ASCII, SA2_ANIM_ASCII_CHAR(';'), 2, 0, 0 },
-};
-
-static const struct UNK_80DF670 gUnknown_080DF840[] = {
     { SA2_ANIM_SP_STAGE_MULTIPLIER, SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x2, 2, 0, 0 },
     { SA2_ANIM_SP_STAGE_MULTIPLIER, SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x3, 2, 0, 0 },
     { SA2_ANIM_SP_STAGE_MULTIPLIER, SA2_ANIM_VARIANT_SP_STAGE_MULTIPLIER_x4, 2, 0, 0 },
@@ -71,13 +82,13 @@ void sub_806FB04(void)
     struct SpecialStageUI *ui = TASK_DATA(gCurTask);
     struct SpecialStage *stage = ui->stage;
 
-    sub_8070C58();
-    sub_806FFC8();
-    sub_8070D14();
+    RenderTime();
+    RenderRingCounters();
+    RenderMultiplier();
 
     if (ui->unk2A8 == 0) {
         if (stage->state == 4) {
-            sub_8070D80(ui);
+            CreateStartText(ui);
         }
     }
 
@@ -86,7 +97,7 @@ void sub_806FB04(void)
             sub_8070DE0(ui);
         } else {
             if (stage->animFrame < 0x1E || stage->animFrame & 2) {
-                sub_8070DD0(ui);
+                RenderStartText(ui);
             }
         }
     }
@@ -110,27 +121,28 @@ static void CreateStageTime(struct SpecialStageUI *ui)
 {
     struct SpecialStage *stage = ui->stage;
     const struct UNK_80DF670 *unkF7E8;
-    Sprite newElement;
+    Sprite unused;
 
     s16 timeHundreds = stage->timeHundreds;
     s16 timeTens = stage->timeTens;
     s16 timeUnits = stage->timeUnits;
 
-    sub_806CA88(&ui->timeSymbol, RENDER_TARGET_SCREEN, 1, 0x377, 0x1000, 0xC0, 0xE, 1, 0, 0);
+    sub_806CA88(&ui->timeSymbol, RENDER_TARGET_SCREEN, 1, 0x377, 0x1000, DISPLAY_WIDTH - 48, 14, 1, 0, 0);
 
-    unkF7E8 = &sDigitSprites[timeHundreds];
-    sub_806CA88(&ui->timeHundreds, RENDER_TARGET_SCREEN, unkF7E8->unk4, unkF7E8->anim, 0x1000, 0xCC, 0x12, 1, unkF7E8->variant, 0);
+    unkF7E8 = &sValueSprites[timeHundreds];
+    sub_806CA88(&ui->timeHundreds, RENDER_TARGET_SCREEN, unkF7E8->size, unkF7E8->anim, 0x1000, DISPLAY_WIDTH - 36, 18, 1, unkF7E8->variant,
+                0);
 
-    unkF7E8 = &sDigitSprites[timeTens];
-    sub_806CA88(&ui->timeTens, RENDER_TARGET_SCREEN, unkF7E8->unk4, unkF7E8->anim, 0x1000, 0xD4, 0x12, 1, unkF7E8->variant, 0);
+    unkF7E8 = &sValueSprites[timeTens];
+    sub_806CA88(&ui->timeTens, RENDER_TARGET_SCREEN, unkF7E8->size, unkF7E8->anim, 0x1000, DISPLAY_WIDTH - 28, 18, 1, unkF7E8->variant, 0);
 
-    unkF7E8 = &sDigitSprites[timeUnits];
-    sub_806CA88(&ui->timeUnits, RENDER_TARGET_SCREEN, unkF7E8->unk4, unkF7E8->anim, 0x1000, 0xDC, 0x12, 1, unkF7E8->variant, 0);
+    unkF7E8 = &sValueSprites[timeUnits];
+    sub_806CA88(&ui->timeUnits, RENDER_TARGET_SCREEN, unkF7E8->size, unkF7E8->anim, 0x1000, DISPLAY_WIDTH - 20, 18, 1, unkF7E8->variant, 0);
 
-    sub_806CA88(&newElement, RENDER_TARGET_SCREEN, 0, 0x379, 0, 0, 0, 0, 0, 0);
+    sub_806CA88(&unused, RENDER_TARGET_SCREEN, 0, 0x379, 0, 0, 0, 0, 0, 0);
 }
 
-void sub_806FCF8(void)
+static void UpdateStageTime(void)
 {
     struct SpecialStageUI *ui = TASK_DATA(gCurTask);
     struct SpecialStage *stage = ui->stage;
@@ -138,55 +150,56 @@ void sub_806FCF8(void)
     Sprite *s;
     const struct UNK_80DF670 *unkF7E8;
 
-    u32 temp;
+    u32 pal;
 
     s16 timeHundreds = stage->timeHundreds;
     s16 timeTens = stage->timeTens;
     s16 timeUnits = stage->timeUnits;
 
-    ui->unk2AA = (ui->unk2AA + 1) & 0xFF;
+    ui->unk2AA = (ui->unk2AA + 1) & 255;
+
     if (timeHundreds == 0 && timeTens == 0) {
-        if (ui->unk2AA & 0x8) {
-            temp = 0;
+        if (ui->unk2AA & 8) {
+            pal = 0;
         } else {
-            temp = 3;
+            pal = 3;
         }
     } else if (timeHundreds == 0 && timeTens < 3) {
-        if (ui->unk2AA & 0x10) {
-            temp = 0;
+        if (ui->unk2AA & 16) {
+            pal = 0;
         } else {
-            temp = 3;
+            pal = 3;
         }
     } else {
-        temp = 0;
+        pal = 0;
     }
 
     if (timeHundreds != 0) {
-        unkF7E8 = &sDigitSprites[timeHundreds];
+        unkF7E8 = &sValueSprites[timeHundreds];
         s = &ui->timeHundreds;
         s->graphics.anim = unkF7E8->anim;
         s->variant = unkF7E8->variant;
         s->frameFlags |= 0x40000;
-        s->palId = temp;
+        s->palId = pal;
         UpdateSpriteAnimation(s);
     }
 
     if ((timeHundreds | timeTens) != 0) {
-        unkF7E8 = &sDigitSprites[timeTens];
+        unkF7E8 = &sValueSprites[timeTens];
         s = &ui->timeTens;
         s->graphics.anim = unkF7E8->anim;
         s->variant = unkF7E8->variant;
         s->frameFlags |= 0x40000;
-        s->palId = temp;
+        s->palId = pal;
         UpdateSpriteAnimation(s);
     }
 
-    unkF7E8 = &sDigitSprites[timeUnits];
+    unkF7E8 = &sValueSprites[timeUnits];
     s = &ui->timeUnits;
     s->graphics.anim = unkF7E8->anim;
     s->variant = unkF7E8->variant;
     s->frameFlags |= 0x40000;
-    s->palId = temp;
+    s->palId = pal;
     UpdateSpriteAnimation(s);
 }
 
@@ -197,36 +210,40 @@ static void CreateRingCounter(struct SpecialStageUI *ui)
     Sprite *s;
     const struct UNK_80DF670 *sprite;
 
-    sprite = &sDigitSprites[stage->ringsHundreds];
-    sub_806CA88(&ui->ringsHundredsDigit, RENDER_TARGET_SCREEN, sprite->unk4, sprite->anim, 0x1000, 100, 0x10, 1, sprite->variant, 0);
+    sprite = &sValueSprites[stage->ringsHundreds];
+    sub_806CA88(&ui->ringsHundredsDigit, RENDER_TARGET_SCREEN, sprite->size, sprite->anim, 0x1000, (DISPLAY_WIDTH / 2) - 20, 16, 1,
+                sprite->variant, 0);
 
-    sprite = &sDigitSprites[stage->ringsTens];
-    sub_806CA88(&ui->ringsTENS_DIGIT, RENDER_TARGET_SCREEN, sprite->unk4, sprite->anim, 0x1000, 0x6C, 0x10, 1, sprite->variant, 0);
+    sprite = &sValueSprites[stage->ringsTens];
+    sub_806CA88(&ui->ringsTensDigit, RENDER_TARGET_SCREEN, sprite->size, sprite->anim, 0x1000, (DISPLAY_WIDTH / 2) - 12, 16, 1,
+                sprite->variant, 0);
 
-    sprite = &sDigitSprites[stage->ringsUnits];
-    sub_806CA88(&ui->ringsUNITS_DIGIT, RENDER_TARGET_SCREEN, sprite->unk4, sprite->anim, 0x1000, 0x74, 0x10, 1, sprite->variant, 0);
+    sprite = &sValueSprites[stage->ringsUnits];
+    sub_806CA88(&ui->ringsUnitsDigit, RENDER_TARGET_SCREEN, sprite->size, sprite->anim, 0x1000, (DISPLAY_WIDTH / 2) - 4, 16, 1,
+                sprite->variant, 0);
 
-    sub_806CA88(&ui->unk154, RENDER_TARGET_SCREEN, 8, 0x378, 0x1000, 0x78, 0xE, 2, 0, 0);
+    sub_806CA88(&ui->unk154, RENDER_TARGET_SCREEN, 8, 0x378, 0x1000, (DISPLAY_WIDTH / 2), 14, 2, 0, 0);
 
-    sprite = &sDigitSprites[stage->ringsTargetHundreds];
-    sub_806CA88(&ui->ringsTargetHundredsDigit, RENDER_TARGET_SCREEN, sprite->unk4, sprite->anim, 0x1000, 0x7C, 0x18, 1, sprite->variant, 0);
+    sprite = &sValueSprites[stage->ringsTargetHundreds];
+    sub_806CA88(&ui->ringsTargetHundredsDigit, RENDER_TARGET_SCREEN, sprite->size, sprite->anim, 0x1000, (DISPLAY_WIDTH / 2) + 4, 24, 1,
+                sprite->variant, 0);
 
-    sprite = &sDigitSprites[stage->ringsTargetTens];
-    sub_806CA88(&ui->ringsTargetTENS_DIGIT, RENDER_TARGET_SCREEN, sprite->unk4, sprite->anim, 0x1000, 0x84, 0x18, 1, sprite->variant, 0);
+    sprite = &sValueSprites[stage->ringsTargetTens];
+    sub_806CA88(&ui->ringsTargetTensDigit, RENDER_TARGET_SCREEN, sprite->size, sprite->anim, 0x1000, (DISPLAY_WIDTH / 2) + 12, 24, 1,
+                sprite->variant, 0);
 
-    sprite = &sDigitSprites[stage->ringsTargetUnits];
-    sub_806CA88(&ui->ringsTargetUNITS_DIGIT, RENDER_TARGET_SCREEN, sprite->unk4, sprite->anim, 0x1000, 0x8C, 0x18, 1, sprite->variant, 0);
+    sprite = &sValueSprites[stage->ringsTargetUnits];
+    sub_806CA88(&ui->ringsTargetUnitsDigit, RENDER_TARGET_SCREEN, sprite->size, sprite->anim, 0x1000, (DISPLAY_WIDTH / 2) + 20, 24, 1,
+                sprite->variant, 0);
 }
 
-void sub_8070078(void);
-
-void sub_806FFC8(void)
+void RenderRingCounters(void)
 {
     struct SpecialStageUI *ui = TASK_DATA(gCurTask);
     struct SpecialStage *stage = ui->stage;
 
     if (stage->paused == FALSE) {
-        sub_8070078();
+        UpdateRingCounters();
     }
 
     if (stage->ringsHundreds != 0) {
@@ -234,10 +251,10 @@ void sub_806FFC8(void)
     }
 
     if (stage->ringsHundreds != 0 || stage->ringsTens != 0) {
-        DisplaySprite(&ui->ringsTENS_DIGIT);
+        DisplaySprite(&ui->ringsTensDigit);
     }
 
-    DisplaySprite(&ui->ringsUNITS_DIGIT);
+    DisplaySprite(&ui->ringsUnitsDigit);
     DisplaySprite(&ui->unk154);
 
     if (stage->ringsTargetHundreds != 0) {
@@ -245,13 +262,13 @@ void sub_806FFC8(void)
     }
 
     if (stage->ringsTargetHundreds != 0 || stage->ringsTargetTens != 0) {
-        DisplaySprite(&ui->ringsTargetTENS_DIGIT);
+        DisplaySprite(&ui->ringsTargetTensDigit);
     }
 
-    DisplaySprite(&ui->ringsTargetUNITS_DIGIT);
+    DisplaySprite(&ui->ringsTargetUnitsDigit);
 }
 
-void sub_8070078(void)
+void UpdateRingCounters(void)
 {
     struct SpecialStageUI *ui = TASK_DATA(gCurTask);
     struct SpecialStage *stage = ui->stage;
@@ -259,20 +276,20 @@ void sub_8070078(void)
     Sprite *s;
     const struct UNK_80DF670 *sprite;
 
-    sprite = &sDigitSprites[stage->ringsHundreds];
+    sprite = &sValueSprites[stage->ringsHundreds];
     s = &ui->ringsHundredsDigit;
     s->graphics.anim = sprite->anim;
     s->variant = sprite->variant;
     UpdateSpriteAnimation(s);
 
-    sprite = &sDigitSprites[stage->ringsTens];
-    s = &ui->ringsTENS_DIGIT;
+    sprite = &sValueSprites[stage->ringsTens];
+    s = &ui->ringsTensDigit;
     s->graphics.anim = sprite->anim;
     s->variant = sprite->variant;
     UpdateSpriteAnimation(s);
 
-    sprite = &sDigitSprites[stage->ringsUnits];
-    s = &ui->ringsUNITS_DIGIT;
+    sprite = &sValueSprites[stage->ringsUnits];
+    s = &ui->ringsUnitsDigit;
     s->graphics.anim = sprite->anim;
     s->variant = sprite->variant;
     UpdateSpriteAnimation(s);
@@ -282,7 +299,7 @@ void sub_8070078(void)
             stage->targetReached = TRUE;
             m4aSongNumStart(MUS_ACHIEVEMENT);
             stage->unk5C7 = 1;
-            stage->unk5C8 = 0x78;
+            stage->unk5C8 = 120;
 
             s = &ui->unk154;
             s->graphics.anim = 0x378;
@@ -325,14 +342,14 @@ static void HandlePaused(struct SpecialStageUI *ui)
     m4aSongNumStart(SE_PAUSE_SCREEN);
 }
 
-#define SomeMacro807028C(i) ({ ((i)*8) + 0x100; })
+#define SomeMacro807028C(i) ({ ((i)*8) + DISPLAY_WIDTH + 16; })
 
 static void SpecialStageResultsScreenCreateUI(struct SpecialStageResultsScreen *resultsScreen)
 {
     const struct UNK_80DF670 *sprite;
     struct SpecialStage *stage = resultsScreen->stage;
-    s16 a = 0x30, b = 0x30, c = 0x30;
-    s16 d = 0x9E, e = 0x9E, f = 0x9E;
+    s16 a = (DISPLAY_WIDTH / 2) - 72, b = (DISPLAY_WIDTH / 2) - 72, c = (DISPLAY_WIDTH / 2) - 72;
+    s16 d = (DISPLAY_WIDTH / 2) + 38, e = (DISPLAY_WIDTH / 2) + 38, f = (DISPLAY_WIDTH / 2) + 38;
     s16 i;
 
     u8 chaosEmeralds = gLoadedSaveGame->chaosEmeralds[stage->character];
@@ -342,30 +359,33 @@ static void SpecialStageResultsScreenCreateUI(struct SpecialStageResultsScreen *
     gUnknown_03005B58 = NULL;
 
     if (stage->targetReached) {
-        sub_806CA88(&resultsScreen->unk4, 1, 0x28, SA2_ANIM_SP_STAGE_NOTIFS, 0, DISPLAY_WIDTH + 16 + a, 32, 0, 1, 0);
-        sub_806CA88(&resultsScreen->unk34, 1, gUnknown_080DF880[character].unk4, gUnknown_080DF880[character].anim, 0,
-                    DISPLAY_WIDTH + 16 + a, 24, 0, gUnknown_080DF880[character].variant, 0);
+        sub_806CA88(&resultsScreen->unk4, 1, 0x28, SA2_ANIM_SP_STAGE_NOTIFS, 0, DISPLAY_WIDTH + 16 + a, (DISPLAY_HEIGHT / 2) - 48, 0, 1, 0);
+        sub_806CA88(&resultsScreen->unk34, 1, gUnknown_080DF880[character].size, gUnknown_080DF880[character].anim, 0,
+                    DISPLAY_WIDTH + 16 + a, (DISPLAY_HEIGHT / 2) - 56, 0, gUnknown_080DF880[character].variant, 0);
     } else {
-        sub_806CA88(&resultsScreen->unk4, 1, 0x20, SA2_ANIM_SP_STAGE_NOTIFS, 0, DISPLAY_WIDTH + 16 + a, 32, 0, 0, 0);
+        sub_806CA88(&resultsScreen->unk4, 1, 0x20, SA2_ANIM_SP_STAGE_NOTIFS, 0, DISPLAY_WIDTH + 16 + a, (DISPLAY_HEIGHT / 2) - 48, 0, 0, 0);
     }
 
-    sub_806CA88(&resultsScreen->unk1B4, 1, 0x16, SA2_ANIM_SP_STAGE_SCORE_BONUSES, 0, DISPLAY_WIDTH + 16 + a, 72, 0, 0, 0);
-    sub_806CA88(&resultsScreen->unk1E4, 1, 0x16, SA2_ANIM_SP_STAGE_SCORE_BONUSES, 0, DISPLAY_WIDTH + 16 + b, 92, 0, 1, 0);
-    sub_806CA88(&resultsScreen->unk214, 1, 0x16, SA2_ANIM_SP_STAGE_SCORE_BONUSES, 0, DISPLAY_WIDTH + 16 + c, 112, 0, 2, 0);
+    sub_806CA88(&resultsScreen->unk1B4, 1, 0x16, SA2_ANIM_SP_STAGE_SCORE_BONUSES, 0, DISPLAY_WIDTH + 16 + a, (DISPLAY_HEIGHT / 2) - 8, 0, 0,
+                0);
+    sub_806CA88(&resultsScreen->unk1E4, 1, 0x16, SA2_ANIM_SP_STAGE_SCORE_BONUSES, 0, DISPLAY_WIDTH + 16 + b, (DISPLAY_HEIGHT / 2) + 12, 0,
+                1, 0);
+    sub_806CA88(&resultsScreen->unk214, 1, 0x16, SA2_ANIM_SP_STAGE_SCORE_BONUSES, 0, DISPLAY_WIDTH + 16 + c, (DISPLAY_HEIGHT / 2) + 32, 0,
+                2, 0);
 
     for (i = 0; i < 5; i++) {
-        sub_806CA88(&resultsScreen->unk244[i], 1, sDigitSprites[0].unk4, sDigitSprites[0].anim, 0, d + SomeMacro807028C(i), 0x58, 0,
-                    sDigitSprites[0].variant, 0);
-    }
-
-    for (i = 0; i < 5; i++) {
-        sub_806CA88(&resultsScreen->unk334[i], 1, sDigitSprites[0].unk4, sDigitSprites[0].anim, 0, e + SomeMacro807028C(i), 0x6C, 0,
-                    sDigitSprites[0].variant, 0);
+        sub_806CA88(&resultsScreen->unk244[i], 1, sValueSprites[0].size, sValueSprites[0].anim, 0, d + SomeMacro807028C(i),
+                    (DISPLAY_HEIGHT / 2) + 8, 0, sValueSprites[0].variant, 0);
     }
 
     for (i = 0; i < 5; i++) {
-        sub_806CA88(&resultsScreen->unk424[i], 1, sDigitSprites[0].unk4, sDigitSprites[0].anim, 0, f + SomeMacro807028C(i), 0x80, 0,
-                    sDigitSprites[0].variant, 0);
+        sub_806CA88(&resultsScreen->unk334[i], 1, sValueSprites[0].size, sValueSprites[0].anim, 0, e + SomeMacro807028C(i),
+                    (DISPLAY_HEIGHT / 2) + 28, 0, sValueSprites[0].variant, 0);
+    }
+
+    for (i = 0; i < 5; i++) {
+        sub_806CA88(&resultsScreen->unk424[i], 1, sValueSprites[0].size, sValueSprites[0].anim, 0, f + SomeMacro807028C(i),
+                    (DISPLAY_HEIGHT / 2) + 48, 0, sValueSprites[0].variant, 0);
     }
 
     for (i = 0; i < NUM_COURSE_ZONES; i++) {
@@ -375,26 +395,17 @@ static void SpecialStageResultsScreenCreateUI(struct SpecialStageResultsScreen *
             sprite = &sChaosEmeraldUnlockedSprites[7];
         }
 
-        sub_806CA88(&resultsScreen->chaosEmerald[i], 1, 9, sprite->anim, 0, i * 24 + DISPLAY_WIDTH + 52, 52, 0, sprite->variant, 0);
+        sub_806CA88(&resultsScreen->chaosEmerald[i], 1, 9, sprite->anim, 0, i * 24 + DISPLAY_WIDTH + 52, (DISPLAY_HEIGHT / 2) - 28, 0,
+                    sprite->variant, 0);
     }
 
     resultsScreen->animFrame = 0;
-    resultsScreen->unk516 = 256;
-    resultsScreen->unk518 = 256;
-    resultsScreen->unk51A = 256;
-    resultsScreen->unk51C = 256;
-    resultsScreen->unk51E = 256;
+    resultsScreen->unk516 = DISPLAY_WIDTH + 16;
+    resultsScreen->unk518 = DISPLAY_WIDTH + 16;
+    resultsScreen->unk51A = DISPLAY_WIDTH + 16;
+    resultsScreen->unk51C = DISPLAY_WIDTH + 16;
+    resultsScreen->unk51E = DISPLAY_WIDTH + 16;
 }
-
-void sub_807061C(s16);
-
-void sub_8070680(s16);
-void sub_80706D8(s16);
-void sub_8070740(s16);
-void sub_80707A8(s16);
-
-static void RenderScoresAnim(void);
-void Task_ResultsScreenSequencePart2(void);
 
 void Task_ResultsScreenSequencePart1(void)
 {
@@ -435,16 +446,16 @@ void sub_807061C(s16 a)
     struct SpecialStage *stage = resultsScreen->stage;
     Sprite *s;
 
-    resultsScreen->unk516 = (0xB - a) * 0x16;
+    resultsScreen->unk516 = (11 - a) * 22;
 
     s = &resultsScreen->unk4;
 
     if (stage->targetReached) {
-        s->x = resultsScreen->unk516 + 0x4C;
+        s->x = resultsScreen->unk516 + (DISPLAY_WIDTH / 2) - 44;
         s = &resultsScreen->unk34;
-        s->x = resultsScreen->unk516 + 4;
+        s->x = resultsScreen->unk516 + (DISPLAY_WIDTH / 2) - 116;
     } else {
-        s->x = resultsScreen->unk516 + 0x30;
+        s->x = resultsScreen->unk516 + (DISPLAY_WIDTH / 2) - 72;
     }
 }
 
@@ -454,14 +465,14 @@ void sub_8070680(s16 a)
     struct SpecialStageResultsScreen *resultsScreen = TASK_DATA(gCurTask);
     struct SpecialStage *stage = resultsScreen->stage;
 
-    resultsScreen->unk518 = (0xB - a) * 0x16;
+    resultsScreen->unk518 = (11 - a) * 22;
 
     for (i = 0; i < 7; i++) {
         Sprite *s = &resultsScreen->chaosEmerald[i];
-        s32 temp2 = (i * 0x18);
-        s32 temp = resultsScreen->unk518 + 0x24;
-        temp2 += temp;
-        s->x = temp2;
+        s32 x = (i * 24);
+        s32 base = resultsScreen->unk518 + (DISPLAY_WIDTH / 2) - 84;
+        x += base;
+        s->x = x;
     }
 }
 
@@ -473,16 +484,16 @@ void sub_80706D8(s16 a)
     struct SpecialStageResultsScreen *resultsScreen = TASK_DATA(gCurTask);
     struct SpecialStage *stage = resultsScreen->stage;
 
-    resultsScreen->unk51A = (0xB - a) * 0x16;
+    resultsScreen->unk51A = (11 - a) * 22;
     s = &resultsScreen->unk1B4;
-    s->x = resultsScreen->unk51A + 0x30;
+    s->x = resultsScreen->unk51A + (DISPLAY_WIDTH / 2) - 72;
 
     for (i = 0; i < 5; i++) {
         s32 temp2, temp;
 
         s = &resultsScreen->unk244[i];
         temp2 = (i * 8);
-        temp = resultsScreen->unk51A + 0x9E;
+        temp = resultsScreen->unk51A + (DISPLAY_WIDTH / 2) + 38;
         s->x = temp2 + temp;
     }
 }
@@ -495,14 +506,14 @@ void sub_8070740(s16 a)
     struct SpecialStageResultsScreen *resultsScreen = TASK_DATA(gCurTask);
     struct SpecialStage *stage = resultsScreen->stage;
 
-    resultsScreen->unk51C = (0xB - a) * 0x16;
+    resultsScreen->unk51C = (11 - a) * 22;
     s = &resultsScreen->unk1E4;
-    s->x = resultsScreen->unk51C + 0x30;
+    s->x = resultsScreen->unk51C + (DISPLAY_WIDTH / 2) - 72;
 
     for (i = 0; i < 5; i++) {
         s = &resultsScreen->unk334[i];
         temp2 = (i * 8);
-        temp = resultsScreen->unk51C + 0x9E;
+        temp = resultsScreen->unk51C + (DISPLAY_WIDTH / 2) + 38;
         s->x = temp2 + temp;
     }
 }
@@ -515,19 +526,18 @@ void sub_80707A8(s16 xPos)
     struct SpecialStageResultsScreen *resultsScreen = TASK_DATA(gCurTask);
     struct SpecialStage *stage = resultsScreen->stage;
 
-    resultsScreen->unk51E = (0xB - xPos) * 0x16;
+    resultsScreen->unk51E = (11 - xPos) * 22;
     s = &resultsScreen->unk214;
-    s->x = resultsScreen->unk51E + 0x30;
+    s->x = resultsScreen->unk51E + (DISPLAY_WIDTH / 2) - 72;
 
     for (i = 0; i < 5; i++) {
         s = &resultsScreen->unk424[i];
         temp2 = (i * 8);
-        temp = resultsScreen->unk51E + 0x9E;
+        temp = resultsScreen->unk51E + (DISPLAY_WIDTH / 2) + 38;
         s->x = temp2 + temp;
     }
 }
 
-void Task_ResultsScreenNewEmeraldSequencePart2(void);
 void Task_ResultsScreenNewEmeraldSequencePart1(void)
 {
     struct SpecialStageResultsScreen *resultsScreen = TASK_DATA(gCurTask);
@@ -610,8 +620,8 @@ static void RenderScoresAnim(void)
         if (found || a[i] != 0 || i == 4) {
             found = TRUE;
             s = &resultsScreen->unk244[i];
-            s->graphics.anim = sDigitSprites[a[i]].anim;
-            s->variant = sDigitSprites[a[i]].variant;
+            s->graphics.anim = sValueSprites[a[i]].anim;
+            s->variant = sValueSprites[a[i]].variant;
             UpdateSpriteAnimation(s);
             DisplaySprite(s);
         }
@@ -621,8 +631,8 @@ static void RenderScoresAnim(void)
         if (found || b[i] != 0 || i == 4) {
             found = TRUE;
             s = &resultsScreen->unk334[i];
-            s->graphics.anim = sDigitSprites[b[i]].anim;
-            s->variant = sDigitSprites[b[i]].variant;
+            s->graphics.anim = sValueSprites[b[i]].anim;
+            s->variant = sValueSprites[b[i]].variant;
             UpdateSpriteAnimation(s);
             DisplaySprite(s);
         }
@@ -632,16 +642,13 @@ static void RenderScoresAnim(void)
         if (found || c[i] != 0 || i == 4) {
             found = TRUE;
             s = &resultsScreen->unk424[i];
-            s->graphics.anim = sDigitSprites[c[i]].anim;
-            s->variant = sDigitSprites[c[i]].variant;
+            s->graphics.anim = sValueSprites[c[i]].anim;
+            s->variant = sValueSprites[c[i]].variant;
             UpdateSpriteAnimation(s);
             DisplaySprite(s);
         }
     }
 }
-
-void sub_8070BEC(struct Task *);
-static void CreateDisplays(struct SpecialStageUI *);
 
 struct Task *CreateSpecialStageUI(struct SpecialStage *stage)
 {
@@ -662,8 +669,6 @@ void sub_8070BEC(struct Task *t)
     // Unused logic
 }
 
-void SpecialStageResultsScreenOnDestroy(struct Task *);
-
 struct Task *CreateSpecialStageResultsScreen(struct SpecialStage *stage)
 {
     struct Task *t = TaskCreate(Task_ResultsScreenSequencePart1, sizeof(struct SpecialStageResultsScreen), 0xD000, 0,
@@ -680,14 +685,10 @@ void SpecialStageResultsScreenOnDestroy(struct Task *t)
     // Unsued logic
 }
 
-static void Task_ResultsScreenStartNewEmeraldSequence(void);
-
 void SpecialStageResultsScreenNewEmeraldSequence(struct SpecialStage *stage)
 {
     stage->uiTask->main = Task_ResultsScreenStartNewEmeraldSequence;
 }
-
-static void CreateMultiplierValue(struct SpecialStageUI *);
 
 static void CreateDisplays(struct SpecialStageUI *ui)
 {
@@ -696,13 +697,13 @@ static void CreateDisplays(struct SpecialStageUI *ui)
     CreateMultiplierValue(ui);
 }
 
-void sub_8070C58(void)
+void RenderTime(void)
 {
     struct SpecialStageUI *ui = TASK_DATA(gCurTask);
     struct SpecialStage *stage = ui->stage;
 
     if (stage->paused == FALSE) {
-        sub_806FCF8();
+        UpdateStageTime();
     }
 
     DisplaySprite(&ui->timeSymbol);
@@ -720,11 +721,12 @@ void sub_8070C58(void)
 
 static void CreateMultiplierValue(struct SpecialStageUI *ui)
 {
-    const struct UNK_80DF670 *unkF840 = &gUnknown_080DF840[0];
-    sub_806CA88(&ui->multiplier, 0, unkF840->unk4, unkF840->anim, 0x1000, 0x70, 100, 2, unkF840->variant, 0);
+    const struct UNK_80DF670 *unkF840 = &sValueSprites[11];
+    sub_806CA88(&ui->multiplier, 0, unkF840->size, unkF840->anim, 0x1000, (DISPLAY_WIDTH / 2) - 8, (DISPLAY_HEIGHT / 2) + 20, 2,
+                unkF840->variant, 0);
 }
 
-void sub_8070D14(void)
+void RenderMultiplier(void)
 {
     struct SpecialStageUI *ui = TASK_DATA(gCurTask);
     struct SpecialStage *stage = ui->stage;
@@ -732,7 +734,7 @@ void sub_8070D14(void)
     s16 unkC0 = player->multiplier;
 
     if (unkC0 > 1) {
-        const struct UNK_80DF670 *unkF830 = &gUnknown_080DF830[unkC0];
+        const struct UNK_80DF670 *unkF830 = &sValueSprites[unkC0 + 9];
         Sprite *s = &ui->multiplier;
         if (stage->paused == FALSE) {
             s->graphics.anim = unkF830->anim;
@@ -743,15 +745,15 @@ void sub_8070D14(void)
     }
 }
 
-void sub_8070D80(struct SpecialStageUI *ui)
+void CreateStartText(struct SpecialStageUI *ui)
 {
-    Sprite *s = &ui->unk244;
+    Sprite *s = &ui->startText;
     ui->unk2A8 = 1;
     ui->unk2A4 = gUnknown_03005B5C;
-    sub_806CA88(s, 0, 0x14, 0x376, 0x1000, 0x78, 0x50, 1, 0, 0);
+    sub_806CA88(s, 0, 20, 0x376, 0x1000, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2, 1, 0, 0);
 }
 
-void sub_8070DD0(struct SpecialStageUI *ui) { DisplaySprite(&ui->unk244); }
+void RenderStartText(struct SpecialStageUI *ui) { DisplaySprite(&ui->startText); }
 
 void sub_8070DE0(struct SpecialStageUI *ui)
 {

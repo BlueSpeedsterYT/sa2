@@ -5,7 +5,7 @@
 #include "trig.h"
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/collision.h"
 #include "game/entity.h"
 
 #include "game/stage/player.h"
@@ -111,7 +111,7 @@ static void sub_807F9F0(void)
             platform->unk4C = FALSE;
             gPlayer.transition = PLTRANS_INIT_JUMP;
             gPlayer.moveState &= ~8;
-            gPlayer.unk3C = 0;
+            gPlayer.stoodObj = 0;
         }
     }
 
@@ -151,10 +151,10 @@ static void sub_807FB1C(Sprite_SpeedingPlatform *platform)
     platform->unk48 += platform->unk5A;
 
     if (PLAYER_IS_ALIVE && platform->unk4C) {
-        gPlayer.x = platform->unk50 + (Q(platform->x) + platform->unk44);
-        gPlayer.y = platform->unk52 + (Q(platform->y) + platform->unk48) - Q(gPlayer.spriteOffsetY);
-        platform->unk50 += gPlayer.speedAirX;
-        platform->unk52 += gPlayer.speedAirY;
+        gPlayer.qWorldX = platform->unk50 + (Q(platform->x) + platform->unk44);
+        gPlayer.qWorldY = platform->unk52 + (Q(platform->y) + platform->unk48) - Q(gPlayer.spriteOffsetY);
+        platform->unk50 += gPlayer.qSpeedAirX;
+        platform->unk52 += gPlayer.qSpeedAirY;
     }
 
     platform->unk4C = sub_807FC9C(platform);
@@ -183,15 +183,15 @@ static bool32 sub_807FC9C(Sprite_SpeedingPlatform *platform)
         return FALSE;
     }
 
-    if (gPlayer.moveState & (MOVESTATE_1000000 | MOVESTATE_400000 | MOVESTATE_IN_AIR | MOVESTATE_DEAD)) {
-        gPlayer.moveState &= ~MOVESTATE_8;
-        gPlayer.unk3C = NULL;
+    if (gPlayer.moveState & (MOVESTATE_1000000 | MOVESTATE_IA_OVERRIDE | MOVESTATE_IN_AIR | MOVESTATE_DEAD)) {
+        gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
+        gPlayer.stoodObj = NULL;
         return FALSE;
     }
 
     if (sub_807FD0C(platform) != 2) {
         s16 x = platform->x + I(platform->unk44) - gCamera.x - 27;
-        s16 playerX = I(gPlayer.x) - gCamera.x;
+        s16 playerX = I(gPlayer.qWorldX) - gCamera.x;
 
         if (x <= playerX && (x + 54) >= playerX) {
             return TRUE;
@@ -206,34 +206,34 @@ static bool32 sub_807FC9C(Sprite_SpeedingPlatform *platform)
 static u32 sub_807FD0C(Sprite_SpeedingPlatform *platform)
 {
     if (PLAYER_IS_ALIVE) {
-        u32 temp = sub_800CCB8(&platform->s, platform->x + I(platform->unk44), platform->y + I(platform->unk48), &gPlayer);
+        u32 temp = Coll_Player_Platform(&platform->s, platform->x + I(platform->unk44), platform->y + I(platform->unk48), &gPlayer);
 
         if (temp != 0) {
             if (temp & 0x10000) {
-                gPlayer.y += Q_8_8(temp);
-                gPlayer.speedAirY = 0;
+                gPlayer.qWorldY += Q_8_8(temp);
+                gPlayer.qSpeedAirY = 0;
                 return 2;
             }
 
             if (temp & 0x40000) {
-                gPlayer.x += (s16)(temp & 0xFF00);
-                gPlayer.speedAirX = 0;
-                gPlayer.speedGroundX = 0;
+                gPlayer.qWorldX += (s16)(temp & 0xFF00);
+                gPlayer.qSpeedAirX = 0;
+                gPlayer.qSpeedGround = 0;
                 gPlayer.moveState |= MOVESTATE_20;
                 return 1;
             }
 
             if (temp & 0x80000) {
-                gPlayer.x += (s16)(temp & 0xFF00);
-                gPlayer.speedAirX = 0;
-                gPlayer.speedGroundX = 0;
+                gPlayer.qWorldX += (s16)(temp & 0xFF00);
+                gPlayer.qSpeedAirX = 0;
+                gPlayer.qSpeedGround = 0;
                 gPlayer.moveState |= MOVESTATE_20;
                 return 1;
             }
 
             if (temp & 0x20000) {
-                gPlayer.y += Q_8_8(temp);
-                gPlayer.speedAirY = 0;
+                gPlayer.qWorldY += Q_8_8(temp);
+                gPlayer.qSpeedAirY = 0;
                 return 1;
             }
         }
@@ -268,8 +268,8 @@ static void TaskDestructor_Interactable097(struct Task *t)
 
 static void sub_807FE34(Sprite_SpeedingPlatform *platform)
 {
-    platform->unk50 = gPlayer.x - (Q(platform->x) + platform->unk44);
-    platform->unk52 = gPlayer.y - (Q(platform->y) + platform->unk48) + Q(gPlayer.spriteOffsetY);
+    platform->unk50 = gPlayer.qWorldX - (Q(platform->x) + platform->unk44);
+    platform->unk52 = gPlayer.qWorldY - (Q(platform->y) + platform->unk48) + Q(gPlayer.spriteOffsetY);
     platform->unk4C = TRUE;
     m4aSongNumStart(SE_288);
     gCurTask->main = sub_807FF20;

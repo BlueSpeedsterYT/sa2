@@ -451,8 +451,8 @@ bool32 sub_80796A8(Sprite_IA69 *ia69)
     } else {
         s16 posX = ia69->unk158 + I(ia69->unk164) - gCamera.x;
         s16 posY = ia69->unk15C + I(ia69->unk168) - gCamera.y;
-        s16 playerX = I(gPlayer.x) - gCamera.x;
-        s16 playerY = I(gPlayer.y) - gCamera.y;
+        s16 playerX = I(gPlayer.qWorldX) - gCamera.x;
+        s16 playerY = I(gPlayer.qWorldY) - gCamera.y;
 
         if ((posX - 0x20) <= playerX && (posX + 0x20) >= playerX) {
             if ((posY - 0x20) <= playerY && posY >= playerY) {
@@ -494,11 +494,11 @@ void sub_8079810(void);
 void sub_80797AC(Sprite_IA69 *ia69)
 {
     Player_SetMovestate_IsInScriptedSequence();
-    gPlayer.moveState |= MOVESTATE_400000;
+    gPlayer.moveState |= MOVESTATE_IA_OVERRIDE;
     gPlayer.charState = CHARSTATE_HIT_AIR;
-    gPlayer.speedAirX = 0;
-    gPlayer.speedAirY = 0;
-    gPlayer.speedGroundX = 0;
+    gPlayer.qSpeedAirX = 0;
+    gPlayer.qSpeedAirY = 0;
+    gPlayer.qSpeedGround = 0;
     gCurTask->main = sub_8079810;
 }
 
@@ -519,7 +519,7 @@ void sub_8079810(void)
         Player_ClearMovestate_IsInScriptedSequence();
         gCurTask->main = Task_Interactable069;
     } else {
-        gPlayer.y = ia69->unk15C * 0x100 + ia69->unk168 - 0x1000;
+        gPlayer.qWorldY = ia69->unk15C * 0x100 + ia69->unk168 - 0x1000;
 
         if (ia69->unk174) {
             sub_8079888(ia69);
@@ -533,8 +533,8 @@ void sub_8079888(Sprite_IA69 *ia69)
     Player_ClearMovestate_IsInScriptedSequence();
 
     if (PLAYER_IS_ALIVE) {
-        gPlayer.moveState &= ~MOVESTATE_400000;
-        gPlayer.transition = PLTRANS_PT9;
+        gPlayer.moveState &= ~MOVESTATE_IA_OVERRIDE;
+        gPlayer.transition = PLTRANS_HURT;
     }
 
     gCurTask->main = Task_Interactable069;

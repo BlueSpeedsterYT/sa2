@@ -18,6 +18,7 @@
 #include "constants/zones.h"
 
 #include "constants/songs.h"
+#include "constants/tilemaps.h"
 
 #define MAX_POINTS 99900
 
@@ -46,7 +47,7 @@ void CreateSpecialStage(s16 selectedCharacter, s16 level)
     struct Task *t;
     struct SpecialStage *stage;
 
-    s16 zone, character, temp, i, target;
+    s16 zone, character, temp, i, viewDistance;
 
     m4aMPlayAllStop();
 
@@ -67,11 +68,11 @@ void CreateSpecialStage(s16 selectedCharacter, s16 level)
 
     t = TaskCreate(Task_ShowIntroScreen, sizeof(struct SpecialStage), 0x2000, 0, SpecialStageOnDestroy);
     stage = TASK_DATA(t);
-    stage->cameraX = Q_16_16(256);
-    stage->cameraY = Q_16_16(256);
+    stage->q16CameraX = Q_16_16(256);
+    stage->q16CameraY = Q_16_16(256);
     stage->unk59C = 0;
 
-    stage->cameraBearing = 512;
+    stage->cameraRotX = 512;
 
     if (character <= CHARACTER_AMY) {
         stage->character = character;
@@ -104,36 +105,38 @@ void CreateSpecialStage(s16 selectedCharacter, s16 level)
     stage->ringsTargetTens = Div(stage->ringsTarget, 10) - (stage->ringsTargetHundreds * 10);
     stage->ringsTargetUnits = Mod(stage->ringsTarget, 10);
 
-    stage->targetReached = 0;
-    stage->targetReached = 0;
+    stage->targetReached = FALSE;
     stage->pauseMenuCursor = 0;
     stage->unk5C7 = 0;
     stage->unk5C8 = 0;
 
-    stage->unk5CA = 120;
-    stage->unk5CC = 140;
-    stage->unk5CE = 64;
+    stage->cameraOriginX = DISPLAY_WIDTH / 2;
+    stage->cameraHeight = 140;
+    stage->worldScale = 64; // scale
 
-    stage->unk5D0 = 40;
-    stage->unk5D1 = 60;
+    stage->cameraPitch = 40; // lower = towards the ground, higher = towards the horizon
 
-    // wtf, all this stuff is const
-    target = 49;
-    stage->unk5D2 = target;
+    stage->horizonHeight = 60; // horizon (pixels)
 
-    for (i = 1; i < stage->unk5D2; i *= 2)
+    // This value is 49 on the GBA
+    // - (horizonHeight / 2) - 1 is just a guess
+    viewDistance = (DISPLAY_HEIGHT / 2) - (60 / 2) - 1;
+    stage->viewDistance = viewDistance;
+
+    // Round up to the nearest power of 2
+    for (i = 1; i < stage->viewDistance; i *= 2)
         ;
 
-    stage->unk5D2 = i;
-    stage->unk5D3 = (((DISPLAY_HEIGHT - 1) - stage->unk5D1) >> 1) + stage->unk5D1;
+    stage->viewDistance = i;
+    stage->unk5D3 = (((DISPLAY_HEIGHT - 1) - stage->horizonHeight) >> 1) + stage->horizonHeight;
 }
 
 static void SetupIntroScreenRegisters(void)
 {
-    gDispCnt = 0x1641;
-    gBgCntRegs[1] = 0x703;
-    gBgCntRegs[2] = 0xD086;
-    gBldRegs.bldCnt = 0xAF;
+    gDispCnt = (DISPCNT_OBJ_ON | DISPCNT_BG1_ON | DISPCNT_BG2_ON | DISPCNT_OBJ_1D_MAP | DISPCNT_MODE_1);
+    gBgCntRegs[1] = (BGCNT_TXT256x256 | BGCNT_16COLOR | BGCNT_PRIORITY(3) | BGCNT_CHARBASE(0) | BGCNT_SCREENBASE(7));
+    gBgCntRegs[2] = (BGCNT_TXT512x512 | BGCNT_256COLOR | BGCNT_PRIORITY(2) | BGCNT_CHARBASE(1) | BGCNT_SCREENBASE(16));
+    gBldRegs.bldCnt = BLDCNT_EFFECT_LIGHTEN | (BLDCNT_TGT1_ALL & ~BLDCNT_TGT1_OBJ);
     gBldRegs.bldY = 0x10;
 
     gBgScrollRegs[1][0] = 0;
@@ -346,7 +349,7 @@ void Task_FadeToResultScreen(void)
         stage->uiTask = NULL;
     }
 
-    sub_806CEC4(&stage->unk48, 0, 7, 0x8B, 0x20, 0x20, 0, 1, 0, 0);
+    SpecialStageDrawBackground(&stage->unk48, 0, 7, TM_TILEMAP_139, 0x20, 0x20, 0, 1, 0, 0);
     gBgScrollRegs[1][0] = 0;
     gBgScrollRegs[1][1] = 0;
     gDispCnt = 0x1240;
@@ -519,7 +522,7 @@ void sub_806C49C(void)
         fade->window = 0;
         fade->flags = 1;
         fade->brightness = Q_8_8(0);
-        fade->speed = 0x40;
+        fade->speed = 64;
         fade->bldAlpha = 0;
         fade->bldCnt = 0xBF;
 
@@ -588,7 +591,6 @@ void sub_806C6A4(void)
 
     stage->animFrame++;
     if (stage->animFrame > 119) {
-        s32 temp2, temp3, temp4;
         s32 temp = stage->finalScore;
 
         if (stage->playerTask != NULL) {
@@ -601,27 +603,12 @@ void sub_806C6A4(void)
             stage->uiTask = NULL;
         }
 
-        temp4 = gLevelScore;
-        gLevelScore += temp;
-
-        temp2 = Div(gLevelScore, 50000);
-        temp3 = Div(temp4, 50000);
-
-        if (temp2 != temp3 && gGameMode == GAME_MODE_SINGLE_PLAYER) {
-            u16 temp5 = (temp2 - temp3);
-            temp5 += gNumLives;
-
-            if (temp5 > 0xFF) {
-                temp5 = 0xFF;
-            }
-
-            gNumLives = temp5;
-        }
+        INCREMENT_SCORE_A(temp);
 
         gLoadedSaveGame->score += stage->rings;
 
         TasksDestroyAll();
-        gUnknown_03002AE4 = gUnknown_0300287C;
+        PAUSE_BACKGROUNDS_QUEUE();
         gUnknown_03005390 = 0;
         PAUSE_GRAPHICS_QUEUE();
         WriteSaveGame();
@@ -692,7 +679,7 @@ void SpecialStagePauseMenuMain(void)
                 return;
             }
             TasksDestroyAll();
-            gUnknown_03002AE4 = gUnknown_0300287C;
+            PAUSE_BACKGROUNDS_QUEUE();
             gUnknown_03005390 = 0;
             PAUSE_GRAPHICS_QUEUE();
             CreateTitleScreenAndSkipIntro();
@@ -716,7 +703,7 @@ static void Task_ShowIntroScreen(void)
 {
     struct SpecialStage *stage = TASK_DATA(gCurTask);
     SetupIntroScreenRegisters();
-    sub_806CA88(&stage->introText, RENDER_TARGET_SCREEN, 0x28, 0x37C, 0, 0x78, 0x50, 0, 0, 0);
+    sub_806CA88(&stage->introText, RENDER_TARGET_SCREEN, 0x28, 0x37C, 0, (DISPLAY_WIDTH / 2), (DISPLAY_HEIGHT / 2), 0, 0, 0);
 
     stage->state = 1;
     m4aSongNumStart(MUS_SPECIAL_STAGE_INTRO);

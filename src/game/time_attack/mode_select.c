@@ -2,6 +2,7 @@
 #include "malloc_vram.h"
 #include "sprite.h"
 #include "task.h"
+#include "flags.h"
 #include "lib/m4a/m4a.h"
 #include "game/character_select.h"
 #include "game/stage/boss_results_transition.h"
@@ -19,15 +20,14 @@
 struct TimeAttackModeSelectionScreen {
     Background unk0;
     Background unk40;
-    Sprite unk80;
-    Sprite unkB0;
-    Sprite unkE0;
+    Sprite title;
+    Sprite zoneItem;
+    Sprite bossItem;
     Sprite infoText;
-    ScreenFade unk140;
+    ScreenFade fade;
     u8 animFrame;
     u8 unk14D;
     u8 unk14E;
-    u8 filler14F;
 };
 
 static void Task_FadeInAndStartIntro(void);
@@ -42,7 +42,7 @@ static void Task_HandleModeSelectedExit(void);
 
 static void TimeAttackModeSelectionScreenOnDestroy(struct Task *);
 
-const TileInfo gUnknown_080E0384[30] = {
+const TileInfo gUnknown_080E0384[] = {
     TextElementAlt4(SA2_ANIM_VARIANT_TA_JP_ZONE, 12, SA2_ANIM_TIME_ATTACK_JP),
     TextElementAlt4(SA2_ANIM_VARIANT_TA_JP_BOSS, 8, SA2_ANIM_TIME_ATTACK_JP),
     TextElementAlt4(SA2_ANIM_VARIANT_TA_JP_CLEAR, 168, SA2_ANIM_TIME_ATTACK_JP),
@@ -114,17 +114,17 @@ void CreateTimeAttackModeSelectionScreen(void)
     modeScreen->unk14D = 0;
     modeScreen->unk14E = 0;
 
-    fade = &modeScreen->unk140;
+    fade = &modeScreen->fade;
     fade->window = 1;
     fade->brightness = Q_8_8(0);
     fade->flags = 2;
-    fade->speed = 0x100;
+    fade->speed = Q_8_8(1);
     fade->bldCnt = 0x3FFF;
     fade->bldAlpha = 0;
 
     UpdateScreenFade(fade);
 
-    s = &modeScreen->unk80;
+    s = &modeScreen->title;
     s->graphics.dest = VramMalloc(0x6C);
     s->graphics.anim = SA2_ANIM_TIME_ATTACK_JP;
     s->variant = SA2_ANIM_VARIANT_TA_TITLE;
@@ -138,10 +138,10 @@ void CreateTimeAttackModeSelectionScreen(void)
     s->animSpeed = SPRITE_ANIM_SPEED(1.0);
     s->palId = 0;
     s->hitboxes[0].index = -1;
-    s->frameFlags = 0x1000;
+    s->frameFlags = SPRITE_FLAG(PRIORITY, 1);
     UpdateSpriteAnimation(s);
 
-    s = &modeScreen->unkB0;
+    s = &modeScreen->zoneItem;
     s->graphics.dest = VramMalloc(gUnknown_080E0384[TextElementOffset(lang, 5, 0)].numTiles);
     s->graphics.anim = gUnknown_080E0384[TextElementOffset(lang, 5, 0)].anim;
     s->variant = gUnknown_080E0384[TextElementOffset(lang, 5, 0)].variant;
@@ -158,7 +158,7 @@ void CreateTimeAttackModeSelectionScreen(void)
     s->frameFlags = 0x1000;
     UpdateSpriteAnimation(s);
 
-    s = &modeScreen->unkE0;
+    s = &modeScreen->bossItem;
     s->graphics.dest = VramMalloc(gUnknown_080E0384[TextElementOffset(lang, 5, 1)].numTiles);
     s->graphics.anim = gUnknown_080E0384[TextElementOffset(lang, 5, 1)].anim;
     s->variant = gUnknown_080E0384[TextElementOffset(lang, 5, 1)].variant;
@@ -180,8 +180,8 @@ void CreateTimeAttackModeSelectionScreen(void)
     s->graphics.anim = gUnknown_080E0384[TextElementOffset(lang, 5, 2)].anim;
     s->variant = gUnknown_080E0384[TextElementOffset(lang, 5, 2)].variant;
     s->prevVariant = -1;
-    s->x = 8;
-    s->y = 103;
+    s->x = DISPLAY_WIDTH / 2 - 112;
+    s->y = DISPLAY_HEIGHT - 57;
     s->oamFlags = SPRITE_OAM_ORDER(4);
     s->graphics.size = 0;
     s->animCursor = 0;
@@ -232,15 +232,15 @@ void Task_IntroSweepAnim(void)
 {
     struct TimeAttackModeSelectionScreen *modeScreen = TASK_DATA(gCurTask);
 
-    gUnknown_03002A80 = 2;
-    gUnknown_03002878 = (void *)REG_ADDR_WIN1H;
+    gHBlankCopySize = sizeof(winreg_t);
+    gHBlankCopyTarget = (void *)REG_ADDR_WIN1H;
 
-    gWinRegs[4] = 0x1300;
-    gWinRegs[5] = 0x11;
+    gWinRegs[WINREG_WININ] = 0x1300;
+    gWinRegs[WINREG_WINOUT] = 0x11;
 
-    gFlags |= 0x4;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
     InitHBlankBgOffsets(DISPLAY_WIDTH);
-    sub_802E044(0x6400, modeScreen->animFrame * 20 + 700);
+    sub_802E044(Q(100), modeScreen->animFrame * 20 + 700);
 
     if (gPressedKeys & A_BUTTON) {
         modeScreen->animFrame = 0;
@@ -266,17 +266,17 @@ static void Task_IntroUIAnim(void)
         modeScreen->animFrame = 31;
     }
 
-    gUnknown_03002A80 = 2;
-    gUnknown_03002878 = (void *)REG_ADDR_WIN1H;
+    gHBlankCopySize = sizeof(winreg_t);
+    gHBlankCopyTarget = (void *)REG_ADDR_WIN1H;
 
-    gWinRegs[4] = 0x1300;
-    gWinRegs[5] = 0x11;
+    gWinRegs[WINREG_WININ] = 0x1300;
+    gWinRegs[WINREG_WINOUT] = 0x11;
 
-    gFlags |= 0x4;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
     InitHBlankBgOffsets(DISPLAY_WIDTH);
-    sub_802E044(0x6400, 700);
+    sub_802E044(Q(100), 700);
 
-    s = &modeScreen->unk80;
+    s = &modeScreen->title;
     if (modeScreen->animFrame < 10) {
         s->x = modeScreen->animFrame * 10 - 50;
     } else {
@@ -284,7 +284,7 @@ static void Task_IntroUIAnim(void)
     }
     s->y = 10;
 
-    s = &modeScreen->unkB0;
+    s = &modeScreen->zoneItem;
     if (modeScreen->animFrame < 10) {
         s->x = -80;
     } else if (modeScreen->animFrame < 20) {
@@ -294,7 +294,7 @@ static void Task_IntroUIAnim(void)
     }
     s->y = 60;
 
-    s = &modeScreen->unkE0;
+    s = &modeScreen->bossItem;
     if (modeScreen->animFrame < 20) {
         s->x = -90;
     } else if (modeScreen->animFrame < 30) {
@@ -317,7 +317,7 @@ static void Task_ScreenMain(void)
         if (modeScreen->unk14D && !gLoadedSaveGame->bossTimeAttackUnlocked) {
             m4aSongNumStart(SE_ABORT);
         } else {
-            fade = &modeScreen->unk140;
+            fade = &modeScreen->fade;
             fade->window = 1;
             fade->brightness = Q_8_8(0);
             fade->flags = 1;
@@ -328,7 +328,7 @@ static void Task_ScreenMain(void)
             gCurTask->main = Task_FadeOutModeSelected;
         }
     } else if (gPressedKeys & B_BUTTON) {
-        fade = &modeScreen->unk140;
+        fade = &modeScreen->fade;
         fade->window = 1;
         fade->brightness = Q_8_8(0);
         fade->flags = 1;
@@ -339,15 +339,15 @@ static void Task_ScreenMain(void)
         gCurTask->main = Task_FadeOutToTitleScreen;
     }
 
-    gUnknown_03002A80 = 2;
-    gUnknown_03002878 = (void *)REG_ADDR_WIN1H;
+    gHBlankCopySize = sizeof(winreg_t);
+    gHBlankCopyTarget = (void *)REG_ADDR_WIN1H;
 
-    gWinRegs[4] = 0x1300;
-    gWinRegs[5] = 0x11;
+    gWinRegs[WINREG_WININ] = 0x1300;
+    gWinRegs[WINREG_WINOUT] = 0x11;
 
-    gFlags |= 0x4;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
     InitHBlankBgOffsets(DISPLAY_WIDTH);
-    sub_802E044(0x6400, 700);
+    sub_802E044(Q(100), 700);
 
     if (gPressedKeys & (DPAD_UP | DPAD_DOWN)) {
         m4aSongNumStart(SE_MENU_CURSOR_MOVE);
@@ -360,10 +360,10 @@ static void Task_ScreenMain(void)
             lang = 0;
         }
 
-        s = &modeScreen->unkB0;
+        s = &modeScreen->zoneItem;
         s->palId = 1;
 
-        s = &modeScreen->unkE0;
+        s = &modeScreen->bossItem;
         s->palId = 0xFF;
 
         s = &modeScreen->infoText;
@@ -380,10 +380,10 @@ static void Task_ScreenMain(void)
         if (lang < 0) {
             lang = 0;
         }
-        s = &modeScreen->unkB0;
+        s = &modeScreen->zoneItem;
         s->palId = 0;
 
-        s = &modeScreen->unkE0;
+        s = &modeScreen->bossItem;
         s->palId = 0;
 
         s = &modeScreen->infoText;
@@ -398,22 +398,22 @@ static void Task_FadeOutModeSelected(void)
 {
     struct TimeAttackModeSelectionScreen *modeScreen = TASK_DATA(gCurTask);
 
-    if (UpdateScreenFade(&modeScreen->unk140) == SCREEN_FADE_COMPLETE) {
-        gFlags &= ~0x4;
+    if (UpdateScreenFade(&modeScreen->fade) == SCREEN_FADE_COMPLETE) {
+        gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
         gMultiSioEnabled = TRUE;
         gCurTask->main = Task_HandleModeSelectedExit;
         return;
     }
 
-    gUnknown_03002A80 = 2;
-    gUnknown_03002878 = (void *)REG_ADDR_WIN1H;
+    gHBlankCopySize = sizeof(winreg_t);
+    gHBlankCopyTarget = (void *)REG_ADDR_WIN1H;
 
-    gWinRegs[4] = 0x3300;
-    gWinRegs[5] = 0x31;
+    gWinRegs[WINREG_WININ] = 0x3300;
+    gWinRegs[WINREG_WINOUT] = 0x31;
 
-    gFlags |= 0x4;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
     InitHBlankBgOffsets(DISPLAY_WIDTH);
-    sub_802E044(0x6400, 700);
+    sub_802E044(Q(100), 700);
     RenderUI(modeScreen);
 }
 
@@ -421,29 +421,29 @@ static void Task_FadeOutToTitleScreen(void)
 {
     struct TimeAttackModeSelectionScreen *modeScreen = TASK_DATA(gCurTask);
 
-    if (UpdateScreenFade(&modeScreen->unk140) == SCREEN_FADE_COMPLETE) {
-        gFlags &= ~0x4;
+    if (UpdateScreenFade(&modeScreen->fade) == SCREEN_FADE_COMPLETE) {
+        gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
         CreateTitleScreenAtSinglePlayerMenu();
         TaskDestroy(gCurTask);
         return;
     }
 
-    gUnknown_03002A80 = 2;
-    gUnknown_03002878 = (void *)REG_ADDR_WIN1H;
+    gHBlankCopySize = sizeof(winreg_t);
+    gHBlankCopyTarget = (void *)REG_ADDR_WIN1H;
 
-    gWinRegs[4] = 0x3300;
-    gWinRegs[5] = 0x31;
+    gWinRegs[WINREG_WININ] = 0x3300;
+    gWinRegs[WINREG_WINOUT] = 0x31;
 
-    gFlags |= 0x4;
+    gFlags |= FLAGS_EXECUTE_HBLANK_COPY;
     InitHBlankBgOffsets(DISPLAY_WIDTH);
-    sub_802E044(0x6400, 700);
+    sub_802E044(Q(100), 700);
     RenderUI(modeScreen);
 }
 
 static void Task_FadeInAndStartIntro(void)
 {
     struct TimeAttackModeSelectionScreen *modeScreen = TASK_DATA(gCurTask);
-    if (UpdateScreenFade(&modeScreen->unk140) == SCREEN_FADE_COMPLETE) {
+    if (UpdateScreenFade(&modeScreen->fade) == SCREEN_FADE_COMPLETE) {
         modeScreen->animFrame = 0xF;
         gCurTask->main = Task_IntroSweepAnim;
     }
@@ -460,7 +460,7 @@ static void Task_HandleModeSelectedExit(void)
     }
 
     TasksDestroyAll();
-    gUnknown_03002AE4 = gUnknown_0300287C;
+    PAUSE_BACKGROUNDS_QUEUE();
     gUnknown_03005390 = 0;
     PAUSE_GRAPHICS_QUEUE();
     CreateCharacterSelectionScreen(0, gLoadedSaveGame->unlockedCharacters & 0x10);
@@ -469,11 +469,11 @@ static void Task_HandleModeSelectedExit(void)
 static void RenderUI(struct TimeAttackModeSelectionScreen *modeScreen)
 {
     Sprite *s;
-    s = &modeScreen->unk80;
+    s = &modeScreen->title;
     DisplaySprite(s);
-    s = &modeScreen->unkB0;
+    s = &modeScreen->zoneItem;
     DisplaySprite(s);
-    s = &modeScreen->unkE0;
+    s = &modeScreen->bossItem;
     DisplaySprite(s);
 
     if (modeScreen->unk14E != 0) {
@@ -486,8 +486,8 @@ static void RenderUI(struct TimeAttackModeSelectionScreen *modeScreen)
 static void TimeAttackModeSelectionScreenOnDestroy(struct Task *t)
 {
     struct TimeAttackModeSelectionScreen *modeScreen = TASK_DATA(t);
-    VramFree(modeScreen->unk80.graphics.dest);
-    VramFree(modeScreen->unkB0.graphics.dest);
-    VramFree(modeScreen->unkE0.graphics.dest);
+    VramFree(modeScreen->title.graphics.dest);
+    VramFree(modeScreen->zoneItem.graphics.dest);
+    VramFree(modeScreen->bossItem.graphics.dest);
     VramFree(modeScreen->infoText.graphics.dest);
 }

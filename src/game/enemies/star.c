@@ -3,7 +3,7 @@
 #include "task.h"
 #include "malloc_vram.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/enemies/star.h"
@@ -79,15 +79,15 @@ static void Task_StarIdle(void) { STAR_TASK(OPEN_CLOSE_TIME, SA2_ANIM_STAR, 1, T
 
 static void Task_StarClose(void)
 {
-    STAR_TASK(SPIN_TIME, SA2_ANIM_STAR, 2, Task_StarSpin, { sub_800C84C(s, pos.x, pos.y); });
+    STAR_TASK(SPIN_TIME, SA2_ANIM_STAR, 2, Task_StarSpin, { Coll_Player_Projectile(s, pos.x, pos.y); });
 }
 
 static void Task_StarSpin(void)
 {
-    STAR_TASK(OPEN_CLOSE_TIME, SA2_ANIM_STAR, 3, Task_StarOpen, { sub_800C84C(s, pos.x, pos.y); });
+    STAR_TASK(OPEN_CLOSE_TIME, SA2_ANIM_STAR, 3, Task_StarOpen, { Coll_Player_Projectile(s, pos.x, pos.y); });
 }
 
 static void Task_StarOpen(void)
 {
-    STAR_TASK(IDLE_TIME, SA2_ANIM_STAR, 0, Task_StarIdle, { sub_800C84C(s, pos.x, pos.y); });
+    STAR_TASK(IDLE_TIME, SA2_ANIM_STAR, 0, Task_StarIdle, { Coll_Player_Projectile(s, pos.x, pos.y); });
 }

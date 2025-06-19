@@ -5,10 +5,10 @@
 #include "gba/types.h"
 #include "sprite.h"
 
-#include "game/sa1_leftovers/globals.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/globals.h"
+#include "game/sa1_sa2_shared/collision.h"
 
-#include "game/stage/collision.h"
+#include "game/stage/terrain_collision.h"
 #include "game/player_callbacks.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -57,10 +57,6 @@ typedef struct {
     SpriteBase base;
     Sprite s;
 } EnemyBase;
-
-u32 sub_800CDBC(Sprite *, s32, s32, Player *);
-
-u32 sub_800DF38(Sprite *, s32, s32, Player *);
 
 // After a MapEntity is initialized, its x-value in the layout-data gets set to -2.
 // TODO:
@@ -129,7 +125,7 @@ u32 sub_800DF38(Sprite *, s32, s32, Player *);
 #define ENEMY_UPDATE_POSITION_STATIC(_enemy, _sprite, _posX, _posY) ENEMY_UPDATE_POSITION_RAW(_enemy, _sprite, _posX, _posY, 0, 0)
 
 #define ENEMY_TURN_TO_PLAYER(_posX, s)                                                                                                     \
-    if (gPlayer.x < _posX) {                                                                                                               \
+    if (gPlayer.qWorldX < _posX) {                                                                                                         \
         SPRITE_FLAG_CLEAR(s, X_FLIP);                                                                                                      \
     } else {                                                                                                                               \
         SPRITE_FLAG_SET(s, X_FLIP);                                                                                                        \
@@ -157,10 +153,11 @@ u32 sub_800DF38(Sprite *, s32, s32, Player *);
 #define ENEMY_CROSSED_BOTTOM_BORDER(_enemy, _mapEntity) ENEMY_CROSSED_BOTTOM_BORDER_RAW(_enemy, _mapEntity, I(_enemy->offsetY))
 
 #define ENEMY_CLAMP_TO_GROUND_INNER(_enemy, _unknownBool, _task)                                                                           \
-    sub_801F100(I(_enemy->spawnY + _enemy->offsetY), I(_enemy->spawnX + _enemy->offsetX), _unknownBool, 8, _task);
+    SA2_LABEL(sub_801F100)(I(_enemy->spawnY + _enemy->offsetY), I(_enemy->spawnX + _enemy->offsetX), _unknownBool, 8, _task);
 
 #define ENEMY_CLAMP_TO_GROUND_INNER_X_FIRST(_enemy, _unknownBool)                                                                          \
-    sub_801F100(I(_enemy->spawnX + _enemy->offsetX), I(_enemy->spawnY + _enemy->offsetY), _unknownBool, 8, sub_801EC3C);
+    SA2_LABEL(sub_801F100)                                                                                                                 \
+    (I(_enemy->spawnX + _enemy->offsetX), I(_enemy->spawnY + _enemy->offsetY), _unknownBool, 8, SA2_LABEL(sub_801EC3C));
 
 #define ENEMY_CLAMP_TO_GROUND_RAW(_enemy, _unknownBool, _p)                                                                                \
     {                                                                                                                                      \
@@ -169,7 +166,7 @@ u32 sub_800DF38(Sprite *, s32, s32, Player *);
                                                                                                                                            \
         if (delta < 0) {                                                                                                                   \
             _enemy->offsetY += Q(delta);                                                                                                   \
-            delta = ENEMY_CLAMP_TO_GROUND_INNER(_enemy, _unknownBool, sub_801EC3C);                                                        \
+            delta = ENEMY_CLAMP_TO_GROUND_INNER(_enemy, _unknownBool, SA2_LABEL(sub_801EC3C));                                             \
         }                                                                                                                                  \
                                                                                                                                            \
         if (delta > 0) {                                                                                                                   \
@@ -186,7 +183,7 @@ u32 sub_800DF38(Sprite *, s32, s32, Player *);
                                                                                                                                            \
         if (delta < 0) {                                                                                                                   \
             _enemy->offsetY -= Q(delta);                                                                                                   \
-            delta = ENEMY_CLAMP_TO_GROUND_INNER(_enemy, _unknownBool, sub_801EC3C);                                                        \
+            delta = ENEMY_CLAMP_TO_GROUND_INNER(_enemy, _unknownBool, SA2_LABEL(sub_801EC3C));                                             \
         }                                                                                                                                  \
                                                                                                                                            \
         if (delta > 0) {                                                                                                                   \
@@ -195,13 +192,13 @@ u32 sub_800DF38(Sprite *, s32, s32, Player *);
     }
 
 #define ENEMY_DESTROY_IF_PLAYER_HIT(_s, _pos)                                                                                              \
-    if (sub_800C4FC(_s, _pos.x, _pos.y, 0) == TRUE) {                                                                                      \
+    if (Coll_Player_Enemy_Attack(_s, _pos.x, _pos.y, 0) == TRUE) {                                                                         \
         TaskDestroy(gCurTask);                                                                                                             \
         return;                                                                                                                            \
     }
 
 #define ENEMY_DESTROY_IF_PLAYER_HIT_2(_s, _pos)                                                                                            \
-    if (sub_800C4FC(_s, _pos.x, _pos.y, 0)) {                                                                                              \
+    if (Coll_Player_Enemy_Attack(_s, _pos.x, _pos.y, 0)) {                                                                                 \
         TaskDestroy(gCurTask);                                                                                                             \
         return;                                                                                                                            \
     }

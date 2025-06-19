@@ -7,8 +7,8 @@
 #include "game/entity.h"
 #include "game/enemies/straw.h"
 
-#include "game/sa1_leftovers/collision.h"
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/collision.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
@@ -75,7 +75,7 @@ void sub_80567F8(void)
     s->x = pos.x - gCamera.x;
     s->y = pos.y - gCamera.y;
 
-    if (sub_800C4FC(s, pos.x, pos.y, 0)) {
+    if (Coll_Player_Enemy_Attack(s, pos.x, pos.y, 0)) {
         TaskDestroy(gCurTask);
         return;
     }
@@ -105,13 +105,13 @@ void Task_StrawMain(void)
 
     ENEMY_UPDATE_POSITION(straw, s, pos.x, pos.y);
 
-    if (gPlayer.x < QS(pos.x)) {
+    if (gPlayer.qWorldX < QS(pos.x)) {
         straw->unk4C -= 0x10;
     } else {
         straw->unk4C += 0xB;
     }
 
-    if (gPlayer.y < QS(pos.y)) {
+    if (gPlayer.qWorldY < QS(pos.y)) {
         straw->unk50 -= 0x10;
     } else {
         straw->unk50 += 0xB;

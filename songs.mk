@@ -202,7 +202,7 @@ $(MID_SUBDIR)/se_sonic_midair_somersault.s: %.s: %.mid
 $(MID_SUBDIR)/se_sonic_insta_shield.s: %.s: %.mid
 	$(MID2AGB) $< $@ -C $(MIDI_COMMENTS) -E -R$(STD_REVERB) -G0 -P20 -V75
     
-$(MID_SUBDIR)/se_114.s: %.s: %.mid
+$(MID_SUBDIR)/se_grinding.s: %.s: %.mid
 	$(MID2AGB) $< $@ -C $(MIDI_COMMENTS) -E -R$(STD_REVERB) -G3 -P20 -V100
     
 $(MID_SUBDIR)/se_brake.s: %.s: %.mid
@@ -700,7 +700,7 @@ $(MID_SUBDIR)/se_music_plant_exit_horn2.s: %.s: %.mid
 $(MID_SUBDIR)/se_music_plant_horn3.s: %.s: %.mid
 	$(MID2AGB) $< $@ -C $(MIDI_COMMENTS) -E -R$(STD_REVERB) -G6 -P20 -V120
     
-$(MID_SUBDIR)/se_music_plant_guitar_string.s: %.s: %.mid
+$(MID_SUBDIR)/se_music_plant_chord.s: %.s: %.mid
 	$(MID2AGB) $< $@ -C $(MIDI_COMMENTS) -E -R$(STD_REVERB) -G6 -P20 -V127
     
 $(MID_SUBDIR)/se_music_plant_piano.s: %.s: %.mid

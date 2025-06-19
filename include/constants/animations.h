@@ -74,7 +74,7 @@
 #define SA2_CHAR_ANIM_52                                     52
 #define SA2_CHAR_ANIM_53                                     53
 #define SA2_CHAR_ANIM_54                                     54
-#define SA2_CHAR_ANIM_55                                     55
+#define SA2_CHAR_ANIM_GRINDING                               55
 #define SA2_CHAR_ANIM_56                                     56
 #define SA2_CHAR_ANIM_57                                     57
 #define SA2_CHAR_ANIM_IN_WHIRLWIND                           58
@@ -145,7 +145,11 @@
 #define SA2_ANIM_SUPER_SONIC_STOPPING_ROCKET           475
 #define SA2_ANIM_SUPER_SONIC_FROZEN                    476
 // Defeating enemies / opening item boxes
+#ifndef COLLECT_RINGS_ROM
 #define SA2_ANIM_DUST_CLOUD 477
+#else
+#define SA2_ANIM_DUST_CLOUD 108
+#endif
 
 // Enemies
 #define SA2_ANIM_MON                    478
@@ -223,13 +227,25 @@
 #define SA2_ANIM_PLATFORM_LF_WIDE        539
 #define SA2_ANIM_BOOSTER                 540
 #define SA2_ANIM_PLATFORM_LEA_FOR        541
-#define SA2_ANIM_SPIKES                  542
+
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_SPIKES 542
+#else
+#define SA2_ANIM_SPIKES 101
+#endif
+
 // TODO: Rename
 #define SA2_ANIM_VARIANT_SPIKES_UP       0
 #define SA2_ANIM_VARIANT_SPIKES_UP_LOW   1
 #define SA2_ANIM_VARIANT_SPIKES_UP_MID   2
 #define SA2_ANIM_VARIANT_SPIKES_SIDEWAYS 3
-#define SA2_ANIM_RAMP                    543
+
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_RAMP 543
+#else
+#define SA2_ANIM_RAMP 103
+#endif
+
 #define SA2_ANIM_WATER_RUNNING_PARTICLES 544
 
 #define SA2_ANIM_ROTATING_HANDLE               546
@@ -266,7 +282,7 @@
 #define SA2_ANIM_SPRING_MUS_PLA_2                573
 #define SA2_ANIM_PLATFORM_SQUARE_MUS_PLA         574
 #define SA2_ANIM_NOTE_BLOCK                      575
-#define SA2_ANIM_VARIANT_NOTE_BLOCK_GUITAR       15
+#define SA2_ANIM_VARIANT_NOTE_BLOCK_CHORD_ELEM   15
 #define SA2_ANIM_NOTE_PARTICLES                  576
 #define SA2_ANIM_VARIANT_NOTE_H                  0
 #define SA2_ANIM_VARIANT_NOTE_V                  1
@@ -422,13 +438,39 @@
 #define SA2_ANIM_TRUE_AREA_53_BOSS_PARTICLE_2        722
 #define SA2_ANIM_TRUE_AREA_53_BOSS_COCKPIT_SEPERATED 723
 
-#define SA2_ANIM_ITEMBOX      724
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_ITEMBOX 724
+#else
+#define SA2_ANIM_ITEMBOX 104
+#endif
+
+#ifndef COLLECT_RINGS_ROM
 #define SA2_ANIM_ITEMBOX_TYPE 725
+#else
+#define SA2_ANIM_ITEMBOX_TYPE 105
+#endif
+
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_VARIANT_ITEM_BOX_MYSTERY_1 9
+#define SA2_ANIM_VARIANT_ITEM_BOX_MYSTERY_2 12
+#else
+#define SA2_ANIM_VARIANT_ITEM_BOX_MYSTERY_1 0
+#define SA2_ANIM_VARIANT_ITEM_BOX_MYSTERY_2 1
+#endif
 
 // Used both for rings placed in the stage and
 // ones the player loses when hit.
-#define SA2_ANIM_RING                 726
-#define SA2_ANIM_RING_COLLECT_EFFECT  727
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_RING 726
+#else
+#define SA2_ANIM_RING 106
+#endif
+
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_RING_COLLECT_EFFECT 727
+#else
+#define SA2_ANIM_RING_COLLECT_EFFECT 107
+#endif
 #define TILE_COUNT__ANIM_ITEMBOX      16 // TODO: Automate
 #define TILE_COUNT__ANIM_ITEMBOX_TYPE 4 // TODO: Automate
 
@@ -440,7 +482,11 @@
 #define SA2_ANIM_VARIANT_SCORE_1000 4
 #define TILE_COUNT__ANIM_SCORE      2 // TODO: Automate
 
+#ifndef COLLECT_RINGS_ROM
 #define SA2_ANIM_MULTIPLAYER_UI_RING 729
+#else
+#define SA2_ANIM_MULTIPLAYER_UI_RING 110
+#endif
 
 #define SA2_ANIM_SPECIAL_RING             730
 #define SA2_ANIM_VARIANT_SP_RING__IDLE    0
@@ -453,7 +499,12 @@
 #define SA2_ANIM_VARIANT_GAME_OVER_NUE   3
 #define SA2_ANIM_VARIANT_GAME_OVER_TIME  4
 
-#define SA2_ANIM_NOTIFICATION_RING_BONUS                   735
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_NOTIFICATION_RING_BONUS 735
+#else
+#define SA2_ANIM_NOTIFICATION_RING_BONUS 112
+#endif
+
 #define SA2_ANIM_CHAR_SELECT_CHARACTER                     736
 #define SA2_ANIM_VARIANT_CHAR_SELECT_CHARACTER_STATIC      0
 #define SA2_ANIM_VARIANT_CHAR_SELECT_CHARACTER_SELECTED    1
@@ -497,7 +548,7 @@
 #define SA2_ANIM_SPINDASH_DUST_EFFECT     846
 #define SA2_ANIM_SPINDASH_DUST_EFFECT_BIG 847
 #define SA2_ANIM_SMALL_DUST_PARTICLE      848
-#define SA2_ANIM_SPARK_EFFECT             849 // Grinding particles
+#define SA2_ANIM_GRIND_EFFECT             849 // Grinding particles
 #define SA2_ANIM_SHIELD_NORMAL            850
 #define SA2_ANIM_SHIELD_MAGNETIC          851
 #define SA2_ANIM_INVINCIBILITY            852
@@ -506,7 +557,12 @@
 
 #define SA2_ANIM_HEART 858
 
-#define SA2_ANIM_INDICATOR_SONIC    863
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_INDICATOR_SONIC 863
+#else
+#define SA2_ANIM_INDICATOR_SONIC 109
+#endif
+
 #define SA2_ANIM_INDICATOR_CREAM    864
 #define SA2_ANIM_INDICATOR_TAILS    865
 #define SA2_ANIM_INDICATOR_KNUCKLES 866
@@ -594,7 +650,7 @@
 #define SA2_ANIM_SOUNDTEST_PLATFORM                      972
 #define SA2_ANIM_SOUNDTEST_CLAP_FORWARD                  973
 
-#define SA2_ANIM_DEMO_PLAY                        1044
+#define ANIM_DEMO_PLAY                            1044
 #define SA2_ANIM_1045                             1045
 #define SA2_ANIM_COPYRIGHT_INFO_TITLE_SCREEN      1046
 #define SA2_ANIM_TIME_ATTACK_DIGITS               1047
@@ -714,13 +770,23 @@
 #define SA2_ANIM_MP_TEAM_PLAY_MSG_ES 1086
 #define SA2_ANIM_MP_TEAM_PLAY_MSG_IT 1087
 
-#define SA2_ANIM_MP_SINGLE_PAK_RESULTS_CUMULATIVE              1099
+#if COLLECT_RINGS_ROM
+#define SA2_ANIM_MP_SINGLE_PAK_RESULTS_CUMULATIVE 113
+#else
+#define SA2_ANIM_MP_SINGLE_PAK_RESULTS_CUMULATIVE 1099
+#endif
+
 #define SA2_ANIM_VARIANT_MP_SINGLE_PAK_RESULTS_CUMULATIVE_0    0
 #define SA2_ANIM_VARIANT_MP_SINGLE_PAK_RESULTS_CUMULATIVE_1    1
 #define SA2_ANIM_VARIANT_MP_SINGLE_PAK_RESULTS_CUMULATIVE_2    2
 #define SA2_ANIM_VARIANT_MP_SINGLE_PAK_RESULTS_CUMULATIVE_WINS 3 // "win(s)"
 
-#define SA2_ANIM_MP_SINGLE_PAK_RESULTS_ROUND              1100
+#if COLLECT_RINGS_ROM
+#define SA2_ANIM_MP_SINGLE_PAK_RESULTS_ROUND 114
+#else
+#define SA2_ANIM_MP_SINGLE_PAK_RESULTS_ROUND 1100
+#endif
+
 #define SA2_ANIM_VARIANT_MP_SINGLE_PAK_RESULTS_ROUND_WIN  0
 #define SA2_ANIM_VARIANT_MP_SINGLE_PAK_RESULTS_ROUND_LOSE 1
 #define SA2_ANIM_VARIANT_MP_SINGLE_PAK_RESULTS_ROUND_DRAW 2
@@ -736,9 +802,15 @@
 #define SA2_ANIM_MP_RESULT_4TH  6
 
 // We can infer this Chao is Cheese, since they have a red bow
-#define SA2_ANIM_MP_CHEESE_WAVING                1103
-#define SA2_ANIM_MP_CHEESE_SITTING               1104
-#define SA2_ANIM_DIGITS                          1105
+#define SA2_ANIM_MP_CHEESE_WAVING  1103
+#define SA2_ANIM_MP_CHEESE_SITTING 1104
+
+#if COLLECT_RINGS_ROM
+#define SA2_ANIM_DIGITS 115
+#else
+#define SA2_ANIM_DIGITS 1105
+#endif
+
 #define SA2_ANIM_PRESS_START_MSG_JP              1106
 #define SA2_ANIM_PRESS_START_MSG_EN              1107
 #define SA2_ANIM_PRESS_START_MSG_DE              1108
@@ -753,11 +825,21 @@
 #define SA2_ANIM_STAGE_INTRO_ZONE_NAMES          1117
 #define SA2_ANIM_STAGE_INTRO_UNLOCKED_ICONS      1118
 
-#define SA2_ANIM_ASCII            1119
+#ifndef COLLECT_RINGS_ROM
+#define SA2_ANIM_ASCII 1119
+#else
+#define SA2_ANIM_ASCII 111
+#endif
+
+#ifndef COLLECT_RINGS_ROM
 #define SA2_ANIM_ASCII_FIRST_CHAR '!'
-#define SA2_ANIM_ASCII_YEN        '\\'
-#define SA2_ANIM_ASCII_CHAR(c)    ((c)-SA2_ANIM_ASCII_FIRST_CHAR)
-#define SA2_ANIM_NUM_ASCII_CHARS  94
+#else
+#define SA2_ANIM_ASCII_FIRST_CHAR '0' - 1
+#endif
+
+#define SA2_ANIM_ASCII_YEN       '\\'
+#define SA2_ANIM_ASCII_CHAR(c)   ((c)-SA2_ANIM_ASCII_FIRST_CHAR + 1)
+#define SA2_ANIM_NUM_ASCII_CHARS 94
 
 // Used in Time Attack and stage results screen (/ stage outro)
 #define SA2_ANIM_TA_WHITE_BAR                      1120

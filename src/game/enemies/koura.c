@@ -5,7 +5,7 @@
 #include "game/entity.h"
 #include "game/enemies/koura.h"
 
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 #include "trig.h"
 
 #include "constants/animations.h"
@@ -104,12 +104,12 @@ static void sub_8054224(void)
 
     ENEMY_UPDATE_POSITION(koura, s, pos.x, pos.y);
 
-    if (gPlayer.speedAirY >= 1 && (gPlayer.moveState & MOVESTATE_IN_AIR)) {
-        if (sub_800DF38(s, pos.x, pos.y, &gPlayer) == 0x80000) {
+    if (gPlayer.qSpeedAirY >= 1 && (gPlayer.moveState & MOVESTATE_IN_AIR)) {
+        if (Coll_Player_Entity_Intersection(s, pos.x, pos.y, &gPlayer) == 0x80000) {
             gPlayer.transition = 14;
             gPlayer.unk6E = 0;
             gPlayer.moveState &= ~MOVESTATE_100;
-            gPlayer.speedAirY = -896;
+            gPlayer.qSpeedAirY = -896;
 
             gCurTask->main = sub_8054904;
             s->graphics.anim = gUnknown_080D8F38[koura->unk54 > 1 ? 3 : 1][0];
@@ -149,7 +149,7 @@ static void sub_8054224(void)
             koura->unk58 = NEGATE(koura->unk58);
         }
 
-        if ((SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.x < QS(pos.x)) || (!SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.x > QS(pos.x))) {
+        if ((SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.qWorldX < QS(pos.x)) || (!SPRITE_FLAG_GET(s, X_FLIP) && gPlayer.qWorldX > QS(pos.x))) {
             gCurTask->main = sub_805462C;
             s->graphics.anim = gUnknown_080D8F38[5][0];
             s->variant = gUnknown_080D8F38[5][1];
@@ -179,12 +179,12 @@ static void sub_805462C(void)
 
     ENEMY_UPDATE_POSITION(koura, s, pos.x, pos.y);
 
-    if (gPlayer.speedAirY >= 1 && (gPlayer.moveState & MOVESTATE_IN_AIR)) {
-        if (sub_800DF38(s, pos.x, pos.y, &gPlayer) == 0x80000) {
+    if (gPlayer.qSpeedAirY >= 1 && (gPlayer.moveState & MOVESTATE_IN_AIR)) {
+        if (Coll_Player_Entity_Intersection(s, pos.x, pos.y, &gPlayer) == 0x80000) {
             gPlayer.transition = 14;
             gPlayer.unk6E = 0;
             gPlayer.moveState &= ~MOVESTATE_100;
-            gPlayer.speedAirY = -896;
+            gPlayer.qSpeedAirY = -896;
 
             ENEMY_TURN_AROUND(s);
 

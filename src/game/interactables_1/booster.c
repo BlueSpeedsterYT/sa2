@@ -4,8 +4,8 @@
 #include "task.h"
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/collision.h"
-#include "game/sa1_leftovers/entities_manager.h"
+#include "game/sa1_sa2_shared/collision.h"
+#include "game/sa1_sa2_shared/entities_manager.h"
 
 #include "game/entity.h"
 #include "game/stage/player.h"
@@ -46,14 +46,14 @@ const TileInfo sBoosterAnimationData[2][6] = {
 // Look left and accelerate
 #define BOOSTER_ACCEL_LEFT(player)                                                                                                         \
     (player).moveState |= MOVESTATE_FACING_LEFT;                                                                                           \
-    if (gPlayer.speedGroundX > -BOOSTER_SPEED)                                                                                             \
-        gPlayer.speedGroundX = -BOOSTER_SPEED;
+    if (gPlayer.qSpeedGround > -BOOSTER_SPEED)                                                                                             \
+        gPlayer.qSpeedGround = -BOOSTER_SPEED;
 
 // Look right and accelerate
 #define BOOSTER_ACCEL_RIGHT(player)                                                                                                        \
     (player).moveState &= ~MOVESTATE_FACING_LEFT;                                                                                          \
-    if (gPlayer.speedGroundX < BOOSTER_SPEED)                                                                                              \
-        gPlayer.speedGroundX = BOOSTER_SPEED;
+    if (gPlayer.qSpeedGround < BOOSTER_SPEED)                                                                                              \
+        gPlayer.qSpeedGround = BOOSTER_SPEED;
 
 void CreateEntity_Booster(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
@@ -113,17 +113,14 @@ void Task_Interactable_Booster(void)
     s->x = screenX - gCamera.x;
     s->y = screenY - gCamera.y;
 
-    if (!(gPlayer.moveState & (MOVESTATE_DEAD | MOVESTATE_IN_AIR)) && (sub_800C204(s, screenX, screenY, 0, &gPlayer, 0) == 1)) {
+    if (!(gPlayer.moveState & (MOVESTATE_DEAD | MOVESTATE_IN_AIR))
+        && (Coll_Player_Entity_HitboxN(s, screenX, screenY, 0, &gPlayer, 0) == 1)) {
         Player_TransitionCancelFlyingAndBoost(&gPlayer);
 
         if (gPlayer.moveState & MOVESTATE_4) {
-            sub_8023B5C(&gPlayer, 9);
-            gPlayer.spriteOffsetX = 6;
-            gPlayer.spriteOffsetY = 9;
+            PLAYERFN_CHANGE_SHIFT_OFFSETS(&gPlayer, 6, 9);
         } else {
-            sub_8023B5C(&gPlayer, 14);
-            gPlayer.spriteOffsetX = 6;
-            gPlayer.spriteOffsetY = 14;
+            PLAYERFN_CHANGE_SHIFT_OFFSETS(&gPlayer, 6, 14);
         }
 
         m4aSongNumStart(SE_SPEED_BOOSTER);

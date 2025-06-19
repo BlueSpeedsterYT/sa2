@@ -2,7 +2,10 @@
 #define GUARD_GBA_TYPES_H
 
 #include "gba/defines.h"
+
+#ifndef GEN_CTX
 #include <stdint.h>
+#endif
 
 #if defined(_MSC_VER)
 #define PACKED(name, struct_body)                                                       \
@@ -26,6 +29,12 @@ typedef int8_t    s8;
 typedef int16_t  s16;
 typedef int32_t  s32;
 typedef int64_t  s64;
+
+#if (GAME == GAME_SA1)
+typedef u8 MetatileIndexType;
+#else
+typedef u16 MetatileIndexType;
+#endif
 
 // If the DISPLAY_HEIGHT was >255, scanline effects would break,
 // so we have to make this variable bigger.

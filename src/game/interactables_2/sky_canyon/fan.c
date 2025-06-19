@@ -122,9 +122,9 @@ static void sub_807D468(Sprite_Fan *prop)
     s32 temp;
     s32 r3;
     if (IS_PROPELLER_DIR_LEFT(prop->kind)) {
-        r3 = Q(prop->posX + prop->right) - gPlayer.x;
+        r3 = Q(prop->posX + prop->right) - gPlayer.qWorldX;
     } else {
-        r3 = gPlayer.x - Q(prop->posX + prop->left);
+        r3 = gPlayer.qWorldX - Q(prop->posX + prop->left);
     }
 
     r3 = (Q(prop->width) - r3) / prop->width;
@@ -140,41 +140,41 @@ static void sub_807D468(Sprite_Fan *prop)
     prop->playerDeltaX = I(prop->playerDeltaX * prop->fanSpeed);
 
     if (IS_PROPELLER_DIR_LEFT(prop->kind)) {
-        if (gPlayer.speedAirX < 0) {
-            gPlayer.speedGroundX = ClampPlayerSpeed(gPlayer.speedGroundX - Q(0.25));
-            gPlayer.speedAirX = ClampPlayerSpeed(gPlayer.speedAirX - Q(0.25));
+        if (gPlayer.qSpeedAirX < 0) {
+            gPlayer.qSpeedGround = ClampPlayerSpeed(gPlayer.qSpeedGround - Q(0.25));
+            gPlayer.qSpeedAirX = ClampPlayerSpeed(gPlayer.qSpeedAirX - Q(0.25));
         } else {
-            s32 newPlayerX = gPlayer.x - prop->playerDeltaX;
-            gPlayer.x = newPlayerX;
+            s32 newPlayerX = gPlayer.qWorldX - prop->playerDeltaX;
+            gPlayer.qWorldX = newPlayerX;
 
             r3 = Q(prop->posX + prop->right) - Q(48);
 
             if ((prop->kind != SKYCAN_FAN_KIND(FAN_DIR_LEFT, TRUE)) && newPlayerX > r3) {
-                gPlayer.x = r3;
+                gPlayer.qWorldX = r3;
             }
 
             if (gPlayer.frameInput & 0x20) {
                 gPlayer.moveState |= MOVESTATE_FACING_LEFT;
-                gPlayer.speedGroundX = -gPlayer.speedGroundX;
+                gPlayer.qSpeedGround = -gPlayer.qSpeedGround;
             }
         }
     } else {
-        if (gPlayer.speedAirX > 0) {
-            gPlayer.speedGroundX = ClampPlayerSpeed(gPlayer.speedGroundX + Q(0.25));
-            gPlayer.speedAirX = ClampPlayerSpeed(gPlayer.speedAirX + Q(0.25));
+        if (gPlayer.qSpeedAirX > 0) {
+            gPlayer.qSpeedGround = ClampPlayerSpeed(gPlayer.qSpeedGround + Q(0.25));
+            gPlayer.qSpeedAirX = ClampPlayerSpeed(gPlayer.qSpeedAirX + Q(0.25));
         } else {
-            s32 newPlayerX = gPlayer.x + prop->playerDeltaX;
-            gPlayer.x = newPlayerX;
+            s32 newPlayerX = gPlayer.qWorldX + prop->playerDeltaX;
+            gPlayer.qWorldX = newPlayerX;
 
             r3 = Q(prop->posX + prop->left) + Q(48);
 
             if ((prop->kind != SKYCAN_FAN_KIND(FAN_DIR_RIGHT, TRUE)) && newPlayerX < r3) {
-                gPlayer.x = r3;
+                gPlayer.qWorldX = r3;
             }
 
             if (gPlayer.frameInput & 0x10) {
                 gPlayer.moveState &= ~MOVESTATE_FACING_LEFT;
-                gPlayer.speedGroundX = -gPlayer.speedGroundX;
+                gPlayer.qSpeedGround = -gPlayer.qSpeedGround;
             }
         }
     }
@@ -262,8 +262,8 @@ static bool32 IsPlayerInFanRegion(Sprite_Fan *prop)
         s16 propX = prop->posX - gCamera.x;
         s16 propY = prop->posY - gCamera.y;
 
-        s16 playerX = I(gPlayer.x) - gCamera.x;
-        s16 playerY = I(gPlayer.y) - gCamera.y;
+        s16 playerX = I(gPlayer.qWorldX) - gCamera.x;
+        s16 playerY = I(gPlayer.qWorldY) - gCamera.y;
 
         u16 width = prop->right - prop->left;
         u16 height = prop->bottom - prop->top;

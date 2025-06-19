@@ -1,6 +1,7 @@
 #include "global.h"
 #include "core.h"
 #include "flags.h"
+#include "trig.h"
 #include "malloc_vram.h"
 #include "game/save.h"
 
@@ -71,7 +72,7 @@ const s16 sZoneTimeSecondsTable[] = {
     ZONE_TIME_TO_INT(0, 45), ZONE_TIME_TO_INT(0, 46), ZONE_TIME_TO_INT(0, 47), ZONE_TIME_TO_INT(0, 48), ZONE_TIME_TO_INT(0, 49),
     ZONE_TIME_TO_INT(0, 50), ZONE_TIME_TO_INT(0, 51), ZONE_TIME_TO_INT(0, 52), ZONE_TIME_TO_INT(0, 53), ZONE_TIME_TO_INT(0, 54),
     ZONE_TIME_TO_INT(0, 55), ZONE_TIME_TO_INT(0, 56), ZONE_TIME_TO_INT(0, 57), ZONE_TIME_TO_INT(0, 58), ZONE_TIME_TO_INT(0, 59),
-    ZONE_TIME_TO_INT(0, 60),
+    ZONE_TIME_TO_INT(1, 0),
 };
 
 const u16 sZoneTimeMinutesTable[] = {
@@ -97,7 +98,7 @@ typedef struct {
     /* 0x2D8 */ u16 unk2D8[12];
 } StageUI; /* size: 0x2F0 */
 
-void Task_CreateStageUIMain(void);
+void Task_StageUIMain(void);
 void TaskDestructor_CreateStageUI(struct Task *t);
 
 struct Task *CreateStageUI(void)
@@ -108,7 +109,7 @@ struct Task *CreateStageUI(void)
     StageUI *ui;
     Sprite *s;
 
-    struct Task *t = TaskCreate(Task_CreateStageUIMain, sizeof(StageUI), 0x2102, 0, TaskDestructor_CreateStageUI);
+    struct Task *t = TaskCreate(Task_StageUIMain, sizeof(StageUI), 0x2102, 0, TaskDestructor_CreateStageUI);
     gStageUITask = t;
     ui = TASK_DATA(t);
 
@@ -123,7 +124,7 @@ struct Task *CreateStageUI(void)
             s->graphics.dest = ui->digits[0].graphics.dest + (i * (2 * TILE_SIZE_4BPP));
         }
 
-        ui->unk2D8[i] = (GET_TILE_NUM(s->graphics.dest) & 0x3FF) | 0x6000;
+        ui->unk2D8[i] = (GET_TILE_NUM(s->graphics.dest) & ONE_CYCLE) | 0x6000;
 
         s->oamFlags = SPRITE_OAM_ORDER(0);
         s->graphics.size = 0;
@@ -218,7 +219,7 @@ struct Task *CreateStageUI(void)
     return gStageUITask;
 }
 
-void Task_CreateStageUIMain(void)
+void Task_StageUIMain(void)
 {
     if (!(gStageFlags & STAGE_FLAG__TURN_OFF_HUD)) {
         u32 time;
@@ -326,7 +327,7 @@ void Task_CreateStageUIMain(void)
         }
 
         /* Ring */
-        ui->unk2D0 += ((gPlayer.speedAirX >> 3) + Q(0.25));
+        ui->unk2D0 += ((gPlayer.qSpeedAirX >> 3) + Q(0.25));
         ui->unk2D0 &= 0x7FF;
         ui->ring.variant = ui->unk2D0 >> 8;
         ui->ring.prevVariant = -1;

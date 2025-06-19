@@ -92,19 +92,19 @@ void Task_802EE78(void)
         ts->bldAlpha = 0;
 
         if (gCurrentLevel != LEVEL_INDEX(ZONE_7, ACT_BOSS)) {
-            gFlags &= ~FLAGS_4;
+            gFlags &= ~FLAGS_EXECUTE_HBLANK_COPY;
         }
 
         if (IS_FINAL_STAGE(gCurrentLevel)) {
             u32 x, y;
 
             x = gUnknown_080D6DE4[sri->unk11][0];
-            x -= I(gPlayer.x);
+            x -= I(gPlayer.qWorldX);
             y = gUnknown_080D6DE4[sri->unk11][1];
-            y -= I(gPlayer.y);
+            y -= I(gPlayer.qWorldY);
 
-            gPlayer.x += Q(x);
-            gPlayer.y += Q(y);
+            gPlayer.qWorldX += Q(x);
+            gPlayer.qWorldY += Q(y);
 
             gCamera.x += x;
             gCamera.y += y;
@@ -149,9 +149,17 @@ void sub_802EF68(s16 p0, s16 p1, u8 p2)
 void InitHBlankBgOffsets(u16 xOffset)
 {
     if (gBgOffsetsHBlank == &gBgOffsetsBuffer) {
+#if DISPLAY_WIDTH > 255
+        DmaFill32(3, xOffset, &gBgOffsetsBuffer[0][0], sizeof(gBgOffsetsBuffer[0]));
+#else
         DmaFill16(3, xOffset, &gBgOffsetsBuffer[0][0], sizeof(gBgOffsetsBuffer[0]));
+#endif
     } else {
+#if DISPLAY_WIDTH > 255
+        DmaFill32(3, xOffset, &gBgOffsetsBuffer[1][0], sizeof(gBgOffsetsBuffer[1]));
+#else
         DmaFill16(3, xOffset, &gBgOffsetsBuffer[1][0], sizeof(gBgOffsetsBuffer[1]));
+#endif
     }
 }
 

@@ -5,8 +5,8 @@
 #include "lib/m4a/m4a.h"
 #include "malloc_vram.h"
 
-#include "game/sa1_leftovers/collision.h"
-#include "game/sa1_leftovers/globals.h"
+#include "game/sa1_sa2_shared/collision.h"
+#include "game/sa1_sa2_shared/globals.h"
 
 #include "game/entity.h"
 #include "game/stage/player.h"
@@ -17,38 +17,48 @@
 #include "constants/songs.h"
 #include "constants/zones.h"
 
+#ifndef COLLECT_RINGS_ROM
+#define SPIKES_VRAM_ADDRESS (void *)(OBJ_VRAM0 + 204 * TILE_SIZE_4BPP);
+#else
+#define SPIKES_VRAM_ADDRESS (void *)(OBJ_VRAM0 + 128 * TILE_SIZE_4BPP);
+#endif
+
 typedef struct {
     /* 0x00 */ SpriteBase base;
     /* 0x0C */ Sprite s;
-    /* 0x3C */ u32 unk3C[2];
+    /* 0x3C */ u32 playerMoveState[2];
 } Sprite_Spikes; /* size: 0x44 */
 
+static void Task_SpikesUpMain(void);
+static void TaskDestructor_Spikes(struct Task *);
+static u32 HandleSpikePlayerCollision(Sprite *, s32 x, s32 y, Player *);
+static bool32 HandleSpikeMovementUp(Sprite *, MapEntity *, Sprite_Spikes *, Player *);
+
+#ifndef COLLECT_RINGS_ROM
+static void Task_SpikesDownMain(void);
+static void Task_SpikesLeftRightMain(void);
+static void Task_SpikesHidingUpMain(void);
+static void Task_SpikesHidingDownMain(void);
+static bool32 HandleSpikeMovementDown(Sprite *, MapEntity *, Sprite_Spikes *, Player *);
+static bool32 HandleSpikeMovementHidingUp(Sprite *, MapEntity *, Sprite_Spikes *, Player *, u32 *);
+static bool32 HandleSpikeMovementHidingDown(Sprite *, MapEntity *, Sprite_Spikes *, Player *, u32 *);
+#endif
+
+#ifndef COLLECT_RINGS_ROM
 const u16 sSpikesOfZone[NUM_COURSE_ZONES + 1] = {
     [ZONE_1] = SA2_ANIM_SPIKES, // NOTE: Comment tells formatter to keep this as-is!
     [ZONE_2] = SA2_ANIM_SPIKES,         [ZONE_3] = SA2_ANIM_SPIKES_MUS_PLA, [ZONE_4] = SA2_ANIM_SPIKES, [ZONE_5] = SA2_ANIM_SPIKES,
     [ZONE_6] = SA2_ANIM_SPIKES_TEC_BAS, [ZONE_7] = SA2_ANIM_SPIKES,         [ZONE_FINAL] = 0,
 };
-
-static void sub_805F810(void);
-static void sub_805F928(void);
-static void sub_805FBA0(void);
-static void Task_805FF68(void);
-static void Task_806012C(void);
-static bool32 sub_80601F8(Sprite *, MapEntity *, Sprite_Spikes *, Player *);
-static bool32 sub_8060440(Sprite *, MapEntity *, Sprite_Spikes *, Player *);
-static bool32 sub_8060554(Sprite *, MapEntity *, Sprite_Spikes *, Player *, u32 *);
-static bool32 sub_80609B4(Sprite *, MapEntity *, Sprite_Spikes *, Player *, u32 *);
-static void TaskDestructor_8060CF4(struct Task *);
-static u32 sub_8060D08(Sprite *, s32 x, s32 y, Player *);
+#endif
 
 void CreateEntity_Spikes_Up(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(sub_805F810, sizeof(Sprite_Spikes), 0x2000, 0, NULL);
+    struct Task *t = TaskCreate(Task_SpikesUpMain, sizeof(Sprite_Spikes), 0x2000, 0, NULL);
     Sprite_Spikes *spikes = TASK_DATA(t);
     Sprite *s = &spikes->s;
 
-    spikes->unk3C[1] = 0;
-    spikes->unk3C[0] = 0;
+    spikes->playerMoveState[0] = spikes->playerMoveState[1] = 0x00;
     spikes->base.regionX = spriteRegionX;
     spikes->base.regionY = spriteRegionY;
     spikes->base.me = me;
@@ -59,14 +69,17 @@ void CreateEntity_Spikes_Up(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     s->y = TO_WORLD_POS(me->y, spriteRegionY);
     SET_MAP_ENTITY_INITIALIZED(me);
 
-    s->graphics.dest = (void *)(OBJ_VRAM0 + 204 * TILE_SIZE_4BPP);
+    s->graphics.dest = SPIKES_VRAM_ADDRESS;
 
     s->oamFlags = SPRITE_OAM_ORDER(17);
     s->graphics.size = 0;
 
+#ifndef COLLECT_RINGS_ROM
     if (gGameMode != GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) {
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
-    } else {
+    } else
+#endif
+    {
         s->graphics.anim = SA2_ANIM_SPIKES;
     }
 
@@ -81,14 +94,14 @@ void CreateEntity_Spikes_Up(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY,
     UpdateSpriteAnimation(s);
 }
 
+#ifndef COLLECT_RINGS_ROM
 void CreateEntity_Spikes_Down(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(sub_805F928, sizeof(Sprite_Spikes), 0x2000, 0, NULL);
+    struct Task *t = TaskCreate(Task_SpikesDownMain, sizeof(Sprite_Spikes), 0x2000, 0, NULL);
     Sprite_Spikes *spikes = TASK_DATA(t);
     Sprite *s = &spikes->s;
 
-    spikes->unk3C[1] = 0;
-    spikes->unk3C[0] = 0;
+    spikes->playerMoveState[0] = spikes->playerMoveState[1] = 0x00;
     spikes->base.regionX = spriteRegionX;
     spikes->base.regionY = spriteRegionY;
     spikes->base.me = me;
@@ -99,7 +112,7 @@ void CreateEntity_Spikes_Down(MapEntity *me, u16 spriteRegionX, u16 spriteRegion
     s->y = TO_WORLD_POS(me->y, spriteRegionY);
     SET_MAP_ENTITY_INITIALIZED(me);
 
-    s->graphics.dest = (void *)(OBJ_VRAM0 + 204 * TILE_SIZE_4BPP);
+    s->graphics.dest = SPIKES_VRAM_ADDRESS;
 
     s->oamFlags = SPRITE_OAM_ORDER(17);
 
@@ -115,8 +128,9 @@ void CreateEntity_Spikes_Down(MapEntity *me, u16 spriteRegionX, u16 spriteRegion
     s->frameFlags = 0x2A00;
     UpdateSpriteAnimation(s);
 }
+#endif
 
-static void sub_805F810(void)
+static void Task_SpikesUpMain(void)
 {
     Sprite_Spikes *spikes = TASK_DATA(gCurTask);
     Sprite *s = &spikes->s;
@@ -129,34 +143,42 @@ static void sub_805F810(void)
     s->x = screenX - gCamera.x;
     s->y = screenY - gCamera.y;
 
+#ifndef COLLECT_RINGS_ROM
     if (!GRAVITY_IS_INVERTED) {
-        sub_80601F8(s, me, spikes, &gPlayer);
+        HandleSpikeMovementUp(s, me, spikes, &gPlayer);
     } else {
-        sub_8060440(s, me, spikes, &gPlayer);
+        HandleSpikeMovementDown(s, me, spikes, &gPlayer);
     }
-
+#else
+    HandleSpikeMovementUp(s, me, spikes, &gPlayer);
+#endif
+#ifndef COLLECT_RINGS_ROM
     if ((gGameMode == GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) && (me->d.sData[0] == 0) && (gUnknown_030053E0 == 0)) {
-        if (spikes->unk3C[0] & 0xC0000) {
+        if (spikes->playerMoveState[0] & (MOVESTATE_40000 | MOVESTATE_80000)) {
             gPlayer.moveState &= ~MOVESTATE_20;
         }
 
-        if (spikes->unk3C[0] & 0x10000) {
-            gPlayer.moveState &= ~MOVESTATE_8;
+        if (spikes->playerMoveState[0] & MOVESTATE_10000) {
+            gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
         }
     }
+#endif
 
     if (IS_OUT_OF_RANGE_OLD(u16, s->x, s->y, (CAM_REGION_WIDTH))) {
         me->x = spikes->base.spriteX;
         TaskDestroy(gCurTask);
     } else {
+#ifndef COLLECT_RINGS_ROM
         if (gGameMode != GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) {
             UpdateSpriteAnimation(s);
         }
+#endif
         DisplaySprite(s);
     }
 }
 
-static void sub_805F928(void)
+#ifndef COLLECT_RINGS_ROM
+static void Task_SpikesDownMain(void)
 {
     Sprite_Spikes *spikes = TASK_DATA(gCurTask);
     Sprite *s = &spikes->s;
@@ -171,19 +193,19 @@ static void sub_805F928(void)
 
     if ((gGameMode != GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) || (me->d.sData[0] != 0) || (gUnknown_030053E0 != 0)) {
         if (!GRAVITY_IS_INVERTED) {
-            sub_8060440(s, me, spikes, &gPlayer);
+            HandleSpikeMovementDown(s, me, spikes, &gPlayer);
         } else {
-            sub_80601F8(s, me, spikes, &gPlayer);
+            HandleSpikeMovementUp(s, me, spikes, &gPlayer);
         }
     }
 
     if ((gGameMode == GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) && (me->d.sData[0] == 0) && (gUnknown_030053E0 == 0)) {
-        if (spikes->unk3C[0] & MOVESTATE_20) {
+        if (spikes->playerMoveState[0] & MOVESTATE_20) {
             gPlayer.moveState &= ~MOVESTATE_20;
         }
 
-        if (spikes->unk3C[0] & 0x8) {
-            gPlayer.moveState &= ~MOVESTATE_8;
+        if (spikes->playerMoveState[0] & MOVESTATE_STOOD_ON_OBJ) {
+            gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
         }
     }
 
@@ -200,12 +222,11 @@ static void sub_805F928(void)
 
 void CreateEntity_Spikes_LeftRight(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(sub_805FBA0, sizeof(Sprite_Spikes), 0x2000, 0, TaskDestructor_8060CF4);
+    struct Task *t = TaskCreate(Task_SpikesLeftRightMain, sizeof(Sprite_Spikes), 0x2000, 0, TaskDestructor_Spikes);
     Sprite_Spikes *spikes = TASK_DATA(t);
     Sprite *s = &spikes->s;
 
-    spikes->unk3C[1] = 0;
-    spikes->unk3C[0] = 0;
+    spikes->playerMoveState[0] = spikes->playerMoveState[1] = 0x00;
     spikes->base.regionX = spriteRegionX;
     spikes->base.regionY = spriteRegionY;
     spikes->base.me = me;
@@ -251,7 +272,7 @@ void CreateEntity_Spikes_LeftRight(MapEntity *me, u16 spriteRegionX, u16 spriteR
     UpdateSpriteAnimation(s);
 }
 
-static void sub_805FBA0(void)
+static void Task_SpikesLeftRightMain(void)
 {
     // Decls had to be split to match, for some reason
     s16 screenX, screenY;
@@ -270,7 +291,7 @@ static void sub_805FBA0(void)
 
     if (gGameMode != GAME_MODE_MULTI_PLAYER_COLLECT_RINGS || me->d.sData[0] != 0 || gUnknown_030053E0 != 0) {
         // _0805FC16
-        s32 r4 = sub_800CCB8(s, screenX, screenY, &gPlayer);
+        s32 r4 = Coll_Player_Platform(s, screenX, screenY, &gPlayer);
 #ifdef NON_MATCHING
         u32 gravityInverted;
 #else
@@ -279,35 +300,35 @@ static void sub_805FBA0(void)
         gravityInverted = GRAVITY_IS_INVERTED;
         if (gravityInverted) {
             if (r4 & 0x10000) {
-                gPlayer.y += (r4 << 24) >> 16;
-                gPlayer.speedAirY = 0;
-                gPlayer.moveState &= (~MOVESTATE_8);
+                gPlayer.qWorldY += (r4 << 24) >> 16;
+                gPlayer.qSpeedAirY = 0;
+                gPlayer.moveState &= (~MOVESTATE_STOOD_ON_OBJ);
                 gPlayer.moveState |= MOVESTATE_IN_AIR;
-                gPlayer.unk3C = 0;
+                gPlayer.stoodObj = 0;
             }
             // _0805FC6C
 
             if (r4 & 0x20000) {
-                if (sub_8060D08(s, screenX, screenY, &gPlayer) & 0x10000) {
-                    gPlayer.y += (r4 << 24) >> 16;
-                    gPlayer.speedAirY = 0;
-                    gPlayer.moveState |= MOVESTATE_8;
+                if (HandleSpikePlayerCollision(s, screenX, screenY, &gPlayer) & 0x10000) {
+                    gPlayer.qWorldY += (r4 << 24) >> 16;
+                    gPlayer.qSpeedAirY = 0;
+                    gPlayer.moveState |= MOVESTATE_STOOD_ON_OBJ;
                     gPlayer.moveState &= ~MOVESTATE_IN_AIR;
-                    gPlayer.unk3C = s;
+                    gPlayer.stoodObj = s;
                 }
             }
         } else {
             // _0805FCC8
             if (r4 & 0x10000) {
-                if (sub_8060D08(s, screenX, screenY, &gPlayer) & 0x10000) {
-                    gPlayer.y += (r4 << 24) >> 16;
-                    gPlayer.speedAirY = gravityInverted; // Q_8_8(0.5) instead?
+                if (HandleSpikePlayerCollision(s, screenX, screenY, &gPlayer) & 0x10000) {
+                    gPlayer.qWorldY += (r4 << 24) >> 16;
+                    gPlayer.qSpeedAirY = gravityInverted; // Q_8_8(0.5) instead?
                 }
             }
 
             if (r4 & 0x20000) {
-                gPlayer.y += (r4 << 24) >> 16;
-                gPlayer.speedAirY = Q_8_8(0);
+                gPlayer.qWorldY += (r4 << 24) >> 16;
+                gPlayer.qSpeedAirY = Q_8_8(0);
             }
         }
 
@@ -319,13 +340,13 @@ static void sub_805FBA0(void)
             register u16 iaIndex asm("r0");
 #endif
             gPlayer.moveState |= MOVESTATE_20;
-            gPlayer.x += (s16)((u32)r4 & 0xFF00);
-            gPlayer.speedAirX = 0;
-            gPlayer.speedGroundX = 0;
+            gPlayer.qWorldX += (s16)((u32)r4 & 0xFF00);
+            gPlayer.qSpeedAirX = 0;
+            gPlayer.qSpeedGround = 0;
 
             iaIndex = IA__SPIKES__NORMAL_LEFT;
             if (iaIndex != me->index) {
-                if (sub_800CBA4(&gPlayer)) {
+                if (Coll_DamagePlayer(&gPlayer)) {
                     m4aSongNumStart(SE_SPIKES);
                 }
             }
@@ -338,13 +359,13 @@ static void sub_805FBA0(void)
                 register u16 iaIndex asm("r0");
 #endif
                 gPlayer.moveState |= MOVESTATE_20;
-                gPlayer.x += (s16)((u32)r4 & 0xFF00);
-                gPlayer.speedAirX = 0;
-                gPlayer.speedGroundX = 0;
+                gPlayer.qWorldX += (s16)((u32)r4 & 0xFF00);
+                gPlayer.qSpeedAirX = 0;
+                gPlayer.qSpeedGround = 0;
 
                 iaIndex = IA__SPIKES__NORMAL_LEFT;
                 if (iaIndex == me->index) {
-                    if (sub_800CBA4(&gPlayer)) {
+                    if (Coll_DamagePlayer(&gPlayer)) {
                         m4aSongNumStart(SE_SPIKES);
                     }
                 }
@@ -354,12 +375,12 @@ static void sub_805FBA0(void)
     // _0805FDA4
 
     if ((gGameMode == GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) && (me->d.sData[0] == 0) && (gUnknown_030053E0 == 0)) {
-        if (spikes->unk3C[0] & 0x20) {
+        if (spikes->playerMoveState[0] & MOVESTATE_20) {
             gPlayer.moveState &= ~MOVESTATE_20;
         }
         // _0805FDD8
-        if (spikes->unk3C[0] & 0x8) {
-            gPlayer.moveState &= ~MOVESTATE_8;
+        if (spikes->playerMoveState[0] & MOVESTATE_STOOD_ON_OBJ) {
+            gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
         }
     }
     // _0805FDF0
@@ -376,12 +397,11 @@ static void sub_805FBA0(void)
 
 void CreateEntity_Spikes_HidingUp(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_805FF68, sizeof(Sprite_Spikes), 0x2000, 0, TaskDestructor_8060CF4);
+    struct Task *t = TaskCreate(Task_SpikesHidingUpMain, sizeof(Sprite_Spikes), 0x2000, 0, TaskDestructor_Spikes);
     Sprite_Spikes *spikes = TASK_DATA(t);
     Sprite *s = &spikes->s;
 
-    spikes->unk3C[1] = 0;
-    spikes->unk3C[0] = 0;
+    spikes->playerMoveState[0] = spikes->playerMoveState[1] = 0x00;
     spikes->base.regionX = spriteRegionX;
     spikes->base.regionY = spriteRegionY;
     spikes->base.me = me;
@@ -409,7 +429,7 @@ void CreateEntity_Spikes_HidingUp(MapEntity *me, u16 spriteRegionX, u16 spriteRe
     s->frameFlags = 0x2200;
 }
 
-static void Task_805FF68(void)
+static void Task_SpikesHidingUpMain(void)
 {
     s16 screenX, screenY;
     u32 someParam = 0;
@@ -428,9 +448,9 @@ static void Task_805FF68(void)
     } else {
         bool32 procResult;
         if (!GRAVITY_IS_INVERTED) {
-            procResult = sub_8060554(s, me, spikes, &gPlayer, &someParam);
+            procResult = HandleSpikeMovementHidingUp(s, me, spikes, &gPlayer, &someParam);
         } else {
-            procResult = sub_80609B4(s, me, spikes, &gPlayer, &someParam);
+            procResult = HandleSpikeMovementHidingDown(s, me, spikes, &gPlayer, &someParam);
         }
 
         if (procResult) {
@@ -442,12 +462,11 @@ static void Task_805FF68(void)
 
 void CreateEntity_Spikes_HidingDown(MapEntity *me, u16 spriteRegionX, u16 spriteRegionY, u8 spriteY)
 {
-    struct Task *t = TaskCreate(Task_806012C, sizeof(Sprite_Spikes), 0x2000, 0, TaskDestructor_8060CF4);
+    struct Task *t = TaskCreate(Task_SpikesHidingDownMain, sizeof(Sprite_Spikes), 0x2000, 0, TaskDestructor_Spikes);
     Sprite_Spikes *spikes = TASK_DATA(t);
     Sprite *s = &spikes->s;
 
-    spikes->unk3C[1] = 0;
-    spikes->unk3C[0] = 0;
+    spikes->playerMoveState[0] = spikes->playerMoveState[1] = 0x00;
     spikes->base.regionX = spriteRegionX;
     spikes->base.regionY = spriteRegionY;
     spikes->base.me = me;
@@ -475,7 +494,7 @@ void CreateEntity_Spikes_HidingDown(MapEntity *me, u16 spriteRegionX, u16 sprite
     s->frameFlags = 0x2A00;
 }
 
-static void Task_806012C(void)
+static void Task_SpikesHidingDownMain(void)
 {
     s16 screenX, screenY;
     u32 someParam = 0;
@@ -494,9 +513,9 @@ static void Task_806012C(void)
     } else {
         bool32 procResult;
         if (!GRAVITY_IS_INVERTED) {
-            procResult = sub_80609B4(s, me, spikes, &gPlayer, &someParam);
+            procResult = HandleSpikeMovementHidingDown(s, me, spikes, &gPlayer, &someParam);
         } else {
-            procResult = sub_8060554(s, me, spikes, &gPlayer, &someParam);
+            procResult = HandleSpikeMovementHidingUp(s, me, spikes, &gPlayer, &someParam);
         }
 
         if (procResult) {
@@ -506,7 +525,9 @@ static void Task_806012C(void)
     }
 }
 
-bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player)
+#endif
+
+static bool32 HandleSpikeMovementUp(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player)
 {
     s16 screenX, screenY;
 
@@ -522,7 +543,7 @@ bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *play
     s->y = screenY - gCamera.y;
 
     if ((gGameMode == GAME_MODE_MULTI_PLAYER_COLLECT_RINGS) && (me->d.sData[0] == 0) && (gUnknown_030053E0 == 30)) {
-        u32 flags = sub_800CCB8(s, screenX, screenY, player);
+        u32 flags = Coll_Player_Platform(s, screenX, screenY, player);
 
         if (flags) {
             u32 v = ((u8)player->spriteOffsetX + 5);
@@ -533,12 +554,12 @@ bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *play
             }
 
             if (!GRAVITY_IS_INVERTED) {
-                player->y = Q(screenY + s->hitboxes[0].top - sp00[3]);
+                player->qWorldY = Q(screenY + s->hitboxes[0].top - sp00[3]);
             } else {
-                player->y = Q(screenY + s->hitboxes[0].bottom + sp00[3]);
+                player->qWorldY = Q(screenY + s->hitboxes[0].bottom + sp00[3]);
             }
 
-            if (sub_800CBA4(player)) {
+            if (Coll_DamagePlayer(player)) {
                 m4aSongNumStart(SE_SPIKES);
                 return TRUE;
             }
@@ -550,11 +571,11 @@ bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *play
         Sprite *sp08;
         u32 flags;
 
-        r7 = (player->moveState >> 3) & (MOVESTATE_8 >> 3);
+        r7 = (player->moveState >> 3) & (MOVESTATE_STOOD_ON_OBJ >> 3);
         r8 = (player->moveState >> 1) & (MOVESTATE_IN_AIR >> 1);
-        sp08 = player->unk3C;
+        sp08 = player->stoodObj;
 
-        flags = sub_800CCB8(s, screenX, screenY, player);
+        flags = Coll_Player_Platform(s, screenX, screenY, player);
         if (flags) {
             if (flags & 0x30000) {
 
@@ -571,14 +592,14 @@ bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *play
 
                 if (gravityInverted) {
                     if (flags & 0x20000) {
-                        player->speedAirY = 0;
-                        player->y = Q(screenY + s->hitboxes[0].bottom + player->spriteOffsetY);
-                        player->moveState |= MOVESTATE_8;
+                        player->qSpeedAirY = 0;
+                        player->qWorldY = Q(screenY + s->hitboxes[0].bottom + player->spriteOffsetY);
+                        player->moveState |= MOVESTATE_STOOD_ON_OBJ;
                         player->moveState &= ~MOVESTATE_IN_AIR;
-                        player->unk3C = s;
-                        player->speedGroundX = player->speedAirX;
+                        player->stoodObj = s;
+                        player->qSpeedGround = player->qSpeedAirX;
                         // _080603BC
-                        if (sub_800CBA4(player)) {
+                        if (Coll_DamagePlayer(player)) {
                             m4aSongNumStart(SE_SPIKES);
                             return TRUE;
                         }
@@ -586,23 +607,23 @@ bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *play
                 } else {
                     // _0806038C
                     if (flags & 0x10000) {
-                        flags = sub_8060D08(s, screenX, screenY, player);
+                        flags = HandleSpikePlayerCollision(s, screenX, screenY, player);
 
                         if (flags & 0x10000) {
-                            player->y += Q_8_8(flags);
-                            player->speedAirY = 0;
+                            player->qWorldY += Q_8_8(flags);
+                            player->qSpeedAirY = 0;
 
                             // _080603BC
-                            if (sub_800CBA4(player)) {
+                            if (Coll_DamagePlayer(player)) {
                                 m4aSongNumStart(SE_SPIKES);
                                 return TRUE;
                             }
                         } else {
                             // _080603D0
                             if (r7) {
-                                player->moveState |= MOVESTATE_8;
+                                player->moveState |= MOVESTATE_STOOD_ON_OBJ;
                             } else {
-                                player->moveState &= ~MOVESTATE_8;
+                                player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
                             }
 
                             if (r8) {
@@ -611,16 +632,16 @@ bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *play
                                 player->moveState &= ~MOVESTATE_IN_AIR;
                             }
 
-                            player->unk3C = sp08;
+                            player->stoodObj = sp08;
                         }
                     }
                 }
             } else if (flags & 0x0C0000) {
                 // _08060404
                 player->moveState |= MOVESTATE_20;
-                player->x += (s16)(flags & 0xFF00);
-                player->speedAirX = 0;
-                player->speedGroundX = 0;
+                player->qWorldX += (s16)(flags & 0xFF00);
+                player->qSpeedAirX = 0;
+                player->qSpeedGround = 0;
             }
         }
     }
@@ -628,7 +649,9 @@ bool32 sub_80601F8(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *play
     return FALSE;
 }
 
-static bool32 sub_8060440(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player)
+#ifndef COLLECT_RINGS_ROM
+
+static bool32 HandleSpikeMovementDown(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player)
 {
 
     s16 screenX, screenY;
@@ -639,33 +662,33 @@ static bool32 sub_8060440(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
     s->x = screenX - gCamera.x;
     s->y = screenY - gCamera.y;
 
-    if (!(player->moveState & MOVESTATE_400000)) {
-        u32 flags = sub_800CCB8(s, screenX, screenY, player);
+    if (!(player->moveState & MOVESTATE_IA_OVERRIDE)) {
+        u32 flags = Coll_Player_Platform(s, screenX, screenY, player);
         if (flags) {
             if ((flags & 0x20000) && !GRAVITY_IS_INVERTED) {
-                player->y = Q((screenY + s->hitboxes[0].bottom) + player->spriteOffsetY + 1);
-                player->speedAirY = 0;
-                player->speedGroundX = 0;
+                player->qWorldY = Q((screenY + s->hitboxes[0].bottom) + player->spriteOffsetY + 1);
+                player->qSpeedAirY = 0;
+                player->qSpeedGround = 0;
 
-                if (sub_800CBA4(player)) {
+                if (Coll_DamagePlayer(player)) {
                     m4aSongNumStart(SE_SPIKES);
                     return TRUE;
                 }
             } else if ((flags & 0x10000) && GRAVITY_IS_INVERTED) {
                 // _080604D0
-                player->y = Q((screenY + s->hitboxes[0].top) - player->spriteOffsetY - 1);
-                player->speedAirY = 0;
-                player->speedGroundX = 0;
+                player->qWorldY = Q((screenY + s->hitboxes[0].top) - player->spriteOffsetY - 1);
+                player->qSpeedAirY = 0;
+                player->qSpeedGround = 0;
 
-                if (sub_800CBA4(player)) {
+                if (Coll_DamagePlayer(player)) {
                     m4aSongNumStart(SE_SPIKES);
                     return TRUE;
                 }
             } else if (flags & 0xC0000) {
                 player->moveState |= MOVESTATE_20;
-                player->x += (s16)(flags & 0xFF00);
-                player->speedAirX = 0;
-                player->speedGroundX = 0;
+                player->qWorldX += (s16)(flags & 0xFF00);
+                player->qSpeedAirX = 0;
+                player->qSpeedGround = 0;
             }
         }
     }
@@ -673,11 +696,11 @@ static bool32 sub_8060440(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
     return FALSE;
 }
 
-static bool32 sub_8060554(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player, u32 *param4) //)
+static bool32 HandleSpikeMovementHidingUp(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player, u32 *param4) //)
 {
     s16 screenX, screenY;
-    u32 sp0C[1] = { gStageTime & 0x7F };
-    s32 sl = player->unk60;
+    u32 stageTimer[1] = { gStageTime & 0x7F };
+    s32 playerID = player->playerID;
 
     screenX = TO_WORLD_POS(spikes->base.spriteX, spikes->base.regionX);
     screenY = TO_WORLD_POS(me->y, spikes->base.regionY);
@@ -686,51 +709,50 @@ static bool32 sub_8060554(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
     s->y = screenY - gCamera.y;
 
     // TODO: Replace magic numbers in if statements
-    if (sp0C[0] < 60) {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+    if (stageTimer[0] < 60) {
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
         // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
 
         return FALSE;
-    } else if (sp0C[0] < 62) {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+    } else if (stageTimer[0] < 62) {
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
         // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
 
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_LOW;
         UpdateSpriteAnimation(s);
-    } else if (sp0C[0] < 64) {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+    } else if (stageTimer[0] < 64) {
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
-        // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_MID;
         UpdateSpriteAnimation(s);
-    } else if (sp0C[0] < 124) {
-        if ((s->variant != SA2_ANIM_VARIANT_SPIKES_UP) || ((player->unk60 != 0) && (*param4 != 0))) {
-            if (player->unk60 == 0) {
+    } else if (stageTimer[0] < 124) {
+        if ((s->variant != SA2_ANIM_VARIANT_SPIKES_UP) || ((player->playerID != 0) && (*param4 != 0))) {
+            if (player->playerID == 0) {
                 // TODO: Replace magic number
                 *param4 = 1;
             }
@@ -739,98 +761,96 @@ static bool32 sub_8060554(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
             s->variant = SA2_ANIM_VARIANT_SPIKES_UP;
             UpdateSpriteAnimation(s);
 
-            if (sub_800DF38(s, screenX, screenY, player) == 0x80000) {
-                if ((sub_8060D08(s, screenX, screenY, player) & 0xD0000) != 0) {
+            if (Coll_Player_Entity_Intersection(s, screenX, screenY, player) == 0x80000) {
+                if ((HandleSpikePlayerCollision(s, screenX, screenY, player) & 0xD0000) != 0) {
                     u32 v = ((u8)player->spriteOffsetX + 5);
                     s8 sp00[4] = { -v, 1 - player->spriteOffsetY, v, player->spriteOffsetY - 1 };
 
                     if (!GRAVITY_IS_INVERTED) {
-                        player->y = Q((screenY + s->hitboxes[0].top) - sp00[3]);
+                        player->qWorldY = Q((screenY + s->hitboxes[0].top) - sp00[3]);
                     } else {
-                        player->y = Q((screenY + s->hitboxes[0].bottom) + sp00[3]);
+                        player->qWorldY = Q((screenY + s->hitboxes[0].bottom) + sp00[3]);
                     }
-                    if (sub_800CBA4(player)) {
+                    if (Coll_DamagePlayer(player)) {
                         m4aSongNumStart(SE_SPIKES);
                         return TRUE;
                     }
                 }
             } else {
-                u32 flags = sub_800CCB8(s, screenX, screenY, player);
+                u32 flags = Coll_Player_Platform(s, screenX, screenY, player);
                 if (flags) {
                     if (flags & 0x10000) {
-                        flags = sub_8060D08(s, screenX, screenY, player);
+                        flags = HandleSpikePlayerCollision(s, screenX, screenY, player);
 
                         if (flags & 0x10000) {
-                            if (sub_800CBA4(player)) {
+                            if (Coll_DamagePlayer(player)) {
                                 m4aSongNumStart(SE_SPIKES);
                                 return TRUE;
                             }
                         }
                     } else if (flags & 0xC0000) {
                         player->moveState |= MOVESTATE_20;
-                        player->x += (s16)(flags & 0xFF00);
-                        player->speedAirX = 0;
-                        player->speedGroundX = 0;
+                        player->qWorldX += (s16)(flags & 0xFF00);
+                        player->qSpeedAirX = 0;
+                        player->qSpeedGround = 0;
                     }
                 }
             }
         } else {
-            u32 flags = sub_800CCB8(s, screenX, screenY, player);
+            u32 flags = Coll_Player_Platform(s, screenX, screenY, player);
             if (flags) {
                 if ((flags & 0x10000) && !GRAVITY_IS_INVERTED) {
-                    flags = sub_8060D08(s, screenX, screenY, player);
+                    flags = HandleSpikePlayerCollision(s, screenX, screenY, player);
 
-                    if ((flags & 0x10000) && sub_800CBA4(player)) {
+                    if ((flags & 0x10000) && Coll_DamagePlayer(player)) {
                         m4aSongNumStart(SE_SPIKES);
                         return TRUE;
                     }
                 } else if ((flags & 0x20000) && GRAVITY_IS_INVERTED) {
-                    player->y = Q(screenY + s->hitboxes[0].bottom + player->spriteOffsetY);
-                    player->moveState |= MOVESTATE_8;
+                    player->qWorldY = Q(screenY + s->hitboxes[0].bottom + player->spriteOffsetY);
+                    player->moveState |= MOVESTATE_STOOD_ON_OBJ;
                     player->moveState &= ~MOVESTATE_IN_AIR;
-                    player->unk3C = s;
-                    player->speedGroundX = player->speedAirX;
+                    player->stoodObj = s;
+                    player->qSpeedGround = player->qSpeedAirX;
 
-                    if (sub_800CBA4(player)) {
+                    if (Coll_DamagePlayer(player)) {
                         m4aSongNumStart(SE_SPIKES);
                         return TRUE;
                     }
                 } else if (flags & 0xC0000) {
                     player->moveState |= MOVESTATE_20;
-                    player->x += (s16)(flags & 0xFF00);
-                    player->speedAirX = 0;
-                    player->speedGroundX = 0;
+                    player->qWorldX += (s16)(flags & 0xFF00);
+                    player->qSpeedAirX = 0;
+                    player->qSpeedGround = 0;
                 }
             }
 
             // TODO: WHY!?
-            spikes->unk3C[sl] = player->moveState;
+            spikes->playerMoveState[playerID] = player->moveState;
         }
-    } else if (sp0C[0] < 126) {
+    } else if (stageTimer[0] < 126) {
 
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
-        // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_MID;
         UpdateSpriteAnimation(s);
     } else {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
-        // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_LOW;
@@ -840,11 +860,11 @@ static bool32 sub_8060554(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
     return TRUE;
 }
 
-static bool32 sub_80609B4(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player, u32 *param4)
+static bool32 HandleSpikeMovementHidingDown(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Player *player, u32 *param4)
 {
     s16 screenX, screenY;
-    u32 sp0C[1] = { gStageTime & 0x7F };
-    s32 sl = player->unk60;
+    u32 stageTimer[1] = { gStageTime & 0x7F };
+    s32 playerID = player->playerID;
 
     screenX = TO_WORLD_POS(spikes->base.spriteX, spikes->base.regionX);
     screenY = TO_WORLD_POS(me->y, spikes->base.regionY);
@@ -853,51 +873,49 @@ static bool32 sub_80609B4(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
     s->y = screenY - gCamera.y;
 
     // TODO: Replace magic numbers in if statements
-    if (sp0C[0] < 60) {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+    if (stageTimer[0] < 60) {
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
-        // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
 
         return FALSE;
-    } else if (sp0C[0] < 62) {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+    } else if (stageTimer[0] < 62) {
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
         // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
 
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_LOW;
         UpdateSpriteAnimation(s);
-    } else if (sp0C[0] < 64) {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+    } else if (stageTimer[0] < 64) {
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
-        // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_MID;
         UpdateSpriteAnimation(s);
-    } else if (sp0C[0] < 124) {
-        if ((s->variant != SA2_ANIM_VARIANT_SPIKES_UP) || ((player->unk60 != 0) && (*param4 != 0))) {
-            if (player->unk60 == 0) {
+    } else if (stageTimer[0] < 124) {
+        if ((s->variant != SA2_ANIM_VARIANT_SPIKES_UP) || ((player->playerID != 0) && (*param4 != 0))) {
+            if (player->playerID == 0) {
                 // TODO: Replace magic number
                 *param4 = 1;
             }
@@ -906,54 +924,54 @@ static bool32 sub_80609B4(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
             s->variant = SA2_ANIM_VARIANT_SPIKES_UP;
             UpdateSpriteAnimation(s);
 
-            if ((sub_800DF38(s, screenX, screenY, player) == 0x80000) && ((sub_8060D08(s, screenX, screenY, player) & 0xD0000) != 0)) {
+            if ((Coll_Player_Entity_Intersection(s, screenX, screenY, player) == 0x80000)
+                && ((HandleSpikePlayerCollision(s, screenX, screenY, player) & 0xD0000) != 0)) {
 
                 u32 v = ((u8)player->spriteOffsetX + 5);
                 s8 sp00[4] = { -v, 1 - player->spriteOffsetY, v, player->spriteOffsetY - 1 };
 
                 if (!GRAVITY_IS_INVERTED) {
-                    player->y = Q(s->hitboxes[0].bottom + screenY - sp00[1]);
+                    player->qWorldY = Q(s->hitboxes[0].bottom + screenY - sp00[1]);
                 } else {
-                    player->y = Q(s->hitboxes[0].top + screenY + sp00[1]);
+                    player->qWorldY = Q(s->hitboxes[0].top + screenY + sp00[1]);
                 }
-                if (!sub_800CBA4(player)) {
+                if (!Coll_DamagePlayer(player)) {
                     return TRUE;
                 }
             } else
                 return TRUE;
         } else {
-            spikes->unk3C[sl] = sub_800CCB8(s, screenX, screenY, player);
-            if (!(spikes->unk3C[sl] & 0x20000) || !sub_800CBA4(player)) {
+            spikes->playerMoveState[playerID] = Coll_Player_Platform(s, screenX, screenY, player);
+            if (!(spikes->playerMoveState[playerID] & MOVESTATE_20000) || !Coll_DamagePlayer(player)) {
                 return TRUE;
             }
         }
 
         m4aSongNumStart(SE_SPIKES);
-    } else if (sp0C[0] < 126) {
+    } else if (stageTimer[0] < 126) {
 
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
         // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_MID;
         UpdateSpriteAnimation(s);
     } else {
-        if ((player->moveState & MOVESTATE_8) && (player->unk3C == s)) {
-            player->moveState &= ~MOVESTATE_8;
+        if ((player->moveState & MOVESTATE_STOOD_ON_OBJ) && (player->stoodObj == s)) {
+            player->moveState &= ~MOVESTATE_STOOD_ON_OBJ;
             player->moveState |= MOVESTATE_IN_AIR;
         }
 
-        // TODO: Replace magic number
-        if (spikes->unk3C[sl] & 0x20) {
+        if (spikes->playerMoveState[playerID] & MOVESTATE_20) {
             player->moveState &= ~MOVESTATE_20;
-            spikes->unk3C[sl] = 0;
+            spikes->playerMoveState[playerID] = 0x00;
         }
         s->graphics.anim = sSpikesOfZone[LEVEL_TO_ZONE(gCurrentLevel)];
         s->variant = SA2_ANIM_VARIANT_SPIKES_UP_LOW;
@@ -963,20 +981,22 @@ static bool32 sub_80609B4(Sprite *s, MapEntity *me, Sprite_Spikes *spikes, Playe
     return TRUE;
 }
 
-static void TaskDestructor_8060CF4(struct Task *t)
+#endif
+
+static void TaskDestructor_Spikes(struct Task *t)
 {
     Sprite_Spikes *spikes = TASK_DATA(t);
     VramFree(spikes->s.graphics.dest);
 }
 
-static u32 sub_8060D08(Sprite *s, s32 x, s32 y, Player *player)
+static u32 HandleSpikePlayerCollision(Sprite *s, s32 x, s32 y, Player *player)
 {
     u32 result;
 
     s->hitboxes[0].left++;
     s->hitboxes[0].right--;
 
-    result = sub_800CCB8(s, x, y, player);
+    result = Coll_Player_Platform(s, x, y, player);
 
     s->hitboxes[0].left--;
     s->hitboxes[0].right++;

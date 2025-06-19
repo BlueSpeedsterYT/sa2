@@ -5,8 +5,8 @@
 
 #include "lib/m4a/m4a.h"
 
-#include "game/sa1_leftovers/globals.h"
-#include "game/sa1_leftovers/collision.h"
+#include "game/sa1_sa2_shared/globals.h"
+#include "game/sa1_sa2_shared/collision.h"
 
 #include "game/bosses/boss_6.h"
 #include "game/bosses/common.h"
@@ -15,7 +15,7 @@
 #include "game/stage/boss_results_transition.h"
 #include "game/stage/player.h"
 #include "game/stage/camera.h"
-#include "game/stage/collision.h"
+#include "game/stage/terrain_collision.h"
 #include "game/player_callbacks.h"
 
 #include "constants/move_states.h"
@@ -183,14 +183,14 @@ void CreateEggGoRound(void)
     sub_8039ED4();
     gPseudoRandom = gStageTime;
 
-    gUnknown_03005AF0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AF0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+    gPlayerBodyPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gPlayerBodyPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
 
-    gUnknown_03005AA0.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
-    gUnknown_03005AA0.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
+    gPlayerLimbsPSI.s.frameFlags &= ~SPRITE_FLAG_MASK_PRIORITY;
+    gPlayerLimbsPSI.s.frameFlags |= SPRITE_FLAG(PRIORITY, 1);
 
-    gPlayer.unk3C = NULL;
-    gPlayer.moveState &= ~MOVESTATE_8;
+    gPlayer.stoodObj = NULL;
+    gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
 
     gActiveBossTask = TaskCreate(Task_IntroRollIn, sizeof(EggGoRound), 0x4000, 0, TaskDestructor_EggGoRound);
     boss = TASK_DATA(gActiveBossTask);
@@ -348,7 +348,7 @@ static void sub_8045E78(EggGoRound *boss)
 
         if (Mod(boss->unk22, 30) == 0) {
             u8 i;
-            u16 targetAngle = sub_8004418(I(gPlayer.y - boss->y), I(gPlayer.x - boss->x));
+            u16 targetAngle = sub_8004418(I(gPlayer.qWorldY - boss->y), I(gPlayer.qWorldX - boss->x));
 
             for (i = 0; i < NUM_PROJECTILES; i++) {
                 ProjectilePosition *projPos = &boss->projectilePositions[i];
@@ -394,7 +394,7 @@ static void UpdateProjectiles(EggGoRound *boss)
             }
 
             if (boss->health > 0) {
-                sub_800C84C(s, I(projPos->x), I(projPos->y));
+                Coll_Player_Projectile(s, I(projPos->x), I(projPos->y));
             }
 
             s->x = I(projPos->x) - gCamera.x;
@@ -423,8 +423,8 @@ static void Task_Main(void)
         boss->timer = 128;
         boss->destructionProps.explosionState = 0;
 
-        gPlayer.unk3C = NULL;
-        gPlayer.moveState &= ~MOVESTATE_8;
+        gPlayer.stoodObj = NULL;
+        gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
         gPlayer.moveState |= MOVESTATE_IN_AIR;
 
         Player_DisableInputAndBossTimer();
@@ -437,7 +437,7 @@ static void Task_DestructionCutScene1(void)
     EggGoRound *boss = TASK_DATA(gCurTask);
     s32 idx;
     if (Mod(gStageTime, 21) == 0) {
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
     }
 
     if (boss->timer >= 64) {
@@ -456,8 +456,8 @@ static void Task_DestructionCutScene1(void)
     SetPalette(boss);
     sub_8047060(boss);
 
-    gPlayer.unk3C = NULL;
-    gPlayer.moveState &= ~MOVESTATE_8;
+    gPlayer.stoodObj = NULL;
+    gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
 
     if (--boss->timer == 0) {
         boss->linkRotOffset = 0;
@@ -472,7 +472,7 @@ static void Task_DestructionCutScene2(void)
     EggGoRound *boss = TASK_DATA(gCurTask);
     s32 idx;
     if (Mod(gStageTime, 17) == 0) {
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
     }
     idx = CLAMP_SIN_PERIOD(boss->timer * 256);
     boss->linkRotOffset = SIN(idx) >> 12;
@@ -503,7 +503,7 @@ static void Task_DestructionCutScene3(void)
     sub_8047138(boss);
 
     if (Mod(gStageTime, 13) == 0) {
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
     }
 
     if (boss->destructionProps.unk1C1 == 0 && (I(destruction->cabin.x) - gCamera.x) < 50) {
@@ -566,8 +566,8 @@ static void Render(EggGoRound *boss)
         if (boss->unk1E != 0 && boss->unk24 == 0 && (i % 2) && (boss->state == 1 || boss->state == 2)) {
             SpriteTransform *transform = &boss->platforms[i].transform;
             transform->rotation = I(boss->platformRotation);
-            transform->width = 0x100;
-            transform->height = 0x100;
+            transform->qScaleX = Q(1);
+            transform->qScaleY = Q(1);
             transform->x = s->x;
             transform->y = s->y;
 
@@ -637,8 +637,8 @@ static void sub_804655C(EggGoRound *boss, u8 val)
         if (boss->unk1E != 0 && boss->unk24 == 0 && (i % 2) && (boss->state == 1 || boss->state == 2)) {
             SpriteTransform *transform = &boss->platforms[i].transform;
             transform->rotation = I(boss->platformRotation);
-            transform->width = 0x100;
-            transform->height = 0x100;
+            transform->qScaleX = Q(1);
+            transform->qScaleY = Q(1);
             transform->x = s->x;
             transform->y = s->y;
 
@@ -812,14 +812,14 @@ static void sub_8046C28(EggGoRound *boss)
             s32 y = I(boss->y) + ((SIN(idx) * platformPos) >> 14);
 
             if (boss->unk1E != 0 && boss->unk24 == 0 && (i % 2) && (boss->state == 1 || boss->state == 2)
-                && ((gPlayer.moveState & MOVESTATE_8) && gPlayer.unk3C == s)) {
-                gPlayer.moveState &= ~MOVESTATE_8;
+                && ((gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ) && gPlayer.stoodObj == s)) {
+                gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
                 gPlayer.moveState &= ~MOVESTATE_100;
                 gPlayer.moveState |= 2;
-                gPlayer.unk3C = NULL;
-                gPlayer.speedAirX += BOSS_X_SPEED;
-                gPlayer.speedGroundX += BOSS_X_SPEED;
-                gPlayer.speedAirY = -Q(2);
+                gPlayer.stoodObj = NULL;
+                gPlayer.qSpeedAirX += BOSS_X_SPEED;
+                gPlayer.qSpeedGround += BOSS_X_SPEED;
+                gPlayer.qSpeedAirY = -Q(2);
                 continue;
             }
 
@@ -828,38 +828,38 @@ static void sub_8046C28(EggGoRound *boss)
                 u8 someBool;
                 s32 speedAirY;
 
-                if (gPlayer.unk3C == s) {
+                if (gPlayer.stoodObj == s) {
                     someBool = TRUE;
                 } else {
                     someBool = FALSE;
                 }
-                speedAirY = gPlayer.speedAirY;
+                speedAirY = gPlayer.qSpeedAirY;
 
-                if (gPlayer.moveState & MOVESTATE_IN_AIR || (gPlayer.moveState & MOVESTATE_8 && gPlayer.unk3C == s)) {
-                    val = sub_800CCB8(s, x, y, &gPlayer);
+                if (gPlayer.moveState & MOVESTATE_IN_AIR || (gPlayer.moveState & MOVESTATE_STOOD_ON_OBJ && gPlayer.stoodObj == s)) {
+                    val = Coll_Player_Platform(s, x, y, &gPlayer);
                 } else {
                     val = 0;
                 }
 
                 if (val & 0x10000) {
-                    if (!someBool && gPlayer.unk3C == s && speedAirY > 0) {
-                        gPlayer.speedAirX -= BOSS_X_SPEED;
-                        gPlayer.speedGroundX -= BOSS_X_SPEED;
+                    if (!someBool && gPlayer.stoodObj == s && speedAirY > 0) {
+                        gPlayer.qSpeedAirX -= BOSS_X_SPEED;
+                        gPlayer.qSpeedGround -= BOSS_X_SPEED;
                     }
 
                     if (boss->unk1E != 0 && !boss->unk24 && !(i % 2) && (boss->state == 0 || boss->state == 2)) {
                         sub_8047940(boss);
-                        sub_800CBA4(&gPlayer);
+                        Coll_DamagePlayer(&gPlayer);
                         return;
                     }
 
-                    gPlayer.y += Q(2) + Q_8_8(val);
+                    gPlayer.qWorldY += Q(2) + Q_8_8(val);
                     if (boss->prevPlatformXPositions[i] != 0) {
-                        gPlayer.x += Q(x - (boss->prevPlatformXPositions[i]));
+                        gPlayer.qWorldX += Q(x - (boss->prevPlatformXPositions[i]));
                     }
                 } else if (someBool) {
-                    gPlayer.moveState &= ~MOVESTATE_8;
-                    gPlayer.unk3C = NULL;
+                    gPlayer.moveState &= ~MOVESTATE_STOOD_ON_OBJ;
+                    gPlayer.stoodObj = NULL;
                     if (!(gPlayer.moveState & MOVESTATE_100)) {
                         gPlayer.moveState &= ~MOVESTATE_100;
                         gPlayer.moveState |= MOVESTATE_IN_AIR;
@@ -919,7 +919,7 @@ static void sub_8046F00(EggGoRound *boss)
             return;
         }
 
-        m4aSongNumStart(SE_144);
+        m4aSongNumStart(SE_EXPLOSION);
 
         for (i = 0; i < NUM_PLATFORMS; i++) {
             u8 j;
@@ -1120,7 +1120,7 @@ bool32 HandleHit(EggGoRound *boss)
     }
 
     if (!IS_FINAL_STAGE(gCurrentLevel) && boss->health == 4) {
-        gUnknown_030054A8.unk1 = 0x11;
+        gMusicManagerState.unk1 = 0x11;
     }
 
     return result;
@@ -1184,13 +1184,13 @@ static void HandleCollisions(EggGoRound *boss)
 
     Player_UpdateHomingPosition(boss->x, boss->y);
 
-    if (sub_800C320(s, x, y, 1, &gPlayer) != 0) {
-        if (gPlayer.x > boss->x) {
-            gPlayer.speedAirX += Q(2.25);
-            gPlayer.x += Q(2);
+    if (Coll_Player_Boss_Attack(s, x, y, 1, &gPlayer) != 0) {
+        if (gPlayer.qWorldX > boss->x) {
+            gPlayer.qSpeedAirX += Q(2.25);
+            gPlayer.qWorldX += Q(2);
         }
 
-        gPlayer.speedAirY += Q(2);
+        gPlayer.qSpeedAirY += Q(2);
         return;
     }
 
@@ -1198,12 +1198,12 @@ static void HandleCollisions(EggGoRound *boss)
         return;
     }
 
-    if (IsColliding_Cheese(s, x, y, 0, &gPlayer) == TRUE || sub_800C320(s, x, y, 0, &gPlayer) == TRUE) {
+    if (Coll_Cheese_Enemy_Attack(s, x, y, 0, &gPlayer) == TRUE || Coll_Player_Boss_Attack(s, x, y, 0, &gPlayer) == TRUE) {
         HandleHit(boss);
         return;
     }
 
-    if (sub_800CA20(s, x, y, 0, &gPlayer) == TRUE) {
+    if (Coll_Player_Enemy(s, x, y, 0, &gPlayer) == TRUE) {
         Sprite *s2 = &boss->pilot;
 
         boss->unk29 = 30;
